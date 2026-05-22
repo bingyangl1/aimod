@@ -4,12 +4,15 @@ import com.example.aimod.ai.BotAIManager;
 import com.example.aimod.ai.InventoryUtils;
 import com.example.aimod.ai.Task;
 import com.example.aimod.fakeplayer.FakePlayer;
-import com.example.aimod.fakeplayer.FakePlayerManager;
 import com.example.aimod.util.DevLog;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
@@ -21,20 +24,25 @@ import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.UUID;
 
-public class AIBotEntity extends PathfinderMob {
+/**
+ * AI Bot entity - extends Mob, encapsulates FakePlayer (ServerPlayer).
+ * The FakePlayer is lazily initialized and NOT added to the world;
+ * it serves as an internal tool for player-like operations (block breaking,
+ * combat, crafting context, etc.).
+ */
+public class AIBotEntity extends Mob {
     private BotAIManager aiManager;
     private Task currentTask;
     private final SimpleContainer inventory;
     private volatile boolean parsingTask = false;
 
-    // FakePlayer 集成
+    /** Lazily-initialized FakePlayer for player-like operations. */
     @Nullable
     private FakePlayer fakePlayer;
-    @Nullable
-    private FakePlayerManager fakePlayerManager;
 
-    public AIBotEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
+    public AIBotEntity(EntityType<? extends Mob> entityType, Level level) {
         super(entityType, level);
         this.aiManager = new BotAIManager(this);
         this.currentTask = null;
@@ -42,7 +50,7 @@ public class AIBotEntity extends PathfinderMob {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return PathfinderMob.createMobAttributes()
+        return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.3D)
                 .add(Attributes.FOLLOW_RANGE, 32.0D)
@@ -57,32 +65,33 @@ public class AIBotEntity extends PathfinderMob {
         this.goalSelector.addGoal(2, new RandomLookAroundGoal(this));
     }
 
-    /**
-     * 初始化 FakePlayer（仅在服务端调用）
-     */
-    public void initFakePlayer() {
-        if (this.level() instanceof ServerLevel serverLevel) {
-            this.fakePlayerManager = new FakePlayerManager(serverLevel);
-            this.fakePlayer = fakePlayerManager.createFakePlayer(this.getName().getString() + "_fake");
-            if (this.fakePlayer != null) {
-                // 将 FakePlayer 设置到与 AIBotEntity 相同的位置
-                this.fakePlayer.moveTo(this.getX(), this.getY(), this.getZ());
-                DevLog.info("FAKE_PLAYER_INIT", "bot={}, fakePlayer={}",
-                        this.getStringUUID(), this.fakePlayer.getStringUUID());
-            }
-        }
+    @Override
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        return InteractionResult.PASS;
     }
 
+    // ── FakePlayer lifecycle ────────────────────────────────────────────
+
     /**
-     * 获取关联的 FakePlayer
+     * 获取关联的 FakePlayer（懒加载，仅服务端）。
+     * FakePlayer 不会被添加到世界中，仅作为内部工具使用。
      */
     @Nullable
     public FakePlayer getFakePlayer() {
+        if (fakePlayer == null && this.level() instanceof ServerLevel serverLevel) {
+            String name = this.getName().getString() + "_impl";
+            UUID uuid = UUID.nameUUIDFromBytes(("AIMod:Bot:" + name).getBytes());
+            GameProfile profile = new GameProfile(uuid, name);
+            fakePlayer = new FakePlayer(serverLevel, profile);
+            fakePlayer.moveTo(this.getX(), this.getY(), this.getZ());
+            DevLog.info("FAKE_PLAYER_LAZY_INIT", "bot={}, fakePlayer={}",
+                    this.getStringUUID(), fakePlayer.getStringUUID());
+        }
         return fakePlayer;
     }
 
     /**
-     * 检查是否有 FakePlayer
+     * 检查 FakePlayer 是否可用
      */
     public boolean hasFakePlayer() {
         return fakePlayer != null && fakePlayer.isAlive();
@@ -94,9 +103,14 @@ public class AIBotEntity extends PathfinderMob {
     private void syncPositionToFakePlayer() {
         if (fakePlayer != null) {
             fakePlayer.moveTo(this.getX(), this.getY(), this.getZ());
-            fakePlayer.lookAt(this.getX() + this.getLookAngle().x, this.getY() + this.getLookAngle().y, this.getZ() + this.getLookAngle().z);
+            fakePlayer.lookAt(
+                    this.getX() + this.getLookAngle().x,
+                    this.getY() + this.getLookAngle().y,
+                    this.getZ() + this.getLookAngle().z);
         }
     }
+
+    // ── Task management ─────────────────────────────────────────────────
 
     public void assignTask(String naturalLanguageCommand) {
         assignTask(naturalLanguageCommand, null);
@@ -110,21 +124,19 @@ public class AIBotEntity extends PathfinderMob {
         }
         parsingTask = true;
 
-        // 设置任务所有者
         aiManager.getFeedback().setOwner(owner);
-        
-        // Run LLM call off the server thread to avoid freezing
+
         String botName = this.getName().getString();
         String ownerName = owner != null ? owner.getName().getString() : null;
         DevLog.info("BOT_ASSIGN_START", "bot={}, owner={}, command={}",
                 this.getStringUUID(), ownerName, DevLog.compact(naturalLanguageCommand));
 
-        // 通知任务开始
         aiManager.getFeedback().reportTaskStart(naturalLanguageCommand);
 
         Thread llmThread = new Thread(() -> {
             try {
-                DevLog.info("BOT_PARSE_THREAD_START", "bot={}, thread={}", this.getStringUUID(), Thread.currentThread().getName());
+                DevLog.info("BOT_PARSE_THREAD_START", "bot={}, thread={}",
+                        this.getStringUUID(), Thread.currentThread().getName());
                 Task task = aiManager.parseCommand(naturalLanguageCommand, ownerName);
                 if (task != null) {
                     if (this.level().getServer() != null) {
@@ -144,32 +156,30 @@ public class AIBotEntity extends PathfinderMob {
                 DevLog.error("BOT_PARSE_THREAD_EXCEPTION", "failed to parse task", e);
             } finally {
                 parsingTask = false;
-                DevLog.info("BOT_PARSE_THREAD_DONE", "bot={}, thread={}", this.getStringUUID(), Thread.currentThread().getName());
+                DevLog.info("BOT_PARSE_THREAD_DONE", "bot={}, thread={}",
+                        this.getStringUUID(), Thread.currentThread().getName());
             }
         }, "AIMod-LLM-" + botName);
         llmThread.setDaemon(true);
         llmThread.start();
     }
 
+    // ── Tick ────────────────────────────────────────────────────────────
+
     @Override
     public void tick() {
         super.tick();
-
-        // 同步位置到 FakePlayer
         syncPositionToFakePlayer();
 
-        // 更新任务
         if (this.currentTask != null && !this.currentTask.isCompleted()) {
             aiManager.updateTask(this.currentTask);
         }
 
-        // 自动拾取附近的掉落物到机器人背包
         pickupNearbyItems();
     }
 
     /**
-     * 自动拾取附近的掉落物实体到机器人背包。
-     * 解决 destroyBlock 生成的掉落物无法进入背包的问题。
+     * 自动拾取附近的掉落物到机器人背包。
      */
     private void pickupNearbyItems() {
         if (this.level().isClientSide || !(this.level() instanceof ServerLevel serverLevel)) {
@@ -189,19 +199,18 @@ public class AIBotEntity extends PathfinderMob {
         }
     }
 
+    // ── Cleanup ─────────────────────────────────────────────────────────
+
     @Override
     public void remove(RemovalReason reason) {
-        // 清理 FakePlayer
         if (fakePlayer != null) {
-            if (fakePlayerManager != null) {
-                fakePlayerManager.destroyFakePlayer(fakePlayer);
-            } else {
-                fakePlayer.discard();
-            }
+            fakePlayer.discard();
             fakePlayer = null;
         }
         super.remove(reason);
     }
+
+    // ── Accessors ───────────────────────────────────────────────────────
 
     public BotAIManager getAiManager() {
         return aiManager;
@@ -215,11 +224,11 @@ public class AIBotEntity extends PathfinderMob {
         return inventory;
     }
 
-    public ItemStack getItemInHand(net.minecraft.world.InteractionHand hand) {
+    public ItemStack getItemInHand(InteractionHand hand) {
         return inventory.getItem(0);
     }
 
-    public void setItemInHand(net.minecraft.world.InteractionHand hand, ItemStack stack) {
+    public void setItemInHand(InteractionHand hand, ItemStack stack) {
         inventory.setItem(0, stack);
     }
 
@@ -229,20 +238,5 @@ public class AIBotEntity extends PathfinderMob {
 
     public boolean isSpectator() {
         return false;
-    }
-
-    /**
-     * 获取假人管理器
-     */
-    @Nullable
-    public FakePlayerManager getFakePlayerManager() {
-        return fakePlayerManager;
-    }
-
-    /**
-     * 假人是否存活
-     */
-    public boolean isFakePlayerAlive() {
-        return fakePlayer != null && fakePlayer.isAlive();
     }
 }

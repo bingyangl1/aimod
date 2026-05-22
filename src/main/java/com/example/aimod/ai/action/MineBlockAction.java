@@ -1,13 +1,18 @@
 package com.example.aimod.ai.action;
 
-import com.example.aimod.ai.InventoryUtils;
 import com.example.aimod.ai.WorldScanner;
+import com.example.aimod.ai.pathing.Pathfinder;
+import com.example.aimod.ai.pathing.PathResult;
 import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class MineBlockAction extends Action {
     private static final int STUCK_TIMEOUT = 200;
@@ -24,6 +29,10 @@ public class MineBlockAction extends Action {
 
     private double lastDistSqr;
     private int stuckTicks;
+
+    // Pathfinding state
+    private List<BlockPos> currentPath;
+    private int pathIndex;
 
     public MineBlockAction(String blockId, int count) {
         this(blockId, count, 32);
@@ -69,6 +78,8 @@ public class MineBlockAction extends Action {
                 searching = false;
                 lastDistSqr = Double.MAX_VALUE;
                 stuckTicks = 0;
+                currentPath = null;
+                pathIndex = 0;
 
                 if (currentTarget == null) {
                     DevLog.warn("MINE_NO_BLOCK_FOUND", "block={}, radius={}", blockId, searchRadius);
@@ -77,6 +88,7 @@ public class MineBlockAction extends Action {
                 }
 
                 DevLog.info("MINE_FOUND", "block={}, pos={}", blockId, currentTarget.toShortString());
+                computePath(bot);
             }
 
             BlockState blockState = bot.level().getBlockState(currentTarget);
@@ -86,10 +98,11 @@ public class MineBlockAction extends Action {
                 currentTarget = null;
                 searching = true;
                 breakProgress = 0;
+                currentPath = null;
                 return;
             }
 
-            double distSqr = navigateTo(bot, currentTarget, 1.0);
+            double distSqr = followPath(bot);
 
             if (distSqr > 6.25) {
                 if (distSqr >= lastDistSqr - 0.01) {
@@ -106,6 +119,7 @@ public class MineBlockAction extends Action {
                     currentTarget = null;
                     searching = true;
                     stuckTicks = 0;
+                    currentPath = null;
                 }
                 return;
             }
@@ -132,11 +146,11 @@ public class MineBlockAction extends Action {
                 Entity destroyer = fakePlayer != null ? fakePlayer : bot;
                 bot.level().destroyBlock(currentTarget, true, destroyer);
                 minedCount++;
+                DevLog.info("MINE_MINED", "block={}, total={}", blockId, minedCount);
                 currentTarget = null;
                 searching = true;
                 breakProgress = 0;
-
-                DevLog.info("MINE_MINED", "block={}, total={}", blockId, minedCount);
+                currentPath = null;
             }
         }
     }
@@ -144,6 +158,54 @@ public class MineBlockAction extends Action {
     @Override
     public boolean isComplete(AIBotEntity bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
+    }
+
+    private void computePath(AIBotEntity bot) {
+        if (!(bot.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+
+        BlockPos botPos = bot.blockPosition();
+        BlockPos approachPos = currentTarget.below();
+
+        DevLog.info("MINE_PATH_COMPUTE", "from={}, to={}", botPos.toShortString(), approachPos.toShortString());
+
+        Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, approachPos);
+        PathResult result = pathfinder.findPath();
+
+        if (result.isFound() && result.getLength() >= 2) {
+            currentPath = result.getPath();
+            pathIndex = 1;
+            DevLog.info("MINE_PATH_FOUND", "length={}, nodes={}", result.getLength(), result.getNodesExplored());
+        } else {
+            currentPath = null;
+            DevLog.info("MINE_PATH_FALLBACK", "reason=no_path, using_direct_navigate");
+        }
+    }
+
+    private double followPath(AIBotEntity bot) {
+        double dx = currentTarget.getX() + 0.5 - bot.getX();
+        double dy = currentTarget.getY() - bot.getY();
+        double dz = currentTarget.getZ() + 0.5 - bot.getZ();
+        double distSqr = dx * dx + dy * dy + dz * dz;
+
+        if (currentPath != null && pathIndex < currentPath.size()) {
+            BlockPos waypoint = currentPath.get(pathIndex);
+            double wpDist = bot.distanceToSqr(waypoint.getX() + 0.5, waypoint.getY(), waypoint.getZ() + 0.5);
+
+            if (wpDist < 2.25) {
+                pathIndex++;
+                if (pathIndex >= currentPath.size()) {
+                    navigateTo(bot, currentTarget, 1.0);
+                    return distSqr;
+                }
+            }
+
+            BlockPos nextWp = currentPath.get(pathIndex);
+            bot.getNavigation().moveTo(nextWp.getX() + 0.5, nextWp.getY(), nextWp.getZ() + 0.5, 1.0);
+            return distSqr;
+        }
+
+        navigateTo(bot, currentTarget, 1.0);
+        return distSqr;
     }
 
     public String getBlockId() { return blockId; }

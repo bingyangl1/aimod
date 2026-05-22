@@ -25,7 +25,7 @@ Package: com.example.aimod
 | Layer | Key File | Role |
 |-------|----------|------|
 | Entrypoint | AIMod.java | @Mod class. Registers entities, commands, config |
-| Entity | entity/AIBotEntity.java | The bot mob. Extends PathfinderMob, integrates FakePlayer |
+| Entity | entity/AIBotEntity.java | The bot mob. Extends Mob, encapsulates FakePlayer (lazy init) |
 | FakePlayer | akeplayer/FakePlayer.java | Extends ServerPlayer, simulates player actions |
 | FakePlayer Manager | akeplayer/FakePlayerManager.java | Manages FakePlayer lifecycle |
 | Fake Network | akeplayer/FakeNetHandler.java | Fake network connection for FakePlayer |
@@ -38,6 +38,7 @@ Package: com.example.aimod
 | World Scanner | i/WorldScanner.java | Scans nearby blocks, entities, and environment |
 | Inventory Utils | i/InventoryUtils.java | Bot inventory helper methods |
 | Actions | i/action/*.java | Action base class + 14 action types |
+| Pathfinding | i/pathing/*.java | A* Pathfinder (Baritone-inspired), PathNode, MoveCost, PathResult |
 | LLM Service | i/llm/LLMService.java | HTTP calls to OpenAI-compatible API with world context |
 | LLM Response | i/llm/LLMResponse.java | LLM response data model |
 | Config | config/ModConfig.java | ModConfigSpec — 12 configuration options |
@@ -66,7 +67,7 @@ Package: com.example.aimod
 ## Adding an Action
 
 1. Create class in i/action/ extending Action with canExecute(), execute(), isComplete()
-2. Use getFakePlayer(bot) to access FakePlayer for player-like actions
+2. Use bot.getFakePlayer() to access the lazily-initialized FakePlayer for player-like actions
 3. Use navigateTo(bot, targetBlockPos, speed) for pathfinding-based movement (uses vanilla PathNavigation); call stopNavigation(bot) when arrived
 4. Register in BotAIManager.convertResponseToActions() — add case to the switch
 ## World Context
@@ -117,9 +118,9 @@ ModConfig.java defines the spec via ModConfigSpec.Builder. Config registered in 
 - Commands use Brigadier via NeoForge.EVENT_BUS.addListener
 - 
 eoforge.mods.toml uses ${} placeholders expanded from gradle.properties at build time
-- FakePlayer extends ServerPlayer with fake network handler
+- FakePlayer extends ServerPlayer with fake network handler. AIBotEntity extends Mob and encapsulates FakePlayer lazily.
 - Actions use getFakePlayer(bot) to access FakePlayer capabilities
-- Actions use navigateTo(bot, pos, speed) / stopNavigation(bot) from Action base class for pathfinding
+- Actions use A* Pathfinder (i/pathing/Pathfinder.java) for local pathfinding (≤20 blocks), falls back to vanilla PathNavigation for longer distances
 - AIBotEntity.tick() auto-picks up nearby ItemEntity (3-block radius) into bot inventory
 - DevLog is used for structured development logging with tags
 
@@ -127,7 +128,8 @@ eoforge.mods.toml uses ${} placeholders expanded from gradle.properties at build
 
 - No persistence (bot inventory and tasks are not saved across server restarts); FakePlayer is re-initialized on task assign but inventory is lost
 - No unit tests or game tests
-- WorldScanner brute-force scans all blocks in a cube (O(n^3) for radius n)
+- WorldScanner brute-force scans all blocks in a cube (O(n^3) for radius n); sorts all results by distance before truncating to 64
+- A* Pathfinder has 2s timeout; may return partial path for very complex terrain
 - HttpClient is created per LLM call instead of being reused
 - Some thread-safety concerns in LLMService health check caching
 - Language files have encoding issues (mojibake in zh_cn.json)

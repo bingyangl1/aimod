@@ -36,9 +36,6 @@ public class BotCommand {
                 bot.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0, 0);
                 level.addFreshEntity(bot);
 
-                // 初始化 FakePlayer
-                bot.initFakePlayer();
-
                 DevLog.info("CMD_SPAWN", "player={}, bot={}, hasFakePlayer={}, pos={}",
                         player.getName().getString(), bot.getStringUUID(), bot.hasFakePlayer(), pos.toShortString());
 
@@ -102,7 +99,7 @@ public class BotCommand {
                                 nearestBot.getCurrentTask().getActionCount() + ")"
                                 : "No task assigned"
                 );
-                status.append("\nFakePlayer: ").append(nearestBot.hasFakePlayer() ? "Active" : "Not available");
+                status.append("\nFakePlayer: ").append(nearestBot.hasFakePlayer() ? "Active" : "Standby (lazy init)");
                 if (nearestBot.hasFakePlayer()) {
                     status.append(" (").append(nearestBot.getFakePlayer().getName().getString()).append(")");
                 }
@@ -136,9 +133,6 @@ public class BotCommand {
         }
         bot.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
         level.addFreshEntity(bot);
-
-        // 初始化 FakePlayer
-        bot.initFakePlayer();
 
         DevLog.info("BOT_AUTOSPAWN", "player={}, bot={}, hasFakePlayer={}, pos={}",
                 player.getName().getString(), bot.getStringUUID(), bot.hasFakePlayer(), pos.toShortString());

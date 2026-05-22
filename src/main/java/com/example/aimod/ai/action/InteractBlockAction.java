@@ -45,19 +45,16 @@ public class InteractBlockAction extends Action {
 
     @Override
     public boolean canExecute(AIBotEntity bot) {
-        // 如果已指定位置，检查该位置是否有正确的方块
         if (targetPos != null) {
             BlockState state = bot.level().getBlockState(targetPos);
             return matchesType(state);
         }
-        // 否则检查附近是否有目标方块
         return findTargetBlock(bot) != null;
     }
 
     @Override
     public void execute(AIBotEntity bot) {
         if (status == ActionStatus.PENDING) {
-            // 查找目标方块
             if (targetPos == null) {
                 targetPos = findTargetBlock(bot);
             }
@@ -73,7 +70,6 @@ public class InteractBlockAction extends Action {
         }
 
         if (status == ActionStatus.IN_PROGRESS) {
-            // 检查方块是否还存在
             BlockState blockState = bot.level().getBlockState(targetPos);
             if (!matchesType(blockState)) {
                 status = ActionStatus.FAILED;
@@ -81,42 +77,30 @@ public class InteractBlockAction extends Action {
                 return;
             }
 
-            // 移动到目标附近
             double distance = bot.distanceToSqr(
                     targetPos.getX() + 0.5,
                     targetPos.getY() + 0.5,
                     targetPos.getZ() + 0.5);
 
-            if (distance > 6.25) { // 2.5 blocks
+            if (distance > 6.25) {
                 moveToward(bot, targetPos);
                 return;
             }
 
-            // 与方块交互
             FakePlayer fakePlayer = getFakePlayer(bot);
             if (fakePlayer != null) {
-                // 面向方块
                 fakePlayer.lookAt(
                         targetPos.getX() + 0.5,
                         targetPos.getY() + 0.5,
                         targetPos.getZ() + 0.5);
-
-                // 右键交互
                 fakePlayer.interactWithBlock(targetPos, InteractionHand.MAIN_HAND);
                 fakePlayer.useItem(InteractionHand.MAIN_HAND);
-
                 DevLog.info("INTERACT_DONE", "type={}, pos={}", interactType, targetPos.toShortString());
                 status = ActionStatus.COMPLETED;
             } else {
-                // 没有 FakePlayer，尝试直接交互
-                if (!attempted) {
-                    fakePlayer.interactWithBlock(targetPos, InteractionHand.MAIN_HAND);
-                    attempted = true;
-                    DevLog.info("INTERACT_DONE_NO_FAKE", "type={}, pos={}", interactType, targetPos.toShortString());
-                    status = ActionStatus.COMPLETED;
-                } else {
-                    status = ActionStatus.FAILED;
-                }
+                // 没有 FakePlayer，标记失败
+                DevLog.warn("INTERACT_FAIL_NO_FAKE", "type={}, pos={}", interactType, targetPos.toShortString());
+                status = ActionStatus.FAILED;
             }
         }
     }
@@ -126,9 +110,6 @@ public class InteractBlockAction extends Action {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
-    /**
-     * 查找目标方块
-     */
     private BlockPos findTargetBlock(AIBotEntity bot) {
         WorldScanner scanner = new WorldScanner(bot);
         return switch (interactType) {
@@ -141,9 +122,6 @@ public class InteractBlockAction extends Action {
         };
     }
 
-    /**
-     * 检查方块是否匹配交互类型
-     */
     private boolean matchesType(BlockState state) {
         return switch (interactType) {
             case CRAFTING_TABLE -> state.is(Blocks.CRAFTING_TABLE);
@@ -155,9 +133,6 @@ public class InteractBlockAction extends Action {
         };
     }
 
-    /**
-     * 向目标移动
-     */
     private void moveToward(AIBotEntity bot, BlockPos target) {
         double dx = target.getX() + 0.5 - bot.getX();
         double dy = target.getY() - bot.getY();
