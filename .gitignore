@@ -55,3 +55,7 @@ TEMPLATE_LICENSE.txt
 # Download scripts
 download-deps.ps1
 
+
+# Downloaded tools
+gh.zip
+

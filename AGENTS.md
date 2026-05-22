@@ -1,8 +1,8 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 ## What This Is
 
-NeoForge 1.21.1 Minecraft mod (imod). Adds an AI bot entity that executes natural language commands via LLM API calls. The bot uses a FakePlayer system to simulate player actions.
+NeoForge 1.21.1 Minecraft mod (imod). Adds an AI bot entity that executes natural language commands via LLM API calls. The bot uses a FakePlayer system to simulate player actions.
 
 ## Build
 
@@ -32,14 +32,14 @@ Package: com.example.aimod
 | Fake Connection | akeplayer/FakeConnection.java | EmbeddedChannel-based connection |
 | Entity Reg | entity/ModEntities.java | Deferred entity type registration |
 | Commands | command/BotCommand.java | /ai_bot command tree |
-| AI Core | i/BotAIManager.java | Parses LLM responses into action sequences, collects world context |
-| Task | i/Task.java | Task data model with status and action list |
-| Task Feedback | i/TaskFeedback.java | Reports task status to player |
-| World Scanner | i/WorldScanner.java | Scans nearby blocks, entities, and environment |
-| Inventory Utils | i/InventoryUtils.java | Bot inventory helper methods |
-| Actions | i/action/*.java | Action base class + 14 action types |
-| LLM Service | i/llm/LLMService.java | HTTP calls to OpenAI-compatible API with world context |
-| LLM Response | i/llm/LLMResponse.java | LLM response data model |
+| AI Core | i/BotAIManager.java | Parses LLM responses into action sequences, collects world context |
+| Task | i/Task.java | Task data model with status and action list |
+| Task Feedback | i/TaskFeedback.java | Reports task status to player |
+| World Scanner | i/WorldScanner.java | Scans nearby blocks, entities, and environment |
+| Inventory Utils | i/InventoryUtils.java | Bot inventory helper methods |
+| Actions | i/action/*.java | Action base class + 14 action types |
+| LLM Service | i/llm/LLMService.java | HTTP calls to OpenAI-compatible API with world context |
+| LLM Response | i/llm/LLMResponse.java | LLM response data model |
 | Config | config/ModConfig.java | ModConfigSpec — 12 configuration options |
 | Client | client/ | AIBotRenderer, AIBotModel (player model) |
 | Logging | util/DevLog.java | Development logging utility |
@@ -65,10 +65,10 @@ Package: com.example.aimod
 
 ## Adding an Action
 
-1. Create class in i/action/ extending Action with canExecute(), execute(), isComplete()
+1. Create class in i/action/ extending Action with canExecute(), execute(), isComplete()
 2. Use getFakePlayer(bot) to access FakePlayer for player-like actions
-3. Register in BotAIManager.convertResponseToActions() — add case to the switch
-
+3. Use navigateTo(bot, targetBlockPos, speed) for pathfinding-based movement (uses vanilla PathNavigation); call stopNavigation(bot) when arrived
+4. Register in BotAIManager.convertResponseToActions() — add case to the switch
 ## World Context
 
 The LLM receives world context including:
@@ -94,8 +94,8 @@ Generated at config/aimod-common.toml on first launch. 12 configuration options:
 
 | Config | Type | Default | Description |
 |--------|------|---------|-------------|
-| piUrl | String | OpenAI endpoint | LLM API endpoint URL |
-| piKey | String | "" | API Key for LLM service |
+| piUrl | String | OpenAI endpoint | LLM API endpoint URL |
+| piKey | String | "" | API Key for LLM service |
 | modelName | String | gpt-3.5-turbo | Model name to use |
 | maxTokens | Integer | 1024 | Maximum tokens for LLM response |
 | 	emperature | Double | 0.7 | LLM temperature |
@@ -105,13 +105,13 @@ Generated at config/aimod-common.toml on first launch. 12 configuration options:
 | modelHealthCheck | Boolean | true | Run model availability check |
 | healthCheckIntervalSeconds | Integer | 300 | Health check cache duration |
 | healthCheckTimeoutSeconds | Integer | 20 | Health check read timeout |
-| llowDevCreativeItemProvisioning | Boolean | false | Dev escape hatch for give_item |
+| llowDevCreativeItemProvisioning | Boolean | false | Dev escape hatch for give_item |
 
 ModConfig.java defines the spec via ModConfigSpec.Builder. Config registered in AIMod constructor.
 
 ## Key Conventions
 
-- Mod ID: imod (defined in AIMod.MODID and gradle.properties)
+- Mod ID: imod (defined in AIMod.MODID and gradle.properties)
 - Entity registered via DeferredRegister<EntityType<?>> in ModEntities
 - Client renderer registered in ClientModEvents via @EventBusSubscriber
 - Commands use Brigadier via NeoForge.EVENT_BUS.addListener
@@ -119,12 +119,13 @@ ModConfig.java defines the spec via ModConfigSpec.Builder. Config registered in 
 eoforge.mods.toml uses ${} placeholders expanded from gradle.properties at build time
 - FakePlayer extends ServerPlayer with fake network handler
 - Actions use getFakePlayer(bot) to access FakePlayer capabilities
+- Actions use navigateTo(bot, pos, speed) / stopNavigation(bot) from Action base class for pathfinding
+- AIBotEntity.tick() auto-picks up nearby ItemEntity (3-block radius) into bot inventory
 - DevLog is used for structured development logging with tags
 
 ## Known Issues
 
-- Pathfinding is basic (uses vanilla navigation + simple movement control)
-- No persistence (bot inventory and tasks are not saved across server restarts)
+- No persistence (bot inventory and tasks are not saved across server restarts); FakePlayer is re-initialized on task assign but inventory is lost
 - No unit tests or game tests
 - WorldScanner brute-force scans all blocks in a cube (O(n^3) for radius n)
 - HttpClient is created per LLM call instead of being reused
