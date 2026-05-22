@@ -1,6 +1,6 @@
 package com.example.aimod.ai.action;
 
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,20 +17,16 @@ public class FollowAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
-        if (targetPlayer == null || !targetPlayer.isAlive()) {
-            findPlayer(bot);
-        }
+    public boolean canExecute(FakePlayer bot) {
+        if (targetPlayer == null || !targetPlayer.isAlive()) findPlayer(bot);
         return targetPlayer != null && targetPlayer.isAlive();
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             if (canExecute(bot)) {
                 status = ActionStatus.IN_PROGRESS;
-                // 设置导航到玩家位置
-                bot.getNavigation().moveTo(targetPlayer, 1.0);
             } else {
                 status = ActionStatus.FAILED;
             }
@@ -38,13 +34,17 @@ public class FollowAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         if (status == ActionStatus.IN_PROGRESS) {
-            // 检查是否到达玩家附近
             if (targetPlayer != null) {
-                double distance = bot.distanceToSqr(targetPlayer);
-                if (distance < 4.0) { // 2 blocks
-                    bot.getNavigation().stop();
+                double dx = targetPlayer.getX() - bot.getX();
+                double dz = targetPlayer.getZ() - bot.getZ();
+                double dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > 2.0) {
+                    double speed = 1.0;
+                    bot.setDeltaMovement((dx / dist) * speed * 0.05, bot.getDeltaMovement().y, (dz / dist) * speed * 0.05);
+                } else {
+                    bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);
                     status = ActionStatus.COMPLETED;
                 }
             }
@@ -52,17 +52,12 @@ public class FollowAction extends Action {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
-    private void findPlayer(AIBotEntity bot) {
+    private void findPlayer(FakePlayer bot) {
         if (bot.level() instanceof ServerLevel serverLevel) {
-            List<ServerPlayer> players = serverLevel.getPlayers(player -> 
-                player.getName().getString().equalsIgnoreCase(playerName));
-            if (!players.isEmpty()) {
-                targetPlayer = players.get(0);
-            }
+            List<ServerPlayer> players = serverLevel.getPlayers(p -> p.getName().getString().equalsIgnoreCase(playerName));
+            if (!players.isEmpty()) targetPlayer = players.get(0);
         }
     }
 
-    public String getPlayerName() {
-        return playerName;
-    }
+    public String getPlayerName() { return playerName; }
 }

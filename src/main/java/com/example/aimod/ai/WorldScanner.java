@@ -1,6 +1,6 @@
 package com.example.aimod.ai;
 
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -22,14 +22,14 @@ import java.util.stream.Collectors;
  */
 public class WorldScanner {
 
-    private final AIBotEntity bot;
+    private final FakePlayer bot;
     private final int defaultScanRadius;
 
-    public WorldScanner(AIBotEntity bot) {
+    public WorldScanner(FakePlayer bot) {
         this(bot, 32);
     }
 
-    public WorldScanner(AIBotEntity bot, int defaultScanRadius) {
+    public WorldScanner(FakePlayer bot, int defaultScanRadius) {
         this.bot = bot;
         this.defaultScanRadius = defaultScanRadius;
     }
@@ -52,7 +52,8 @@ public class WorldScanner {
     public List<BlockPos> findNearbyBlocks(Block targetBlock, int radius) {
         BlockPos botPos = bot.blockPosition();
         List<BlockPos> results = new ArrayList<>();
-        final int MAX_RESULTS = 64;
+        final int MAX_RESULTS = 16;
+        int radiusSq = radius * radius;
 
         for (BlockPos pos : BlockPos.betweenClosed(
                 botPos.offset(-radius, -radius, -radius),
@@ -207,7 +208,7 @@ public class WorldScanner {
         // 扫描实体
         List<LivingEntity> entities = bot.level().getEntitiesOfClass(LivingEntity.class,
                 bot.getBoundingBox().inflate(radius),
-                entity -> entity.isAlive() && !(entity instanceof AIBotEntity));
+                entity -> entity.isAlive() && !(entity instanceof FakePlayer));
 
         if (!entities.isEmpty()) {
             Map<String, Integer> entityCounts = new LinkedHashMap<>();

@@ -1,6 +1,6 @@
 package com.example.aimod.ai.action;
 
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 
 public class WaitAction extends Action {
     private final int totalTicks;
@@ -13,12 +13,12 @@ public class WaitAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         return true;
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             status = ActionStatus.IN_PROGRESS;
         }
@@ -31,7 +31,7 @@ public class WaitAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 }

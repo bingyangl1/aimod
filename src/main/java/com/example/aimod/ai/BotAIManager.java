@@ -17,7 +17,7 @@ import com.example.aimod.ai.action.SayAction;
 import com.example.aimod.ai.action.WaitAction;
 import com.example.aimod.ai.llm.LLMResponse;
 import com.example.aimod.ai.llm.LLMService;
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -34,12 +34,12 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
 public class BotAIManager {
-    private final AIBotEntity bot;
+    private final FakePlayer bot;
     private final LLMService llmService;
     private final TaskFeedback feedback;
     private final WorldScanner worldScanner;
 
-    public BotAIManager(AIBotEntity bot) {
+    public BotAIManager(FakePlayer bot) {
         this.bot = bot;
         this.llmService = new LLMService();
         this.feedback = new TaskFeedback(bot);

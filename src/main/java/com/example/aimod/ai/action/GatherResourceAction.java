@@ -4,7 +4,6 @@ import com.example.aimod.ai.InventoryUtils;
 import com.example.aimod.ai.WorldScanner;
 import com.example.aimod.ai.pathing.Pathfinder;
 import com.example.aimod.ai.pathing.PathResult;
-import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
@@ -63,12 +62,12 @@ public class GatherResourceAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         return true;
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             status = ActionStatus.IN_PROGRESS;
             searching = true;
@@ -130,7 +129,7 @@ public class GatherResourceAction extends Action {
         // === Try to reach the target ===
         boolean moved = false;
 
-        // Strategy 1: Adjacent target — move directly (skip A* overhead)
+        // Strategy 1: Adjacent target -?move directly (skip A* overhead)
         if (distSqr <= 25.0) { // Within 5 blocks
             BlockPos standPos = findAdjacentStandPos(bot);
             if (standPos != null) {
@@ -157,7 +156,7 @@ public class GatherResourceAction extends Action {
             }
         }
 
-        // Strategy 3: Target is elevated, no stand pos found — try to pillar up
+        // Strategy 3: Target is elevated, no stand pos found -?try to pillar up
         if (!moved) {
             if (currentTarget.getY() > bot.blockPosition().getY()) {
                 moved = tryPillarUp(bot);
@@ -180,20 +179,20 @@ public class GatherResourceAction extends Action {
                 resetTarget();
             }
         } else {
-            // No strategy worked — skip this target
+            // No strategy worked -?skip this target
             DevLog.warn("GATHER_UNREACHABLE", "type={}, target={}", resourceType, currentTarget.toShortString());
             resetTarget();
         }
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
     // ========== Target Breaking ==========
 
-    private void breakTarget(AIBotEntity bot, BlockState blockState) {
+    private void breakTarget(FakePlayer bot, BlockState blockState) {
         if (breakProgress == 0) {
             float hardness = blockState.getDestroySpeed(bot.level(), currentTarget);
             breakTime = Math.max(20, (int) (hardness * 20));
@@ -201,7 +200,7 @@ public class GatherResourceAction extends Action {
                     resourceType, currentTarget.toShortString(), breakTime);
         }
 
-        FakePlayer fakePlayer = getFakePlayer(bot);
+        FakePlayer fakePlayer = bot;
         if (fakePlayer != null) {
             fakePlayer.lookAt(
                     currentTarget.getX() + 0.5,
@@ -228,7 +227,7 @@ public class GatherResourceAction extends Action {
      * - Not in water/lava
      * Returns the closest valid position, or null.
      */
-    private BlockPos findBestStandPos(AIBotEntity bot) {
+    private BlockPos findBestStandPos(FakePlayer bot) {
         if (!(bot.level() instanceof ServerLevel level)) return null;
 
         BlockPos best = null;
@@ -273,7 +272,7 @@ public class GatherResourceAction extends Action {
     /**
      * Find an adjacent stand position (within 2 blocks, for nearby targets).
      */
-    private BlockPos findAdjacentStandPos(AIBotEntity bot) {
+    private BlockPos findAdjacentStandPos(FakePlayer bot) {
         if (!(bot.level() instanceof ServerLevel level)) return null;
 
         BlockPos best = null;
@@ -333,7 +332,7 @@ public class GatherResourceAction extends Action {
 
     // ========== A* Navigation ==========
 
-    private boolean navigateWithAStar(AIBotEntity bot, BlockPos goal) {
+    private boolean navigateWithAStar(FakePlayer bot, BlockPos goal) {
         if (!(bot.level() instanceof ServerLevel serverLevel)) return false;
 
         BlockPos botPos = bot.blockPosition();
@@ -345,7 +344,7 @@ public class GatherResourceAction extends Action {
         if (result.isFound() && result.getLength() >= 2) {
             // Navigate to second waypoint (first is current position)
             BlockPos nextWp = result.getPath().get(1);
-            bot.getNavigation().moveTo(nextWp.getX() + 0.5, nextWp.getY(), nextWp.getZ() + 0.5, 1.0);
+            navigateTo(bot, nextWp, 1.0);
             DevLog.info("GATHER_ASTAR_OK", "length={}, next={}", result.getLength(), nextWp.toShortString());
             return true;
         }
@@ -360,7 +359,7 @@ public class GatherResourceAction extends Action {
      * Try to place a block below the bot to reach an elevated target.
      * Finds a throwaway block in inventory and places it below the bot.
      */
-    private boolean tryPillarUp(AIBotEntity bot) {
+    private boolean tryPillarUp(FakePlayer bot) {
         if (placeBlockCooldown > 0) {
             placeBlockCooldown--;
             return true; // Wait, don't skip
@@ -404,7 +403,7 @@ public class GatherResourceAction extends Action {
     /**
      * Find a throwaway block in the bot's inventory (dirt, cobblestone, etc.)
      */
-    private ItemStack findThrowawayBlock(AIBotEntity bot) {
+    private ItemStack findThrowawayBlock(FakePlayer bot) {
         var inventory = bot.getInventory();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.getItem(i);
@@ -428,7 +427,7 @@ public class GatherResourceAction extends Action {
 
     // ========== Water Handling ==========
 
-    private boolean isInWater(AIBotEntity bot) {
+    private boolean isInWater(FakePlayer bot) {
         return bot.level().getFluidState(bot.blockPosition()).isEmpty() == false
                 || bot.level().getFluidState(bot.blockPosition().below()).isEmpty() == false;
     }
@@ -436,7 +435,7 @@ public class GatherResourceAction extends Action {
     /**
      * Try to move out of water current by jumping or moving to a dry adjacent block.
      */
-    private void handleWaterEscape(AIBotEntity bot) {
+    private void handleWaterEscape(FakePlayer bot) {
         // Try jumping out of water
         if (bot.onGround() || bot.isInWater()) {
             bot.jumpFromGround();
@@ -451,7 +450,7 @@ public class GatherResourceAction extends Action {
             BlockState state = bot.level().getBlockState(candidate);
             if (fluid.isEmpty() && state.isAir()) {
                 BlockPos below = candidate.below();
-                if (bot.level().getBlockState(below).isSolidRender()) {
+                if (bot.level().getBlockState(below).isSolidRender(bot.level(), below)) {
                     double dist = bot.distanceToSqr(
                             candidate.getX() + 0.5, candidate.getY(), candidate.getZ() + 0.5);
                     if (dist < bestDist) {
@@ -476,7 +475,7 @@ public class GatherResourceAction extends Action {
         breakProgress = 0;
     }
 
-    private BlockPos findResource(AIBotEntity bot) {
+    private BlockPos findResource(FakePlayer bot) {
         WorldScanner scanner = new WorldScanner(bot);
         List<BlockPos> candidates = new ArrayList<>();
 

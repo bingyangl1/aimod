@@ -1,7 +1,6 @@
 package com.example.aimod.ai.action;
 
 import com.example.aimod.ai.InventoryUtils;
-import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -32,7 +31,7 @@ public class CraftAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         // 尝试解析配方
         resolvedRecipe = findRecipe(bot);
         if (resolvedRecipe == null) {
@@ -52,7 +51,7 @@ public class CraftAction extends Action {
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             if (resolvedRecipe == null) {
                 resolvedRecipe = findRecipe(bot);
@@ -108,14 +107,14 @@ public class CraftAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
     /**
      * 查找配方
      */
-    private RecipeHolder<?> findRecipe(AIBotEntity bot) {
+    private RecipeHolder<?> findRecipe(FakePlayer bot) {
         Level level = bot.level();
         net.minecraft.world.item.Item resultItem = resolveItem(itemId);
         if (resultItem == Items.AIR) {

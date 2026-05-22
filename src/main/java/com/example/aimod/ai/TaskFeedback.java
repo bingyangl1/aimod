@@ -1,6 +1,6 @@
 package com.example.aimod.ai;
 
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -14,13 +14,13 @@ import java.util.UUID;
  */
 public class TaskFeedback {
 
-    private final AIBotEntity bot;
+    private final FakePlayer bot;
     @Nullable
     private UUID ownerUUID;
     @Nullable
     private String ownerName;
 
-    public TaskFeedback(AIBotEntity bot) {
+    public TaskFeedback(FakePlayer bot) {
         this.bot = bot;
     }
 

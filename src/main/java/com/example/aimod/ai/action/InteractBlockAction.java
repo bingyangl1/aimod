@@ -1,7 +1,6 @@
 package com.example.aimod.ai.action;
 
 import com.example.aimod.ai.WorldScanner;
-import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
@@ -44,7 +43,7 @@ public class InteractBlockAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         if (targetPos != null) {
             BlockState state = bot.level().getBlockState(targetPos);
             return matchesType(state);
@@ -53,7 +52,7 @@ public class InteractBlockAction extends Action {
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             if (targetPos == null) {
                 targetPos = findTargetBlock(bot);
@@ -87,7 +86,7 @@ public class InteractBlockAction extends Action {
                 return;
             }
 
-            FakePlayer fakePlayer = getFakePlayer(bot);
+            FakePlayer fakePlayer = bot;
             if (fakePlayer != null) {
                 fakePlayer.lookAt(
                         targetPos.getX() + 0.5,
@@ -106,11 +105,11 @@ public class InteractBlockAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
-    private BlockPos findTargetBlock(AIBotEntity bot) {
+    private BlockPos findTargetBlock(FakePlayer bot) {
         WorldScanner scanner = new WorldScanner(bot);
         return switch (interactType) {
             case CRAFTING_TABLE -> scanner.findNearestCraftingTable(searchRadius);
@@ -133,7 +132,7 @@ public class InteractBlockAction extends Action {
         };
     }
 
-    private void moveToward(AIBotEntity bot, BlockPos target) {
+    private void moveToward(FakePlayer bot, BlockPos target) {
         double dx = target.getX() + 0.5 - bot.getX();
         double dy = target.getY() - bot.getY();
         double dz = target.getZ() + 0.5 - bot.getZ();

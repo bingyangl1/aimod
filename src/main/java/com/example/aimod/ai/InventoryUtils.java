@@ -1,9 +1,9 @@
 package com.example.aimod.ai;
 
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -11,10 +11,10 @@ public final class InventoryUtils {
     private InventoryUtils() {
     }
 
-    public static int countItem(AIBotEntity bot, Item item) {
-        SimpleContainer inventory = bot.getInventory();
+    public static int countItem(FakePlayer bot, Item item) {
+        Inventory inventory = bot.getInventory();
         int total = 0;
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
+        for (int i = 0; i < 36; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == item) {
                 total += stack.getCount();
@@ -23,7 +23,7 @@ public final class InventoryUtils {
         return total;
     }
 
-    public static Map<Item, Integer> missingItems(AIBotEntity bot, Map<Item, Integer> requiredItems) {
+    public static Map<Item, Integer> missingItems(FakePlayer bot, Map<Item, Integer> requiredItems) {
         Map<Item, Integer> missing = new LinkedHashMap<>();
         for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
             int available = countItem(bot, entry.getKey());
@@ -34,15 +34,15 @@ public final class InventoryUtils {
         return missing;
     }
 
-    public static boolean hasItems(AIBotEntity bot, Map<Item, Integer> requiredItems) {
+    public static boolean hasItems(FakePlayer bot, Map<Item, Integer> requiredItems) {
         return missingItems(bot, requiredItems).isEmpty();
     }
 
-    public static void consumeItems(AIBotEntity bot, Map<Item, Integer> requiredItems) {
-        SimpleContainer inventory = bot.getInventory();
+    public static void consumeItems(FakePlayer bot, Map<Item, Integer> requiredItems) {
+        Inventory inventory = bot.getInventory();
         for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
             int remaining = entry.getValue();
-            for (int i = 0; i < inventory.getContainerSize() && remaining > 0; i++) {
+            for (int i = 0; i < 36 && remaining > 0; i++) {
                 ItemStack stack = inventory.getItem(i);
                 if (!stack.isEmpty() && stack.getItem() == entry.getKey()) {
                     int used = Math.min(remaining, stack.getCount());
@@ -56,11 +56,11 @@ public final class InventoryUtils {
         }
     }
 
-    public static ItemStack removeItem(AIBotEntity bot, Item item, int count) {
-        SimpleContainer inventory = bot.getInventory();
+    public static ItemStack removeItem(FakePlayer bot, Item item, int count) {
+        Inventory inventory = bot.getInventory();
         ItemStack result = new ItemStack(item, 0);
         int remaining = count;
-        for (int i = 0; i < inventory.getContainerSize() && remaining > 0; i++) {
+        for (int i = 0; i < 36 && remaining > 0; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == item) {
                 int taken = Math.min(remaining, stack.getCount());
@@ -79,13 +79,13 @@ public final class InventoryUtils {
         return result;
     }
 
-    public static boolean addItem(AIBotEntity bot, ItemStack stack) {
+    public static boolean addItem(FakePlayer bot, ItemStack stack) {
         if (stack.isEmpty()) {
             return true;
         }
-        SimpleContainer inventory = bot.getInventory();
+        Inventory inventory = bot.getInventory();
         ItemStack remaining = stack.copy();
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
+        for (int i = 0; i < 36; i++) {
             ItemStack existing = inventory.getItem(i);
             if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, remaining)) {
                 int transferable = Math.min(remaining.getCount(), existing.getMaxStackSize() - existing.getCount());
@@ -99,7 +99,7 @@ public final class InventoryUtils {
             }
         }
 
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
+        for (int i = 0; i < 36; i++) {
             if (inventory.getItem(i).isEmpty()) {
                 inventory.setItem(i, remaining.copy());
                 return true;

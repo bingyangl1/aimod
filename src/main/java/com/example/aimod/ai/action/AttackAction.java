@@ -1,6 +1,5 @@
 package com.example.aimod.ai.action;
 
-import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.world.entity.Entity;
@@ -28,7 +27,7 @@ public class AttackAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         // 查找附近的目标实体
         if (targetEntity == null || !targetEntity.isAlive()) {
             findTarget(bot);
@@ -37,7 +36,7 @@ public class AttackAction extends Action {
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             if (canExecute(bot)) {
                 status = ActionStatus.IN_PROGRESS;
@@ -74,7 +73,7 @@ public class AttackAction extends Action {
             double distance = bot.distanceTo(targetEntity);
 
             // 使用 FakePlayer 攻击
-            FakePlayer fakePlayer = getFakePlayer(bot);
+            FakePlayer fakePlayer = bot;
             if (fakePlayer != null) {
                 // 面向目标
                 fakePlayer.lookAtEntity(targetEntity);
@@ -94,7 +93,7 @@ public class AttackAction extends Action {
                         targetEntity.getName().getString(), attackCount, String.format("%.1f", distance));
             } else {
                 // 没有 FakePlayer，使用原始攻击
-                bot.getLookControl().setLookAt(targetEntity);
+                bot.lookAt(targetEntity.getX(), targetEntity.getY() + targetEntity.getBbHeight() / 2, targetEntity.getZ());
 
                 if (distance > ATTACK_RANGE) {
                     moveToward(bot, targetEntity);
@@ -112,11 +111,11 @@ public class AttackAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
-    private void findTarget(AIBotEntity bot) {
+    private void findTarget(FakePlayer bot) {
         // 根据类型查找附近实体
         List<Entity> entities = bot.level().getEntities(bot, bot.getBoundingBox().inflate(MOVE_RANGE), 
                 entity -> entity instanceof LivingEntity && entity.isAlive());
@@ -145,7 +144,7 @@ public class AttackAction extends Action {
     /**
      * 移动到目标附近
      */
-    private void moveToward(AIBotEntity bot, LivingEntity target) {
+    private void moveToward(FakePlayer bot, LivingEntity target) {
         double dx = target.getX() - bot.getX();
         double dz = target.getZ() - bot.getZ();
         double distance = Math.sqrt(dx * dx + dz * dz);

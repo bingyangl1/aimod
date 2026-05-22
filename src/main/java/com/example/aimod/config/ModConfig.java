@@ -13,7 +13,7 @@ public class ModConfig {
                 "- Ollama: http://localhost:11434/api/generate",
                 "- LM Studio: http://localhost:1234/v1/chat/completions"
             )
-            .define("apiUrl", "https://api.openai.com/v1/chat/completions");
+            .define("apiUrl", "https://api.deepseek.com/chat/completions");
 
     public static final ModConfigSpec.ConfigValue<String> API_KEY = BUILDER
             .comment(
@@ -30,11 +30,11 @@ public class ModConfig {
                 "Claude: claude-3-sonnet-20240229",
                 "Ollama: llama3, qwen2, mistral"
             )
-            .define("modelName", "gpt-3.5-turbo");
+            .define("modelName", "deepseek-v4-pro");
 
     public static final ModConfigSpec.ConfigValue<Integer> MAX_TOKENS = BUILDER
             .comment("Maximum tokens for LLM response (higher = more detailed actions)")
-            .defineInRange("maxTokens", 1024, 256, 8192);
+            .defineInRange("maxTokens", 1024, 256, 1280000);
 
     public static final ModConfigSpec.ConfigValue<Double> TEMPERATURE = BUILDER
             .comment("LLM temperature (0.0 = deterministic, 1.0 = creative)")

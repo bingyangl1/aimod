@@ -1,6 +1,5 @@
 package com.example.aimod.ai.action;
 
-import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
@@ -12,7 +11,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.SimpleContainer;
+
 
 public class PlaceBlockAction extends Action {
     private final BlockPos targetPos;
@@ -27,7 +26,7 @@ public class PlaceBlockAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         BlockState blockState = bot.level().getBlockState(targetPos);
         if (!blockState.isAir()) {
             return false;
@@ -36,7 +35,7 @@ public class PlaceBlockAction extends Action {
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             status = ActionStatus.IN_PROGRESS;
             attempted = false;
@@ -51,7 +50,7 @@ public class PlaceBlockAction extends Action {
             }
 
             // 使用 FakePlayer 放置方块
-            FakePlayer fakePlayer = getFakePlayer(bot);
+            FakePlayer fakePlayer = bot;
             if (fakePlayer != null) {
                 // 面向放置位置
                 fakePlayer.lookAt(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
@@ -110,17 +109,17 @@ public class PlaceBlockAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
-    private boolean hasBlockItem(AIBotEntity bot) {
+    private boolean hasBlockItem(FakePlayer bot) {
         return !findBlockItem(bot).isEmpty();
     }
 
-    private ItemStack findBlockItem(AIBotEntity bot) {
-        SimpleContainer inventory = bot.getInventory();
-        for (int i = 0; i < inventory.getContainerSize(); i++) {
+    private ItemStack findBlockItem(FakePlayer bot) {
+        var inventory = bot.getInventory();
+        for (int i = 0; i < 36; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == blockItem) {
                 return stack;
@@ -132,7 +131,7 @@ public class PlaceBlockAction extends Action {
     /**
      * 找到可放置方块的相邻面
      */
-    private Direction findPlaceableFace(AIBotEntity bot, BlockPos pos) {
+    private Direction findPlaceableFace(FakePlayer bot, BlockPos pos) {
         for (Direction face : Direction.values()) {
             BlockPos adjacent = pos.relative(face);
             BlockState adjacentState = bot.level().getBlockState(adjacent);

@@ -1,10 +1,7 @@
 package com.example.aimod.ai.action;
 
-import com.example.aimod.entity.AIBotEntity;
-import net.minecraft.core.BlockPos;
 import com.example.aimod.fakeplayer.FakePlayer;
-
-import javax.annotation.Nullable;
+import net.minecraft.core.BlockPos;
 
 public abstract class Action {
     protected ActionStatus status;
@@ -15,54 +12,32 @@ public abstract class Action {
         this.status = ActionStatus.PENDING;
     }
 
-    public abstract boolean canExecute(AIBotEntity bot);
-    public abstract void execute(AIBotEntity bot);
-    public abstract boolean isComplete(AIBotEntity bot);
+    public abstract boolean canExecute(FakePlayer bot);
+    public abstract void execute(FakePlayer bot);
+    public abstract boolean isComplete(FakePlayer bot);
 
-    public ActionStatus getStatus() {
-        return status;
-    }
+    public ActionStatus getStatus() { return status; }
+    public void setStatus(ActionStatus status) { this.status = status; }
+    public String getDescription() { return description; }
 
-    public void setStatus(ActionStatus status) {
-        this.status = status;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    /**
-     * 获取假人玩家（如果可用）
-     */
-    @Nullable
-    protected FakePlayer getFakePlayer(AIBotEntity bot) {
-        return bot.getFakePlayer();
-    }
-
-    /**
-     * 检查假人是否可用
-     */
-    protected boolean hasFakePlayer(AIBotEntity bot) {
-        return bot.hasFakePlayer();
-    }
-
-    protected double navigateTo(AIBotEntity bot, net.minecraft.core.BlockPos target, double speed) {
+    protected double navigateTo(FakePlayer bot, BlockPos target, double speed) {
         double dx = target.getX() + 0.5 - bot.getX();
         double dy = target.getY() - bot.getY();
         double dz = target.getZ() + 0.5 - bot.getZ();
         double distSqr = dx * dx + dy * dy + dz * dz;
-        bot.getNavigation().moveTo(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, speed);
+        double dist = Math.sqrt(distSqr);
+        if (dist > 0.1) {
+            double moveX = (dx / dist) * speed * 0.05;
+            double moveZ = (dz / dist) * speed * 0.05;
+            bot.setDeltaMovement(moveX, bot.getDeltaMovement().y, moveZ);
+            if (dy > 0.5 && dy <= 1.5 && bot.onGround()) { bot.jumpFromGround(); }
+        }
         return distSqr;
     }
 
-    protected void stopNavigation(AIBotEntity bot) {
-        bot.getNavigation().stop();
+    protected void stopNavigation(FakePlayer bot) {
+        bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);
     }
 
-    public enum ActionStatus {
-        PENDING,
-        IN_PROGRESS,
-        COMPLETED,
-        FAILED
-    }
+    public enum ActionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED }
 }

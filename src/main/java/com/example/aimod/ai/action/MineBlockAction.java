@@ -3,7 +3,6 @@ package com.example.aimod.ai.action;
 import com.example.aimod.ai.WorldScanner;
 import com.example.aimod.ai.pathing.Pathfinder;
 import com.example.aimod.ai.pathing.PathResult;
-import com.example.aimod.entity.AIBotEntity;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
@@ -52,12 +51,12 @@ public class MineBlockAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         return true;
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             status = ActionStatus.IN_PROGRESS;
             searching = true;
@@ -133,7 +132,7 @@ public class MineBlockAction extends Action {
                         blockId, currentTarget.toShortString(), breakTime);
             }
 
-            FakePlayer fakePlayer = getFakePlayer(bot);
+            FakePlayer fakePlayer = bot;
             if (fakePlayer != null) {
                 fakePlayer.lookAt(
                         currentTarget.getX() + 0.5,
@@ -156,11 +155,11 @@ public class MineBlockAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
-    private void computePath(AIBotEntity bot) {
+    private void computePath(FakePlayer bot) {
         if (!(bot.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
 
         BlockPos botPos = bot.blockPosition();
@@ -181,7 +180,7 @@ public class MineBlockAction extends Action {
         }
     }
 
-    private double followPath(AIBotEntity bot) {
+    private double followPath(FakePlayer bot) {
         double dx = currentTarget.getX() + 0.5 - bot.getX();
         double dy = currentTarget.getY() - bot.getY();
         double dz = currentTarget.getZ() + 0.5 - bot.getZ();
@@ -200,7 +199,7 @@ public class MineBlockAction extends Action {
             }
 
             BlockPos nextWp = currentPath.get(pathIndex);
-            bot.getNavigation().moveTo(nextWp.getX() + 0.5, nextWp.getY(), nextWp.getZ() + 0.5, 1.0);
+            navigateTo(bot, nextWp, 1.0);
             return distSqr;
         }
 

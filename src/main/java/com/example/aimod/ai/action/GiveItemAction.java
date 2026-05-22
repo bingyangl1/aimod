@@ -2,7 +2,7 @@ package com.example.aimod.ai.action;
 
 import com.example.aimod.ai.InventoryUtils;
 import com.example.aimod.config.ModConfig;
-import com.example.aimod.entity.AIBotEntity;
+import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -26,13 +26,13 @@ public class GiveItemAction extends Action {
     }
 
     @Override
-    public boolean canExecute(AIBotEntity bot) {
+    public boolean canExecute(FakePlayer bot) {
         Item item = resolveItem();
         return bot.level() instanceof ServerLevel && item != Items.AIR;
     }
 
     @Override
-    public void execute(AIBotEntity bot) {
+    public void execute(FakePlayer bot) {
         if (status != ActionStatus.PENDING) {
             return;
         }
@@ -90,7 +90,7 @@ public class GiveItemAction extends Action {
     }
 
     @Override
-    public boolean isComplete(AIBotEntity bot) {
+    public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 
@@ -114,7 +114,7 @@ public class GiveItemAction extends Action {
         level.addFreshEntity(itemEntity);
     }
 
-    private void dropAtBot(ServerLevel level, AIBotEntity bot, ItemStack stack) {
+    private void dropAtBot(ServerLevel level, FakePlayer bot, ItemStack stack) {
         ItemEntity itemEntity = new ItemEntity(level, bot.getX(), bot.getY() + 0.5D, bot.getZ(), stack);
         level.addFreshEntity(itemEntity);
     }

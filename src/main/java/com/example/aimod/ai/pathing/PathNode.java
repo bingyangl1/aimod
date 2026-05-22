@@ -13,6 +13,7 @@ public class PathNode {
     public double combinedCost;    // f = g + h
     public PathNode previous;
     public boolean inOpenSet;
+    public int heapPosition = -1; // Position in binary heap
 
     public PathNode(int x, int y, int z) {
         this.x = x;
