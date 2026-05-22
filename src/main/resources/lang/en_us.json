@@ -1,0 +1,9 @@
+{
+  "entity.aimod.ai_bot": "AI Bot",
+  "commands.ai_bot.spawn.success": "AI Bot spawned at %s",
+  "commands.ai_bot.spawn.failure": "Failed to spawn AI Bot",
+  "commands.ai_bot.task.success": "Task assigned: %s",
+  "commands.ai_bot.task.failure": "No AI Bot found nearby. Use /ai_bot spawn first.",
+  "commands.ai_bot.status.success": "Bot status: %s",
+  "commands.ai_bot.status.failure": "No AI Bot found nearby."
+}

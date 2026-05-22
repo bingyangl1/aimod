@@ -1,0 +1,9 @@
+{
+  "entity.aimod.ai_bot": "AI机器人",
+  "commands.ai_bot.spawn.success": "AI机器人已生成于 %s",
+  "commands.ai_bot.spawn.failure": "生成AI机器人失败",
+  "commands.ai_bot.task.success": "任务已分配: %s",
+  "commands.ai_bot.task.failure": "附近没有找到AI机器人。请先使用 /ai_bot spawn 生成机器人。",
+  "commands.ai_bot.status.success": "机器人状态: %s",
+  "commands.ai_bot.status.failure": "附近没有找到AI机器人。"
+}

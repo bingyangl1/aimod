@@ -1,0 +1,57 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+build
+.gradle
+
+# other
+eclipse
+run
+runs
+run-data
+
+repo
+# Build logs
+build_*.txt
+build_info.txt
+build_output.txt
+download_output.txt
+
+# Local dependency infrastructure
+local-repo/
+maven-cache/
+maven-proxy.ps1
+init-proxy.gradle
+
+# Minecraft version metadata
+mc_1211.json
+mc_manifest.json
+
+# Temp artifacts
+temp_installertools_*.html
+
+# Test artifacts
+TestSSL*.class
+TestSSL.java
+
+# Project docs
+CODE_REVIEW.md
+PROGRESS.md
+TEMPLATE_LICENSE.txt
+
+# Download scripts
+download-deps.ps1
+
