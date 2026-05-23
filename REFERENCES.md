@@ -1,258 +1,211 @@
 # AI Mod 参考项目文档
 
 > 本文档记录项目中所有参考的开源项目及其具体参考部分，便于溯源和维护。
+> 详细的对比分析请参阅 ANALYSIS.md。
 
 ---
 
 ## 参考项目总览
 
-| 参考项目 | 仓库地址 | 参考内容 | 对应文件 |
-|---------|---------|---------|---------|
-| SiliconeDolls | Anvil-Dev/SiliconeDolls | FakePlayer 创建/注册模式 | FakePlayer.java |
-| Baritone | cabaletta/baritone (1.21.1) | A* 寻路、Goal 系统、命令模式 | ai/pathing/*.java, BotCommand.java |
-| AI-Player | shasankp000/AI-Player | GameProfile 持久化 | BotProfileStore.java |
-| EMI | EmilyPloszaj/emi | 合成配方索引策略 | RecipeIndex.java |
-| Meteor Client | MeteorDevelopment/meteor-client | 背包工具、方块交互模式 | InventoryUtils.java |
-| RollingGate | Anvil-Dev/RollingGate | 配置文件风格 | ModConfig.java |
+| 参考项目 | 仓库地址 | 本地路径 | 参考内容 | 对应文件 |
+|---------|---------|---------|---------|---------|
+| PlayerEngine | Goodbird-git/PlayerEngine | PlayerEngine-main/ | 服务端 Baritone（Automatone），实体抽象接口 | 待吸收 |
+| Player2NPC | Goodbird-git/Player2NPC | Player2NPC-master/ | NPC 行为系统、AltoClef 任务链 | 待吸收 |
+| Baritone | cabaletta/baritone (1.21.1) | baritone-ref/ | A* 寻路、Movement 系统、世界缓存 | ai/pathing/*.java |
+| SiliconeDolls | Anvil-Dev/SiliconeDolls | 无 | FakePlayer 创建/注册模式 | fakeplayer/FakePlayer.java |
+| AI-Player | shasankp000/AI-Player | 无 | GameProfile 持久化 | fakeplayer/BotProfileStore.java |
+| EMI | EmilyPloszaj/emi | 无 | 合成配方索引策略 | ai/RecipeIndex.java |
+| Meteor Client | MeteorDevelopment/meteor-client | 无 | 背包工具、方块交互 | ai/InventoryUtils.java |
+| RollingGate | Anvil-Dev/RollingGate | 无 | 配置文件风格 | config/ModConfig.java |
 
 ---
 
 ## 详细参考说明
 
-### 1. SiliconeDolls (Anvil-Dev/SiliconeDolls)
+### 1. PlayerEngine（Automatone）
 
-**仓库地址**：https://github.com/Anvil-Dev/SiliconeDolls
+**仓库**：https://github.com/Goodbird-git/PlayerEngine/tree/main
+**本地路径**：PlayerEngine-main/
+**类型**：Fabric 模组，Baritone 的服务端分叉
+
+**核心创新**：将 Baritone 从客户端 LocalPlayer 扩展为服务端任意 LivingEntity。
+
+**关键文件**：
+- src/main/java/baritone/PlayerEngine.java — 主类，线程池初始化
+- src/main/java/baritone/api/entity/IInventoryProvider.java — 背包接口
+- src/main/java/baritone/api/entity/LivingEntityInventory.java — 实体背包（完整复制 Player.Inventory）
+- src/main/java/baritone/api/entity/LivingEntityInteractionManager.java — 实体交互管理（挖掘/放置/使用）
+- src/main/java/baritone/utils/player/EntityContext.java — 实体上下文（替代 PlayerContext）
+- src/main/java/baritone/utils/player/EntityInteractionController.java — 实体交互控制器
+
+**可吸收内容**：
+- 接口抽象设计（IInventoryProvider、IInteractionManagerProvider）
+- LivingEntityInteractionManager 方块挖掘逻辑
+- 线程池配置（4 核心 + 无限制最大）
+- EntityContext 实体上下文设计
+
+**我们的现状**：使用 FakePlayer(ServerPlayer)，不需要 LivingEntityInventory，但可以吸收接口抽象思想。
+
+---
+
+### 2. Player2NPC
+
+**仓库**：https://github.com/Goodbird-git/Player2NPC/tree/master
+**本地路径**：Player2NPC-master/
+**类型**：Fabric 模组，基于 Automatone + AltoClef
+
+**核心设计**：将 LivingEntity 包装为可对话的 AI NPC。
+
+**关键文件**：
+- src/main/java/com/goodbird/player2npc/companion/AutomatoneEntity.java — NPC 实体（LivingEntity + 接口）
+- src/main/java/com/goodbird/player2npc/companion/CompanionManager.java — NPC 生命周期管理
+- src/main/java/com/goodbird/player2npc/client/util/SkinManager.java — 皮肤管理
+- src/main/java/com/goodbird/player2npc/client/gui/CharacterSelectionScreen.java — 角色选择 GUI
+
+**AltoClef 任务链系统**（位于 PlayerEngine-main/src/autoclef/）：
+- AltoClefController.java — AI 控制器（TaskRunner + TrackerManager + Chain）
+- chains/UserTaskChain.java — 用户任务链
+- chains/FoodChain.java — 自动进食链
+- chains/MobDefenseChain.java — 怪物防御链
+- chains/MLGBucketFallChain.java — 水桶防摔链
+- chains/UnstuckChain.java — 卡住自救链
+- chains/PreEquipItemChain.java — 预装备链
+- chains/WorldSurvivalChain.java — 世界生存链
+
+**可吸收内容**：
+- BehaviorChain 行为链系统（优先级执行）
+- FoodChain 自动进食
+- MobDefenseChain 怪物防御
+- MLGBucketFallChain 水桶防摔
+- UnstuckChain 卡住自救
+- CompanionManager NPC 生命周期管理
+- SkinManager 皮肤系统
+- GUI 系统
+
+**我们的现状**：无行为链系统，任务顺序执行。需要引入优先级机制。
+
+---
+
+### 3. Baritone
+
+**仓库**：https://github.com/cabaletta/baritone/tree/1.21.1
+**本地路径**：baritone-ref/
+**类型**：Forge/NeoForge 模组，自动化路径规划
+
+**关键文件**：
+- src/main/java/baritone/pathing/movement/Movement.java — Movement 基类
+- src/main/java/baritone/pathing/movement/movements/MovementTraverse.java — 平地行走 + 搭桥
+- src/main/java/baritone/pathing/movement/movements/MovementPillar.java — 搭柱向上
+- src/main/java/baritone/pathing/movement/movements/MovementFall.java — 跌落
+- src/main/java/baritone/pathing/movement/CalculationContext.java — 代价快照
+- src/main/java/baritone/behavior/PathingBehavior.java — 异步寻路
+- src/main/java/baritone/cache/CachedWorld.java — 世界缓存
+- src/main/java/baritone/utils/ToolSet.java — 工具选择
+- src/main/java/baritone/utils/InputOverrideHandler.java — 输入覆盖
+- src/main/java/baritone/utils/PlayerMovementInput.java — 移动输入模拟
+
+**可吸收内容**：
+- Movement 系统（8 种 Movement 类型）
+- PathingBehavior 异步寻路（双缓冲）
+- CalculationContext 代价快照
+- CachedWorld 世界缓存
+- ToolSet 工具选择（附魔、药水）
+- InputOverrideHandler 输入模拟
+
+**我们的现状**：已参考 A* 寻路和 Goal 系统，但缺少 Movement 系统和异步寻路。
+
+---
+
+### 4. SiliconeDolls
+
+**仓库**：https://github.com/Anvil-Dev/SiliconeDolls
 
 **参考内容**：FakePlayer 创建和注册模式
 
-**具体参考**：
-- FakePlayer 继承 ServerPlayer 的方式
-- 通过 placeNewPlayer() 注册到服务器玩家列表
-- FakeClientConnection 使用 EmbeddedChannel 模拟网络连接
-- FakePlayerNetHandler 继承 ServerGamePacketListenerImpl 丢弃数据包
-- ClientInformation.createDefault() 用于构造 FakePlayer
-- setInvulnerable(true) 使假人无敌
-- 死亡后自动重生机制
+**已吸收**：
+- FakePlayer 继承 ServerPlayer
+- 通过 placeNewPlayer() 注册到服务器
+- FakeClientConnection 使用 EmbeddedChannel
+- FakePlayerNetHandler 丢弃数据包
 
 **对应文件**：
-- akeplayer/FakePlayer.java — createAndRegister() 方法
-- akeplayer/FakeClientConnection.java — EmbeddedChannel 连接
-- akeplayer/FakePlayerNetHandler.java — 网络处理器
-
-**关键代码片段**（FakePlayer.createAndRegister）：
-`java
-// 参考 SiliconeDolls 的注册模式
-server.getPlayerList().placeNewPlayer(
-    new FakeClientConnection(PacketFlow.SERVERBOUND),
-    instance,
-    new CommonListenerCookie(profile, 0, instance.clientInformation(), false)
-);
-`
+- akeplayer/FakePlayer.java
+- akeplayer/FakeClientConnection.java
+- akeplayer/FakePlayerNetHandler.java
 
 ---
 
-### 2. Baritone (cabaletta/baritone)
+### 5. AI-Player
 
-**仓库地址**：https://github.com/cabaletta/baritone/tree/1.21.1
+**仓库**：https://github.com/shasankp000/AI-Player
 
-**参考内容**：A* 寻路算法、Goal 系统、命令模式、移动代价计算
+**参考内容**：GameProfile 持久化
 
-**具体参考**：
-
-#### 2.1 A* 寻路算法
-- Pathfinder 类参考 Baritone 的 AStarPathFinder
-- HashMap 存储 PathNode，O(1) 节点查找
-- PriorityQueue（二叉堆）作为开放列表
-- 超时搜索机制（默认 2 秒），返回最佳路径
-- 欧几里得距离启发函数
-- 16 种移动类型（4 基本 + 4 对角 + 4 上升 + 4 下降）
+**已吸收**：
+- Bot name -> UUID 映射持久化到 JSON
+- 重启后使用相同 UUID
 
 **对应文件**：
-- i/pathing/Pathfinder.java — A* 核心算法
-- i/pathing/PathNode.java — 路径节点（含 hash 和 heuristic）
-- i/pathing/BinaryHeapOpenSet.java — 二叉堆开放列表
-
-#### 2.2 Goal 系统
-- Goal 基类抽象（isReached、heuristic）
-- GoalBlock — 到达指定方块坐标
-- GoalXZ — 到达 XZ 平面
-- GoalYLevel — 到达指定 Y 高度
-- GoalComposite — 组合多个目标
-
-**对应文件**：
-- i/pathing/goals/Goal.java
-- i/pathing/goals/GoalBlock.java
-- i/pathing/goals/GoalXZ.java
-- i/pathing/goals/GoalYLevel.java
-- i/pathing/goals/GoalComposite.java
-
-#### 2.3 移动代价计算
-- MoveCost 参考 Baritone 的 MovementHelper
-- 多格跌落（1-4 格）+ 跌落伤害代价
-- 对角穿墙检测（corner-cutting）
-- 半砖/楼梯可行走（canWalkOn）
-- 岩浆/虚空标记为 VOID_COST
-
-**对应文件**：
-- i/pathing/MoveCost.java — 移动代价常量和计算
-- i/pathing/MovementHelper.java — 移动辅助（方块可通行性）
-
-#### 2.4 工具选择
-- ToolSet 参考 Baritone 的 ToolSet
-- 计算挖掘速度，选择最佳工具
-- 考虑工具附魔（效率、精准采集）
-
-**对应文件**：
-- i/pathing/ToolSet.java
-
-#### 2.5 路径执行
-- PathExecutor 参考 Baritone 的 PathExecutor
-- 逐步移动 + 卡住检测
-- 路径偏离检测 + 自动重新寻路
-
-**对应文件**：
-- i/pathing/PathExecutor.java
-
-#### 2.6 命令模式
-- BotCommand 的 stop/cancel/pause/resume 命令参考 Baritone 命令风格
-- Brigadier 命令树结构
-
-**对应文件**：
-- command/BotCommand.java
+- akeplayer/BotProfileStore.java
 
 ---
 
-### 3. AI-Player (shasankp000/AI-Player)
+### 6. EMI
 
-**仓库地址**：https://github.com/shasankp000/AI-Player
-
-**参考内容**：GameProfile 持久化（UUID 跨重启保存）
-
-**具体参考**：
-- Bot name 到 UUID 的映射持久化到 JSON 文件
-- 重启后使用相同 UUID，保持背包和状态一致性
-- 使用 Gson 进行 JSON 序列化
-
-**对应文件**：
-- akeplayer/BotProfileStore.java — GameProfile 持久化
-- akeplayer/FakePlayerManager.java — 集成 BotProfileStore
-
-**存储格式**（config/aimod/bots.json）：
-`json
-{
-  "Steve": "uuid-string",
-  "Alex": "uuid-string"
-}
-`
-
----
-
-### 4. EMI (EmilyPloszaj/emi)
-
-**仓库地址**：https://github.com/EmilyPloszaj/emi
+**仓库**：https://github.com/EmilyPloszaj/emi
 
 **参考内容**：合成配方索引策略
 
-**具体参考**：
-- RecipeIndex 参考 EMI 的配方索引设计
-- byOutput 索引：输出物品 -> 配方列表（O(1) 查找）
-- byInput 索引：输入物品 -> 配方列表（O(1) 查找）
-- Tag 匹配支持（如 #minecraft:planks 匹配任意木板）
-- 催化物/消耗物区分（工作台是催化物，木板是消耗物）
-- 智能配方选择：根据库存选择最佳配方
+**已吸收**：
+- byOutput/byInput 索引，O(1) 查找
+- Tag 匹配支持
+- 催化物/消耗物区分
 
 **对应文件**：
-- i/RecipeIndex.java — 合成配方索引
-- i/action/CraftAction.java — 使用 RecipeIndex 的合成动作
+- i/RecipeIndex.java
 
 ---
 
-### 5. Meteor Client (MeteorDevelopment/meteor-client)
+### 7. Meteor Client
 
-**仓库地址**：https://github.com/MeteorDevelopment/meteor-client
+**仓库**：https://github.com/MeteorDevelopment/meteor-client
 
-**参考内容**：背包工具、方块交互模式
+**参考内容**：背包工具、方块交互
 
-**具体参考**：
-
-#### 5.1 InvUtils 背包工具
-- Predicate 驱动的物品查找
-- findFastestTool() — 查找最快挖掘工具
-- 流式容器操作 API
-- FindItemResult 统一返回格式 (slot, count)
+**已吸收（部分）**：
+- InvUtils 背包工具模式
+- BlockUtils 方块交互模式
 
 **对应文件**：
-- i/InventoryUtils.java — 背包操作工具（部分参考）
-
-#### 5.2 BlockUtils 方块交互
-- 智能放置面检测 getPlaceSide()
-- 挖掘速度精确计算 getBreakDelta()
-- 暴露检测 isExposed()
-
-**对应文件**：
-- i/action/BreakBlockAction.java — 破坏方块（部分参考）
-- i/action/PlaceBlockAction.java — 放置方块（部分参考）
+- i/InventoryUtils.java
 
 ---
 
-### 6. RollingGate (Anvil-Dev/RollingGate)
+### 8. RollingGate
 
-**仓库地址**：https://github.com/Anvil-Dev/RollingGate
+**仓库**：https://github.com/Anvil-Dev/RollingGate
 
 **参考内容**：配置文件风格
 
-**具体参考**：
+**已吸收**：
 - NeoForge ModConfigSpec 配置风格
-- 注释风格和配置项组织方式
 
 **对应文件**：
-- config/ModConfig.java — 配置项定义
-
----
-
-## 参考项目对比分析
-
-### 本项目优势（相比参考项目）
-
-| 优势 | 说明 | 参考项目对比 |
-|------|------|------------|
-| LLM 自然语言 | 核心差异化，其他项目无此功能 | AI-Player 无 LLM |
-| 混合架构 | AIBotEntity 可见 + FakePlayer 完整能力 | SiliconeDolls 仅 FakePlayer |
-| 流式 LLM 输出 | 实时显示 LLM 思考过程 | AI-Player 不支持 |
-| Baritone 风格寻路 | A* + Goal 系统 + 多格跌落 | Meteor Client 无此深度 |
-| 合成系统 | RecipeIndex O(1) + Tag 感知 | Baritone 无合成 |
-| 战斗 AI | AttackAction + 目标追踪 | Baritone 无战斗 |
-| 任务队列反馈 | Task + TaskFeedback 实时状态报告 | 其他项目无 |
-| i18n 国际化 | 中英文支持 | 其他项目多为英文 |
-| 给予/装备动作 | GiveItemAction / EquipItemAction | Baritone 无 |
-
-### 待改进（参考项目已实现）
-
-| 功能 | 参考项目 | 本项目状态 |
-|------|---------|-----------|
-| 持久化（背包/任务） | AI-Player | 仅 GameProfile 持久化 |
-| 异步寻路 | Baritone | 同步寻路（2 秒超时） |
-| 世界缓存 | Baritone (ChunkCache) | 暴力扫描 O(n^3) |
-| 战斗 AI（盾牌/走位） | Meteor Client (KillAura) | 仅基础攻击 |
-| 自动进食 | Meteor Client (AutoEat) | 未实现 |
-| Movement 基类 | Baritone (Movement*) | 未实现 |
+- config/ModConfig.java
 
 ---
 
 ## 参考代码目录
 
-本项目参考代码存储在 baritone-ref/ 目录（不参与编译）：
-
 - aritone-ref/ — Baritone 1.21.1 参考代码
-  - 用于对比 A* 寻路实现
-  - 用于参考 Goal 系统设计
-  - 用于参考 MoveCost 计算方式
+- PlayerEngine-main/ — PlayerEngine（Automatone）参考代码
+- Player2NPC-master/ — Player2NPC 参考代码
 
 ---
 
 ## 如何添加新参考
 
 1. 在本文档中添加新的参考项目条目
-2. 记录仓库地址、参考内容、对应文件
-3. 如果需要存储参考代码，放入 baritone-ref/ 或新建目录
+2. 记录仓库地址、本地路径、参考内容、对应文件
+3. 在 ANALYSIS.md 中添加详细对比分析
 4. 在 PROGRESS.md 中记录参考来源
