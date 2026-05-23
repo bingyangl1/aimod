@@ -217,7 +217,19 @@ TaskFeedback 向分配任务的玩家报告任务状态：
 - mc_1211.json、mc_manifest.json — Minecraft 版本元数据
 - TestSSL*.class、TestSSL.java — 遗留测试产物
 - temp_installertools_*.html — 临时下载产物
-- baritone-ref/ — Baritone 参考代码（不参与编译）
 - _*.py、*.ps1 — 构建调试的临时脚本
 - *.md（AGENTS.md 除外）— 项目文档
 - gh.zip — 临时文件
+- Player2NPC-master.zip、PlayerEngine-main.zip、SiliconeDolls-releases-1.21.zip、RollingGate-releases-1.21.zip — 参考项目压缩包
+
+## 参考项目目录（只读，不参与构建，不提交）
+
+以下目录为参考代码，仅供阅读和学习，已加入 .gitignore：
+
+| 目录 | 项目 | 用途 |
+|------|------|------|
+| baritone-ref/ | Baritone 1.21.1 | A* 寻路、Movement 系统、世界缓存参考 |
+| PlayerEngine-main/ | PlayerEngine (Automatone) | 服务端 Baritone 分支，实体抽象接口参考 |
+| Player2NPC-master/ | Player2NPC | NPC 行为链系统、AltoClef 任务系统参考 |
+| RollingGate-releases-1.21/ | RollingGate | 配置文件风格参考 |
+| SiliconeDolls-releases-1.21/ | SiliconeDolls | FakePlayer 创建/注册模式参考 |

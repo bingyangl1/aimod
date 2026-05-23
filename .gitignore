@@ -58,4 +58,14 @@ download-deps.ps1
 
 # Downloaded tools
 gh.zip
+Player2NPC-master.zip
+PlayerEngine-main.zip
+SiliconeDolls-releases-1.21.zip
+RollingGate-releases-1.21.zip
 
+# Reference projects (read-only, not part of the build)
+baritone-ref/
+PlayerEngine-main/
+Player2NPC-master/
+RollingGate-releases-1.21/
+SiliconeDolls-releases-1.21/
