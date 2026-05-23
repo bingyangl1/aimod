@@ -1,5 +1,6 @@
 package com.aimod.ai;
 
+import com.aimod.ai.recipe.ItemUid;
 import com.aimod.util.DevLog;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -27,6 +28,8 @@ public final class RecipeIndex {
 
     private final Map<Item, List<IndexedRecipe>> byOutput = new ConcurrentHashMap<>();
     private final Map<Item, List<IndexedRecipe>> byInput = new ConcurrentHashMap<>();
+    private final Map<Object, List<IndexedRecipe>> byOutputUid = new ConcurrentHashMap<>();
+    private final Map<Object, List<IndexedRecipe>> byInputUid = new ConcurrentHashMap<>();
     private boolean built = false;
 
     private static final RecipeIndex INSTANCE = new RecipeIndex();
@@ -44,6 +47,8 @@ public final class RecipeIndex {
     public void build(ServerLevel level) {
         byOutput.clear();
         byInput.clear();
+        byOutputUid.clear();
+        byInputUid.clear();
 
         RecipeManager manager = level.getRecipeManager();
         int count = 0;
@@ -51,23 +56,19 @@ public final class RecipeIndex {
         for (RecipeHolder<?> holder : manager.getRecipes()) {
             Recipe<?> recipe = holder.value();
 
-            // Index all recipe types (crafting, smelting, stonecutting, etc.)
             ItemStack result = recipe.getResultItem(level.registryAccess());
             if (result.isEmpty()) continue;
 
             Item outputItem = result.getItem();
             if (outputItem == Items.AIR) continue;
 
-            // Determine recipe category
             RecipeType<?> type = recipe.getType();
             RecipeCategory category = classifyRecipe(type);
 
-            // Collect inputs (consumed) and catalysts (not consumed)
             List<Ingredient> allIngredients = recipe.getIngredients();
             List<IngredientEntry> consumedInputs = new ArrayList<>();
             List<Item> catalysts = new ArrayList<>();
 
-            // For crafting recipes, the crafting table is a catalyst
             if (category == RecipeCategory.CRAFTING) {
                 catalysts.add(Items.CRAFTING_TABLE);
             } else if (category == RecipeCategory.SMELTING) {
@@ -90,13 +91,20 @@ public final class RecipeIndex {
                     outputItem, result.getCount()
             );
 
-            // Index by output
+            // Index by output Item (backward compatible)
             byOutput.computeIfAbsent(outputItem, k -> new ArrayList<>()).add(indexed);
 
-            // Index by each input item
+            // Index by output UID (NBT-aware, RECIPE context)
+            Object outputUid = ItemUid.compute(result, ItemUid.Context.RECIPE);
+            byOutputUid.computeIfAbsent(outputUid, k -> new ArrayList<>()).add(indexed);
+
+            // Index by each input item and UID
             for (IngredientEntry entry : consumedInputs) {
                 for (Item item : entry.getMatchingItems()) {
                     byInput.computeIfAbsent(item, k -> new ArrayList<>()).add(indexed);
+                    // RECIPE context: broad match for recipe lookup
+                    Object uid = ItemUid.compute(new ItemStack(item), ItemUid.Context.RECIPE);
+                    byInputUid.computeIfAbsent(uid, k -> new ArrayList<>()).add(indexed);
                 }
             }
 
@@ -104,8 +112,8 @@ public final class RecipeIndex {
         }
 
         built = true;
-        DevLog.info("RECIPE_INDEX_BUILT", "recipes={}, outputs={}, inputs={}",
-                count, byOutput.size(), byInput.size());
+        DevLog.info("RECIPE_INDEX_BUILT", "recipes={}, outputs={}, inputs={}, uidOutputs={}, uidInputs={}",
+                count, byOutput.size(), byInput.size(), byOutputUid.size(), byInputUid.size());
     }
 
     /**
@@ -120,6 +128,31 @@ public final class RecipeIndex {
      */
     public List<IndexedRecipe> getRecipesUsingInput(Item input) {
         return byInput.getOrDefault(input, Collections.emptyList());
+    }
+
+    /**
+     * NBT-aware: get recipes that produce an item matching the given stack.
+     * For items with subtypes (enchanted books, potions), use strict matching.
+     * For normal items, falls back to Item-based lookup. O(1).
+     */
+    public List<IndexedRecipe> getRecipesForOutput(ItemStack stack) {
+        Object uid = ItemUid.compute(stack, ItemUid.Context.RECIPE);
+        List<IndexedRecipe> result = byOutputUid.get(uid);
+        if (result != null && !result.isEmpty()) return result;
+        // Fallback to Item-based lookup
+        return byOutput.getOrDefault(stack.getItem(), Collections.emptyList());
+    }
+
+    /**
+     * NBT-aware: get recipes that use an item matching the given stack.
+     * O(1).
+     */
+    public List<IndexedRecipe> getRecipesUsingInput(ItemStack stack) {
+        Object uid = ItemUid.compute(stack, ItemUid.Context.RECIPE);
+        List<IndexedRecipe> result = byInputUid.get(uid);
+        if (result != null && !result.isEmpty()) return result;
+        // Fallback to Item-based lookup
+        return byInput.getOrDefault(stack.getItem(), Collections.emptyList());
     }
 
     /**
@@ -178,6 +211,8 @@ public final class RecipeIndex {
     public void clear() {
         byOutput.clear();
         byInput.clear();
+        byOutputUid.clear();
+        byInputUid.clear();
         built = false;
     }
 

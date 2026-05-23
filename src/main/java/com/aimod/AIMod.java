@@ -11,6 +11,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import com.aimod.command.BotCommand;
 import com.aimod.entity.ModEntities;
 import com.aimod.entity.AIBotEntity;
+import com.aimod.fakeplayer.FakePlayerManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -43,5 +44,33 @@ public class AIMod {
     private void onServerStarted(final ServerStartedEvent event) {
         BotCommand.init(event.getServer());
         LOGGER.info("AI Mod: Server started");
+
+        // Auto-load bots from previous session
+        FakePlayerManager manager = BotCommand.getManager();
+        if (manager != null) {
+            int loaded = autoLoadBots(manager, event.getServer());
+            if (loaded > 0) {
+                LOGGER.info("AI Mod: Auto-loaded {} bot(s)", loaded);
+            }
+        }
+    }
+
+    private int autoLoadBots(FakePlayerManager manager, net.minecraft.server.MinecraftServer server) {
+        var persistence = new com.aimod.fakeplayer.BotPersistence(server);
+        var names = persistence.getAutoLoadList();
+        int count = 0;
+        for (String name : names) {
+            try {
+                var bot = manager.loadBot(name);
+                if (bot != null) {
+                    persistence.addToAutoLoad(name); // re-add for next restart
+                    count++;
+                    LOGGER.info("AI Mod: Auto-loaded bot '{}'", name);
+                }
+            } catch (Exception e) {
+                LOGGER.warn("AI Mod: Failed to auto-load bot '{}': {}", name, e.getMessage());
+            }
+        }
+        return count;
     }
 }

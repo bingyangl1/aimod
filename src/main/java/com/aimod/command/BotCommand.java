@@ -8,6 +8,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
@@ -106,6 +107,20 @@ public class BotCommand {
                 .then(Commands.literal("equip")
                         .then(Commands.argument("item", StringArgumentType.word())
                                 .executes(BotCommand::equipItem)))
+                // --- Persistence commands ---
+                .then(Commands.literal("save")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .then(Commands.argument("desc", StringArgumentType.greedyString())
+                                        .executes(BotCommand::saveBot))
+                                .executes(BotCommand::saveBot)))
+                .then(Commands.literal("load")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(BotCommand::loadBot)))
+                .then(Commands.literal("list")
+                        .executes(BotCommand::listBots))
+                .then(Commands.literal("delete")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(BotCommand::deleteBot)))
                 // --- Help command ---
                 .then(Commands.literal("help")
                         .executes(BotCommand::showHelp))
@@ -442,6 +457,85 @@ public class BotCommand {
         return 1;
     }
 
+    // ========== Persistence commands ==========
+
+    private static int saveBot(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        Player player = source.getPlayerOrException();
+        String name = StringArgumentType.getString(context, "name");
+        String desc = null;
+        try { desc = StringArgumentType.getString(context, "desc"); } catch (IllegalArgumentException ignored) {}
+
+        if (manager == null) {
+            source.sendFailure(Component.literal("Not initialized"));
+            return 0;
+        }
+
+        // Find nearest existing bot (don't auto-spawn)
+        FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
+        if (bot == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.no_bot_nearby"));
+            return 0;
+        }
+
+        manager.saveBot(bot, desc != null ? desc : name);
+        source.sendSuccess(() -> Component.translatable("commands.ai_bot.saved", name), true);
+        return 1;
+    }
+
+    private static int loadBot(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        String name = StringArgumentType.getString(context, "name");
+
+        if (manager == null) {
+            source.sendFailure(Component.literal("Not initialized"));
+            return 0;
+        }
+
+        FakePlayer bot = manager.loadBot(name);
+        if (bot == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.load_failed", name));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("commands.ai_bot.loaded", name), true);
+        return 1;
+    }
+
+    private static int listBots(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+
+        if (manager == null) {
+            source.sendFailure(Component.literal("Not initialized"));
+            return 0;
+        }
+
+        java.util.List<String> names = manager.listSavedBots();
+        if (names.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.ai_bot.list_empty"), false);
+        } else {
+            source.sendSuccess(() -> Component.literal("Saved bots: " + String.join(", ", names)), false);
+        }
+        return 1;
+    }
+
+    private static int deleteBot(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        String name = StringArgumentType.getString(context, "name");
+
+        if (manager == null) {
+            source.sendFailure(Component.literal("Not initialized"));
+            return 0;
+        }
+
+        boolean deleted = manager.deleteBot(name);
+        if (deleted) {
+            source.sendSuccess(() -> Component.translatable("commands.ai_bot.deleted", name), true);
+        } else {
+            source.sendFailure(Component.translatable("commands.ai_bot.delete_failed", name));
+        }
+        return deleted ? 1 : 0;
+    }
+
     // ========== Help command ==========
 
     private static int showHelp(CommandContext<CommandSourceStack> context) {
@@ -461,6 +555,10 @@ public class BotCommand {
                 "commands.ai_bot.help.say",
                 "commands.ai_bot.help.give",
                 "commands.ai_bot.help.equip",
+                "commands.ai_bot.help.save",
+                "commands.ai_bot.help.load",
+                "commands.ai_bot.help.list",
+                "commands.ai_bot.help.delete",
                 "commands.ai_bot.help.help"
         };
         source.sendSuccess(() -> {
