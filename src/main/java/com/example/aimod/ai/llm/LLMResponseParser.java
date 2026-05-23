@@ -35,9 +35,20 @@ public final class LLMResponseParser {
     }
 
     public static List<String> parseActionsFromContent(String content) {
-        List<String> actions = new ArrayList<>();
+        // 策略1：标准解析 - 查找完整的JSON对象
+        List<String> actions = parseStandard(content);
+        if (!actions.isEmpty()) return actions;
+
+        // 策略2：宽松解析 - 直接查找"actions": [...]模式
+        actions = findActionsArrayLoosely(content);
+        if (!actions.isEmpty()) return actions;
+
+        // 策略3：提取独立的action对象
+        return extractActionObjects(content);
+    }
+
+    private static List<String> parseStandard(String content) {
         try {
-            // 首先尝试标准解析：查找完整的JSON对象
             if (content.contains("{") && content.contains("}")) {
                 int start = content.indexOf("{");
                 int end = content.lastIndexOf("}") + 1;
@@ -45,25 +56,17 @@ public final class LLMResponseParser {
                 JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
                 if (json.has("actions")) {
                     JsonArray actionsArray = json.getAsJsonArray("actions");
+                    List<String> actions = new ArrayList<>();
                     for (int i = 0; i < actionsArray.size(); i++) {
                         actions.add(actionsArray.get(i).toString());
                     }
-                    return actions; // 如果成功，直接返回
+                    return actions;
                 }
             }
-            
-            // 如果标准解析失败，尝试宽松解析：查找actions数组
-            actions = findActionsArrayLoosely(content);
-            if (!actions.isEmpty()) {
-                return actions;
-            }
-            
-            // 最后尝试：查找看起来像action对象的内容
-            return extractActionObjects(content);
         } catch (Exception e) {
-            DevLog.warn("LLM_ACTION_PARSE_ERROR", "failed to parse actions from content: {}", e.getMessage());
+            DevLog.warn("LLM_PARSE_STANDARD_FAILED", "standard parse failed: {}", e.getMessage());
         }
-        return actions;
+        return List.of();
     }
 
     /**
