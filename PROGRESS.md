@@ -400,3 +400,26 @@
 - Predicate 驱动筛选（灵活可组合）
 - FindItemResult 统一返回格式 (slot, count)
 - 事件驱动 tick 处理
+### EMI (emilyploszaj/emi) & JEI (mezz/JustEnoughItems)
+- **类型**：配方查看器（最成熟的配方系统参考）
+- **分析文档**：`docs/RECIPE_SYSTEM_ANALYSIS.md`
+
+**核心发现**：
+1. **配方索引** — EMI/JEI 预建 byOutput/byInput 索引，查找 O(1)；我们遍历全部配方 O(n)
+2. **EmiIngredient 抽象** — 支持 Tag（#minecraft:planks = 任意木板）、数量、概率；我们只认具体物品
+3. **inputs vs catalysts** — EMI 区分消耗物（木板）和催化物（工作台）；我们不区分
+4. **Bill of Materials (BoM)** — EMI 独有的配方树，递归解析完整依赖链（钻石镐→木棍→木板→原木）
+5. **可合成检测** — EMI 可根据当前库存显示"能合成什么"；我们无此功能
+6. **RecipeType/Category** — JEI 按类型组织配方（crafting/smelting/stonecutting）；我们只处理 CraftingRecipe
+
+**当前 CraftAction 主要缺陷**：
+- O(n) 遍历查找配方
+- 不支持 Tag
+- 不区分输入/催化物
+- 无配方树（无法规划多步合成）
+- 只支持工作台合成
+
+**推荐开发优先级**：
+- P0：配方索引 + Tag感知 + 催化物区分
+- P1：可合成检测 + 多配方类型
+- P2：多步配方树 + 完整合成规划引擎
