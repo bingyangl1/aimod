@@ -35,6 +35,11 @@ public class DangerChain extends BehaviorChain {
             dangerPos = pos; active = true; escapeTicks = 0; return true;
         }
 
+        // Lava nearby (3 block radius)
+        if (DangerZone.isLavaNearby(bot, 3)) {
+            dangerPos = pos; active = true; escapeTicks = 0; return true;
+        }
+
         // On fire
         if (bot.isOnFire() && !bot.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) {
             dangerPos = pos; active = true; escapeTicks = 0; return true;
@@ -42,6 +47,16 @@ public class DangerChain extends BehaviorChain {
 
         // Drowning (air < 5 bubbles)
         if (bot.isInWater() && bot.getAirSupply() < 60) {
+            dangerPos = pos; active = true; escapeTicks = 0; return true;
+        }
+
+        // Deep water (avoid drowning risk before it happens)
+        if (DangerZone.isDeepWater(bot) && bot.getAirSupply() < 150) {
+            dangerPos = pos; active = true; escapeTicks = 0; return true;
+        }
+
+        // Cliff ahead
+        if (bot.onGround() && DangerZone.isCliffAhead(bot)) {
             dangerPos = pos; active = true; escapeTicks = 0; return true;
         }
 
@@ -54,30 +69,25 @@ public class DangerChain extends BehaviorChain {
         var level = bot.level();
         BlockPos pos = bot.blockPosition();
 
-        // Find safe direction (no lava, no deep fall)
-        Direction bestDir = null;
-        double bestDist = Double.MAX_VALUE;
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos target = pos.relative(dir);
-            BlockPos belowTarget = target.below();
-            BlockState there = level.getBlockState(target);
-            BlockState belowThere = level.getBlockState(belowTarget);
-
-            if (there.getBlock() == Blocks.LAVA || there.getFluidState().isSource()) continue;
-            if (belowThere.getBlock() == Blocks.LAVA) continue;
-            if (!belowThere.isSolid()) continue; // cliff
-
-            double dist = target.distSqr(dangerPos);
-            if (dist > bestDist) continue;
-            bestDist = dist;
-            bestDir = dir;
+        // Use DangerZone to find safe direction
+        Direction bestDir = DangerZone.findSafeDirection(bot);
+        if (bestDir == null) {
+            // Fallback: manual scan
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                BlockPos target = pos.relative(dir);
+                BlockState there = level.getBlockState(target);
+                if (there.getBlock() == Blocks.LAVA || there.getFluidState().isSource()) continue;
+                if (!level.getBlockState(target.below()).isSolid()) continue;
+                bestDir = dir;
+                break;
+            }
         }
 
         if (bestDir != null) {
             double speed = 0.3;
             Vec3 move = new Vec3(bestDir.getStepX() * speed, 0, bestDir.getStepZ() * speed);
-            if (bot.onGround() && bot.isOnFire()) {
-                move = new Vec3(move.x, 0.42, move.z); // jump while escaping fire
+            if (bot.onGround() && (bot.isOnFire() || DangerZone.isLavaNearby(bot, 1))) {
+                move = new Vec3(move.x, 0.42, move.z); // jump while escaping
             }
             if (bot.isInWater()) {
                 move = new Vec3(move.x, 0.3, move.z); // swim up
@@ -88,7 +98,11 @@ public class DangerChain extends BehaviorChain {
 
         // Stop after 40 ticks (2 seconds) or when safe
         BlockState feet = level.getBlockState(bot.blockPosition());
-        boolean safe = feet.getBlock() != Blocks.LAVA && !bot.isOnFire() && bot.getAirSupply() >= 60;
+        boolean safe = feet.getBlock() != Blocks.LAVA
+                && !bot.isOnFire()
+                && bot.getAirSupply() >= 60
+                && !DangerZone.isLavaNearby(bot, 1)
+                && !DangerZone.isCliffAhead(bot);
         if (safe || escapeTicks > 40) {
             active = false;
             bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);

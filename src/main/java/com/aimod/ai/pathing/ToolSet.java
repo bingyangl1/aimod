@@ -145,12 +145,31 @@ public class ToolSet {
 
     /**
      * Get the number of ticks to break a block with the best tool.
-     * Returns -1 if unbreakable.
+     * Returns -1 if unbreakable. Includes environmental modifiers.
      */
     public double getBreakTicks(BlockState state) {
         double speed = getStrVsBlock(state);
         if (speed <= 0) return -1;
+        // Environmental modifiers
+        speed *= potionAmplifier();
+        speed *= waterAmplifier();
+        speed *= onGroundAmplifier();
         return 1.0 / speed;
+    }
+
+    /** Penalty when mining underwater (SUBMERGED_MINING_SPEED attribute). */
+    private double waterAmplifier() {
+        if (bot.isUnderWater()) {
+            var attr = bot.getAttribute(Attributes.SUBMERGED_MINING_SPEED);
+            if (attr != null) return attr.getValue();
+            return 0.2; // default 5x slower
+        }
+        return 1.0;
+    }
+
+    /** Penalty when mining while not on ground (5x slower). */
+    private double onGroundAmplifier() {
+        return bot.onGround() ? 1.0 : 0.2;
     }
 
     /**

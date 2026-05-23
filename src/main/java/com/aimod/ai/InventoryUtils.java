@@ -128,4 +128,54 @@ public final class InventoryUtils {
             @Override public boolean hasItem(Item item, int count) { return InventoryUtils.countItem(bot, item) >= count; }
         };
     }
+
+    // ── FindItemResult ─────────────────────────────────────────────────
+
+    /**
+     * Search result for item finding operations.
+     * Inspired by Meteor Client's FindItemResult record.
+     */
+    public record FindItemResult(int slot, int count) {
+        public boolean found() { return slot != -1; }
+        public boolean isHotbar() { return slot >= 0 && slot < 9; }
+        public boolean isMainInventory() { return slot >= 9 && slot < 36; }
+        public boolean isArmor() { return slot >= 36 && slot < 40; }
+        public boolean isOffhand() { return slot == 40; }
+
+        public net.minecraft.world.InteractionHand getHand() {
+            if (slot == 40) return net.minecraft.world.InteractionHand.OFF_HAND;
+            if (slot >= 0 && slot < 9) return net.minecraft.world.InteractionHand.MAIN_HAND;
+            return null;
+        }
+
+        public static final FindItemResult NOT_FOUND = new FindItemResult(-1, 0);
+    }
+
+    /**
+     * Find an item matching the predicate. Priority: offhand > main hand > hotbar > inventory.
+     */
+    public static FindItemResult find(FakePlayer bot, java.util.function.Predicate<ItemStack> predicate) {
+        var inv = bot.getInventory();
+        // Offhand
+        ItemStack offhand = inv.getItem(40);
+        if (predicate.test(offhand)) return new FindItemResult(40, offhand.getCount());
+        // Hotbar (0-8)
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = inv.getItem(i);
+            if (predicate.test(stack)) return new FindItemResult(i, stack.getCount());
+        }
+        // Main inventory (9-35)
+        for (int i = 9; i < 36; i++) {
+            ItemStack stack = inv.getItem(i);
+            if (predicate.test(stack)) return new FindItemResult(i, stack.getCount());
+        }
+        return FindItemResult.NOT_FOUND;
+    }
+
+    /**
+     * Find an item by exact type. Priority: offhand > main hand > hotbar > inventory.
+     */
+    public static FindItemResult find(FakePlayer bot, Item item) {
+        return find(bot, stack -> stack.getItem() == item);
+    }
 }

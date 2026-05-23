@@ -4,10 +4,13 @@ import com.aimod.fakeplayer.FakePlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
  * Auto-eating chain. Eats the best available food when hungry.
  * Priority 55 — just above user tasks but below survival/defense.
+ *
+ * <p>Food scoring: saturation * 2 - hunger_wasted, with rotten flesh penalty (-100).</p>
  */
 public class FoodChain extends BehaviorChain {
 
@@ -32,46 +35,61 @@ public class FoodChain extends BehaviorChain {
     @Override
     public void tick(FakePlayer bot) {
         if (eatTicks == 0) {
-            // Find best food in inventory
-            int bestSlot = -1;
-            int bestNutrition = 0;
-            float bestSaturation = 0;
-            var inv = bot.getInventory();
-            for (int i = 0; i < inv.getContainerSize(); i++) {
-                ItemStack stack = inv.getItem(i);
-                if (stack.isEmpty()) continue;
-                FoodProperties food = stack.getItem().getFoodProperties(stack, bot);
-                if (food == null) continue;
-                if (food.nutrition() > bestNutrition ||
-                    (food.nutrition() == bestNutrition && food.saturation() > bestSaturation)) {
-                    bestNutrition = food.nutrition();
-                    bestSaturation = food.saturation();
-                    bestSlot = i;
-                }
-            }
-
+            int bestSlot = findBestFood(bot);
             if (bestSlot < 0) {
                 active = false;
                 return;
             }
-
-            // Move food to hand
+            // Move food to hotbar if needed
             originalSlot = bot.getInventory().selected;
             if (bestSlot < 9) {
                 bot.getInventory().selected = bestSlot;
+            } else {
+                // Swap to hotbar slot 0
+                var inv = bot.getInventory();
+                ItemStack tmp = inv.getItem(0);
+                inv.setItem(0, inv.getItem(bestSlot));
+                inv.setItem(bestSlot, tmp);
+                inv.selected = 0;
             }
         }
-
-        // Hold right-click to eat
         bot.startUsingItem(InteractionHand.MAIN_HAND);
         eatTicks++;
-
-        // Eating typically takes 32 ticks (1.6s)
         if (eatTicks > 40) {
             bot.stopUsingItem();
             if (originalSlot >= 0) bot.getInventory().selected = originalSlot;
             active = false;
         }
+    }
+
+    /**
+     * Score-based food selection (Player2NPC FoodChain algorithm).
+     * Score = saturation * 2 - wasted_hunger, rotten flesh = -100.
+     */
+    static int findBestFood(FakePlayer bot) {
+        int bestSlot = -1;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        int maxHunger = 20 - bot.getFoodData().getFoodLevel();
+        var inv = bot.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
+            if (stack.isEmpty()) continue;
+            FoodProperties food = stack.getItem().getFoodProperties(stack, bot);
+            if (food == null) continue;
+
+            double score;
+            if (stack.getItem() == Items.ROTTEN_FLESH) {
+                score = -100;
+            } else {
+                int wasted = Math.max(0, food.nutrition() - maxHunger);
+                score = food.saturation() * 2.0 - wasted;
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                bestSlot = i;
+            }
+        }
+        return bestSlot;
     }
 
     @Override public boolean isActive() { return active; }
