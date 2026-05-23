@@ -6,7 +6,9 @@
   "refmap": "aimod.refmap.json",
   "mixins": [
     "ConnectionMixin",
+    "PacketDistributorMixin",
     "PlayerListMixin",
+    "ServerCommonPacketListenerImplMixin",
     "ServerConfigurationPacketListenerImplMixin"
   ],
   "client": [],
