@@ -1,27 +1,36 @@
 package com.example.aimod.ai.action;
 
 import com.example.aimod.ai.InventoryUtils;
+import com.example.aimod.ai.RecipeIndex;
 import com.example.aimod.fakeplayer.FakePlayer;
 import com.example.aimod.util.DevLog;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.inventory.CraftingContainer;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.*;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.item.crafting.RecipeHolder;
 
-import java.util.*;
+import java.util.Map;
 
+/**
+ * CraftAction - refactored to use RecipeIndex for O(1) lookup,
+ * Tag-aware ingredient matching, and catalyst/consumed input distinction.
+ *
+ * Key improvements (from EMI/JEI analysis):
+ * - O(1) recipe lookup via RecipeIndex (was O(n) scan)
+ * - Tag support: #minecraft:planks matches any planks
+ * - Catalyst distinction: crafting table is not consumed
+ * - Smart ingredient selection: picks best available Tag match
+ */
 public class CraftAction extends Action {
     private static final int CRAFT_TIME = 40;
 
     private final String itemId;
     private final int count;
     private int craftProgress;
-    private RecipeHolder<?> resolvedRecipe;
+    private RecipeIndex.IndexedRecipe resolvedRecipe;
+    private boolean recipeIndexBuilt = false;
 
     public CraftAction(String itemId, int count) {
         super("Craft " + count + " " + itemId);
@@ -32,21 +41,36 @@ public class CraftAction extends Action {
 
     @Override
     public boolean canExecute(FakePlayer bot) {
-        // 尝试解析配方
-        resolvedRecipe = findRecipe(bot);
+        ensureRecipeIndex(bot);
+
+        Item resultItem = resolveItem(itemId);
+        if (resultItem == Items.AIR) {
+            DevLog.warn("CRAFT_NO_ITEM", "item={}", itemId);
+            return false;
+        }
+
+        // O(1) lookup via RecipeIndex
+        resolvedRecipe = RecipeIndex.getInstance().findBestRecipe(
+                resultItem, InventoryUtils.asInventoryState(bot)
+        );
+
         if (resolvedRecipe == null) {
             DevLog.warn("CRAFT_NO_RECIPE", "item={}", itemId);
             return false;
         }
 
-        // 检查材料
-        Map<net.minecraft.world.item.Item, Integer> requiredItems = getRequiredItems(resolvedRecipe);
-        Map<net.minecraft.world.item.Item, Integer> missing = InventoryUtils.missingItems(bot, requiredItems);
+        // Check consumed inputs only (catalysts are not consumed)
+        Map<Item, Integer> requiredItems = resolvedRecipe.getTotalRequiredItems();
+        Map<Item, Integer> missing = InventoryUtils.missingItems(bot, requiredItems);
         if (!missing.isEmpty()) {
             DevLog.warn("CRAFT_MISSING_ITEMS", "item={}, count={}, missing={}",
                     itemId, count, InventoryUtils.describeItems(missing));
             return false;
         }
+
+        DevLog.info("CRAFT_RECIPE_RESOLVED", "item={}, recipe={}, category={}, inputs={}, catalysts={}",
+                itemId, resolvedRecipe.getId(), resolvedRecipe.getCategory(),
+                resolvedRecipe.getConsumedInputs().size(), resolvedRecipe.getCatalysts().size());
         return true;
     }
 
@@ -54,7 +78,11 @@ public class CraftAction extends Action {
     public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             if (resolvedRecipe == null) {
-                resolvedRecipe = findRecipe(bot);
+                ensureRecipeIndex(bot);
+                Item resultItem = resolveItem(itemId);
+                resolvedRecipe = RecipeIndex.getInstance().findBestRecipe(
+                        resultItem, InventoryUtils.asInventoryState(bot)
+                );
             }
             if (resolvedRecipe == null) {
                 status = ActionStatus.FAILED;
@@ -62,8 +90,9 @@ public class CraftAction extends Action {
                 return;
             }
 
-            Map<net.minecraft.world.item.Item, Integer> requiredItems = getRequiredItems(resolvedRecipe);
-            Map<net.minecraft.world.item.Item, Integer> missing = InventoryUtils.missingItems(bot, requiredItems);
+            // Check consumed inputs (not catalysts)
+            Map<Item, Integer> requiredItems = resolvedRecipe.getTotalRequiredItems();
+            Map<Item, Integer> missing = InventoryUtils.missingItems(bot, requiredItems);
             if (!missing.isEmpty()) {
                 status = ActionStatus.FAILED;
                 DevLog.warn("CRAFT_FAIL_MISSING", "item={}, missing={}", itemId, InventoryUtils.describeItems(missing));
@@ -72,32 +101,35 @@ public class CraftAction extends Action {
 
             status = ActionStatus.IN_PROGRESS;
             craftProgress = 0;
-            DevLog.info("CRAFT_START", "item={}, count={}, recipe={}", itemId, count, resolvedRecipe.id());
+            DevLog.info("CRAFT_START", "item={}, count={}, recipe={}, category={}",
+                    itemId, count, resolvedRecipe.getId(), resolvedRecipe.getCategory());
         }
 
         if (status == ActionStatus.IN_PROGRESS) {
             craftProgress++;
             if (craftProgress >= CRAFT_TIME) {
-                // 消耗材料
-                Map<net.minecraft.world.item.Item, Integer> requiredItems = getRequiredItems(resolvedRecipe);
+                // Re-verify consumed inputs still available
+                Map<Item, Integer> requiredItems = resolvedRecipe.getTotalRequiredItems();
                 if (!InventoryUtils.hasItems(bot, requiredItems)) {
                     status = ActionStatus.FAILED;
                     DevLog.warn("CRAFT_FAIL_RESOURCES_CHANGED", "item={}", itemId);
                     return;
                 }
 
+                // Consume only inputs, NOT catalysts
                 InventoryUtils.consumeItems(bot, requiredItems);
 
-                // 创建输出物品
-                ItemStack result = resolvedRecipe.value().getResultItem(bot.level().registryAccess());
+                // Create output
+                ItemStack result = resolvedRecipe.getHolder().value()
+                        .getResultItem(bot.level().registryAccess());
                 ItemStack output = result.copy();
                 output.setCount(output.getCount() * count);
 
-                // 添加到背包
                 boolean added = InventoryUtils.addItem(bot, output);
                 if (added) {
                     status = ActionStatus.COMPLETED;
-                    DevLog.info("CRAFT_DONE", "item={}, count={}", itemId, count);
+                    DevLog.info("CRAFT_DONE", "item={}, count={}, category={}",
+                            itemId, count, resolvedRecipe.getCategory());
                 } else {
                     status = ActionStatus.FAILED;
                     DevLog.warn("CRAFT_FAIL_INVENTORY_FULL", "item={}", itemId);
@@ -112,74 +144,43 @@ public class CraftAction extends Action {
     }
 
     /**
-     * 查找配方
+     * Ensure the recipe index is built. Call once per server lifecycle.
      */
-    private RecipeHolder<?> findRecipe(FakePlayer bot) {
-        Level level = bot.level();
-        net.minecraft.world.item.Item resultItem = resolveItem(itemId);
-        if (resultItem == Items.AIR) {
-            return null;
+    private void ensureRecipeIndex(FakePlayer bot) {
+        if (recipeIndexBuilt) return;
+        RecipeIndex index = RecipeIndex.getInstance();
+        if (!index.isBuilt()) {
+            index.build(bot.serverLevel());
+            DevLog.info("RECIPE_INDEX_INIT", "Built recipe index on first craft request");
         }
-
-        // 查找所有配方
-        RecipeManager recipeManager = level.getRecipeManager();
-        Collection<RecipeHolder<?>> recipes = recipeManager.getRecipes();
-
-        for (RecipeHolder<?> recipe : recipes) {
-            Recipe<?> recipeValue = recipe.value();
-
-            // 检查是否是合成配方
-            if (recipeValue instanceof CraftingRecipe) {
-                ItemStack result = recipeValue.getResultItem(level.registryAccess());
-                if (result.getItem() == resultItem) {
-                    return recipe;
-                }
-            }
-        }
-
-        return null;
+        recipeIndexBuilt = true;
     }
 
     /**
-     * 获取配方所需材料
+     * Resolve item ID string to Item.
      */
-    private Map<net.minecraft.world.item.Item, Integer> getRequiredItems(RecipeHolder<?> recipe) {
-        Map<net.minecraft.world.item.Item, Integer> required = new LinkedHashMap<>();
-
-        Recipe<?> recipeValue = recipe.value();
-        if (recipeValue instanceof CraftingRecipe) {
-            // 获取配方的输入
-            List<Ingredient> ingredients = recipeValue.getIngredients();
-            for (Ingredient ingredient : ingredients) {
-                if (!ingredient.isEmpty()) {
-                    ItemStack[] items = ingredient.getItems();
-                    if (items.length > 0) {
-                        net.minecraft.world.item.Item item = items[0].getItem();
-                        required.put(item, required.getOrDefault(item, 0) + 1);
-                    }
-                }
-            }
-        }
-
-        return required;
-    }
-
-    /**
-     * 解析物品 ID
-     */
-    private net.minecraft.world.item.Item resolveItem(String idText) {
+    private Item resolveItem(String idText) {
         ResourceLocation id = ResourceLocation.tryParse(idText.contains(":") ? idText : "minecraft:" + idText);
-        if (id == null) {
-            return Items.AIR;
-        }
+        if (id == null) return Items.AIR;
         return BuiltInRegistries.ITEM.get(id);
     }
 
-    public String getItemId() {
-        return itemId;
-    }
+    public String getItemId() { return itemId; }
+    public int getCount() { return count; }
 
-    public int getCount() {
-        return count;
+    /**
+     * Get human-readable info about the resolved recipe.
+     */
+    public String getRecipeInfo() {
+        if (resolvedRecipe == null) return "No recipe resolved";
+        StringBuilder sb = new StringBuilder();
+        sb.append(resolvedRecipe.getOutputItem()).append(" x").append(resolvedRecipe.getOutputCount());
+        sb.append(" via ").append(resolvedRecipe.getCategory());
+        sb.append(" (").append(resolvedRecipe.getConsumedInputs().size()).append(" inputs");
+        if (!resolvedRecipe.getCatalysts().isEmpty()) {
+            sb.append(", ").append(resolvedRecipe.getCatalysts().size()).append(" catalysts");
+        }
+        sb.append(")");
+        return sb.toString();
     }
 }

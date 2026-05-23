@@ -1,6 +1,8 @@
 package com.example.aimod.fakeplayer;
 
 import com.example.aimod.util.DevLog;
+import com.mojang.authlib.GameProfile;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameType;
@@ -13,8 +15,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages FakePlayer lifecycle.
- * Players are registered with the server and tracked here.
+ * Manages FakePlayer lifecycle with GameProfile persistence.
+ * Profiles (name -> UUID) are saved to disk and reused across restarts.
+ * Inspired by AI-Player's createFakePlayer persistence pattern.
  */
 public class FakePlayerManager {
 
@@ -22,13 +25,16 @@ public class FakePlayerManager {
 
     private final MinecraftServer server;
     private final Map<UUID, FakePlayer> activePlayers = new ConcurrentHashMap<>();
+    private final BotProfileStore profileStore;
 
     public FakePlayerManager(MinecraftServer server) {
         this.server = server;
+        this.profileStore = new BotProfileStore(server);
     }
 
     /**
-     * Create and register a new FakePlayer.
+     * Create and register a new FakePlayer with persistent identity.
+     * If a bot with this name was created before, it reuses the same UUID.
      */
     @Nullable
     public FakePlayer createFakePlayer(String name, ServerLevel level, Vec3 pos, GameType gamemode) {
@@ -37,9 +43,21 @@ public class FakePlayerManager {
             return null;
         }
 
-        FakePlayer player = FakePlayer.createAndRegister(server, level, name, pos, gamemode, null);
+        // Check if a bot with this name already exists
+        FakePlayer existing = getByName(name);
+        if (existing != null) {
+            DevLog.warn("FAKE_PLAYER_DUPLICATE", "name={} already exists", name);
+            return existing;
+        }
+
+        // Get persistent UUID (or create new one)
+        UUID persistentUUID = profileStore.getOrCreateUUID(name);
+
+        FakePlayer player = FakePlayer.createAndRegister(server, level, name, pos, gamemode, null, persistentUUID);
         if (player != null) {
             activePlayers.put(player.getUUID(), player);
+            DevLog.info("FAKE_PLAYER_CREATED", "name={}, uuid={}, persistent=true",
+                    name, player.getStringUUID());
         }
         return player;
     }
@@ -115,5 +133,12 @@ public class FakePlayerManager {
      */
     public void cleanup() {
         activePlayers.entrySet().removeIf(e -> !e.getValue().isAlive());
+    }
+
+    /**
+     * Get the profile store for external access.
+     */
+    public BotProfileStore getProfileStore() {
+        return profileStore;
     }
 }

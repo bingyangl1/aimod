@@ -118,4 +118,14 @@ public final class InventoryUtils {
         }
         return builder.toString();
     }
+
+    /**
+     * Create an InventoryState adapter for RecipeIndex queries.
+     */
+    public static RecipeIndex.InventoryState asInventoryState(FakePlayer bot) {
+        return new RecipeIndex.InventoryState() {
+            @Override public int countItem(Item item) { return InventoryUtils.countItem(bot, item); }
+            @Override public boolean hasItem(Item item, int count) { return InventoryUtils.countItem(bot, item) >= count; }
+        };
+    }
 }

@@ -80,9 +80,11 @@ public class FakePlayer extends ServerPlayer {
     @Nullable
     public static FakePlayer createAndRegister(
             MinecraftServer server, ServerLevel level, String name,
-            Vec3 pos, GameType gamemode, Consumer<FakePlayer> callback
+            Vec3 pos, GameType gamemode, Consumer<FakePlayer> callback,
+            @Nullable UUID persistentUUID
     ) {
-        GameProfile profile = new GameProfile(UUIDUtil.createOfflinePlayerUUID("AI:" + name), name);
+        UUID botUUID = (persistentUUID != null) ? persistentUUID : UUIDUtil.createOfflinePlayerUUID("AI:" + name);
+        GameProfile profile = new GameProfile(botUUID, name);
 
         FakePlayer instance = new FakePlayer(server, level, profile, ClientInformation.createDefault());
 
@@ -129,9 +131,14 @@ public class FakePlayer extends ServerPlayer {
     /** Convenience overload with default survival mode */
     @Nullable
     public static FakePlayer createAndRegister(MinecraftServer server, ServerLevel level, String name, Vec3 pos) {
-        return createAndRegister(server, level, name, pos, GameType.SURVIVAL, null);
+        return createAndRegister(server, level, name, pos, GameType.SURVIVAL, null, null);
     }
 
+
+    @Nullable
+    public static FakePlayer createAndRegister(MinecraftServer server, ServerLevel level, String name, Vec3 pos, GameType gamemode, Consumer<FakePlayer> callback) {
+        return createAndRegister(server, level, name, pos, gamemode, callback, null);
+    }
     // Placeholder for fixStartingPosition (called by super.tick via placeNewPlayer)
     private Runnable fixStartingPosition = () -> {};
 
@@ -191,7 +198,9 @@ public class FakePlayer extends ServerPlayer {
 
     @Override
     public void die(@NotNull DamageSource cause) {
-        // Reset state on death
+        String botName = this.getName().getString();
+        DevLog.info("FAKE_PLAYER_DIE", "name={}, cause={}", botName, cause.getMsgId());
+
         this.setExperiencePoints(0);
         this.setExperienceLevels(0);
         this.setDeltaMovement(Vec3.ZERO);
@@ -201,9 +210,28 @@ public class FakePlayer extends ServerPlayer {
         super.die(cause);
         setHealth(20);
         this.foodData = new FoodData();
-        DevLog.info("FAKE_PLAYER_DIE", "name={}", this.getName().getString());
-    }
 
+        // Auto-respawn after 2 seconds (40 ticks)
+        MinecraftServer srv = this.getServer();
+        if (srv != null) {
+            srv.tell(new TickTask(srv.getTickCount() + 40, () -> {
+                DevLog.info("FAKE_PLAYER_RESPAWN", "name={}", botName);
+                this.setHealth(20.0F);
+                this.foodData = new FoodData();
+                this.removeAllEffects();
+                this.setDeltaMovement(Vec3.ZERO);
+                this.fallDistance = 0;
+
+                // Teleport to world spawn
+                ServerLevel spawnLevel = srv.overworld();
+                net.minecraft.core.BlockPos spawnPos = spawnLevel.getSharedSpawnPos();
+                if (spawnPos != null) {
+                    this.teleportTo(spawnLevel, spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0, 0);
+                }
+                DevLog.info("FAKE_PLAYER_RESPAWNED", "name={}, pos={}", botName, this.position());
+            }));
+        }
+    }
     @Override
     public Entity changeDimension(@NotNull DimensionTransition transition) {
         super.changeDimension(transition);
