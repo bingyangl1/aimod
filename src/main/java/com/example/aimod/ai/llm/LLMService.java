@@ -14,11 +14,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class LLMService {
     private static final String DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions";
     private static final int HEALTH_CHECK_MAX_TOKENS = 1;
+    
+    // Retry constants
+    private static final int DEFAULT_MAX_RETRIES = 3;
+    private static final long RETRY_BASE_DELAY_MS = 1000L;
+    private static final long RETRY_MAX_DELAY_MS = 30000L;
     
     // HTTP client for connection reuse
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
@@ -42,6 +46,8 @@ public class LLMService {
     private boolean modelHealthCheck;
     private int healthCheckIntervalMs;
     private int healthCheckTimeoutMs;
+    private int maxRetries;
+    private RateLimiter rateLimiter;
 
     /** Simple container for health check cache */
     private static class HealthCheckResult {
@@ -53,6 +59,61 @@ public class LLMService {
             this.key = key;
             this.checkedAtMs = checkedAtMs;
             this.isOk = isOk;
+        }
+    }
+
+    /**
+     * Sliding window rate limiter.
+     * Tracks request timestamps in a circular buffer.
+     * When at capacity, blocks the caller until the oldest request expires.
+     */
+    static class RateLimiter {
+        private final long windowMs;
+        private final int maxRequests;
+        private final long[] timestamps;
+        private int head;
+        private int count;
+
+        RateLimiter(int maxRequestsPerMinute) {
+            this(maxRequestsPerMinute, 60_000L);
+        }
+
+        RateLimiter(int maxRequestsPerMinute, long windowMs) {
+            this.windowMs = windowMs;
+            this.maxRequests = Math.max(1, maxRequestsPerMinute);
+            this.timestamps = new long[this.maxRequests];
+        }
+
+        synchronized void acquire() throws InterruptedException {
+            long now = System.currentTimeMillis();
+            while (count > 0 && now - timestamps[head] > windowMs) {
+                head = (head + 1) % maxRequests;
+                count--;
+            }
+            if (count >= maxRequests) {
+                long oldestTs = timestamps[head];
+                long waitMs = windowMs - (now - oldestTs);
+                if (waitMs > 0) {
+                    Thread.sleep(waitMs);
+                }
+                now = System.currentTimeMillis();
+                while (count > 0 && now - timestamps[head] > windowMs) {
+                    head = (head + 1) % maxRequests;
+                    count--;
+                }
+            }
+            int tail = (head + count) % maxRequests;
+            timestamps[tail] = now;
+            count++;
+        }
+
+        synchronized int getCount() {
+            long now = System.currentTimeMillis();
+            while (count > 0 && now - timestamps[head] > windowMs) {
+                head = (head + 1) % maxRequests;
+                count--;
+            }
+            return count;
         }
     }
 
@@ -69,9 +130,20 @@ public class LLMService {
         this.modelHealthCheck = com.example.aimod.config.ModConfig.getModelHealthCheck();
         this.healthCheckIntervalMs = com.example.aimod.config.ModConfig.getHealthCheckIntervalSeconds() * 1000;
         this.healthCheckTimeoutMs = com.example.aimod.config.ModConfig.getHealthCheckTimeoutSeconds() * 1000;
-        DevLog.info("LLM_CONFIG", "apiUrl={}, model={}, maxTokens={}, temperature={}, connectTimeoutMs={}, readTimeoutMs={}, streamResponses={}, modelHealthCheck={}, healthCheckIntervalMs={}, healthCheckTimeoutMs={}, hasApiKey={}",
-                apiUrl, model, maxTokens, temperature, connectTimeoutMs, readTimeoutMs, streamResponses,
-                modelHealthCheck, healthCheckIntervalMs, healthCheckTimeoutMs,
+        this.maxRetries = com.example.aimod.config.ModConfig.getMaxRetries();
+        boolean rateLimitEnabled = com.example.aimod.config.ModConfig.getRateLimitEnabled();
+        if (rateLimitEnabled) {
+            int requestsPerMinute = com.example.aimod.config.ModConfig.getRateLimitRequestsPerMinute();
+            this.rateLimiter = new RateLimiter(requestsPerMinute);
+            DevLog.info("LLM_RATE_LIMIT", "enabled=true, requestsPerMinute={}", requestsPerMinute);
+        } else {
+            this.rateLimiter = null;
+            DevLog.info("LLM_RATE_LIMIT", "enabled=false");
+        }
+        DevLog.info("LLM_CONFIG", "apiUrl={}, model={}, maxTokens={}, temperature={}, connectTimeoutMs={}, readTimeoutMs={}, streamResponses={}, modelHealthCheck={}, healthCheckIntervalMs={}, healthCheckTimeoutMs={}, maxRetries={}, rateLimitEnabled={}, hasApiKey={}",
+                apiUrl, model, maxTokens, temperature, connectTimeoutMs, readTimeoutMs,
+                streamResponses, modelHealthCheck, healthCheckIntervalMs, healthCheckTimeoutMs,
+                maxRetries, rateLimitEnabled,
                 apiKey != null && !apiKey.isBlank());
     }
 
@@ -204,10 +276,49 @@ public class LLMService {
     }
 
     private String callLLMApi(String prompt) throws IOException, InterruptedException {
-        return callLLMApiDirect(prompt, maxTokens, readTimeoutMs);
+        return callWithRetry(prompt, maxTokens, readTimeoutMs);
+    }
+
+    private String callWithRetry(String prompt, int maxTokens, int timeoutMs) throws IOException, InterruptedException {
+        int retries = Math.max(0, maxRetries);
+        if (retries == 0) {
+            return callLLMApiDirect(prompt, maxTokens, timeoutMs);
+        }
+        long delay = RETRY_BASE_DELAY_MS;
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return callLLMApiDirect(prompt, maxTokens, timeoutMs);
+            } catch (IOException e) {
+                if (attempt >= retries || !isRetryable(e)) {
+                    throw e;
+                }
+                long jitter = (long) (delay * 0.25 * (Math.random() * 2.0 - 1.0));
+                long sleepMs = Math.max(1, delay + jitter);
+                DevLog.info("LLM_RETRY", "attempt={}/{}, sleepMs={}, error={}",
+                        attempt + 1, retries, sleepMs, e.getMessage());
+                Thread.sleep(sleepMs);
+                delay = Math.min(delay * 2, RETRY_MAX_DELAY_MS);
+            }
+        }
+    }
+
+    private static boolean isRetryable(IOException e) {
+        if (e instanceof java.net.SocketTimeoutException) {
+            return true;
+        }
+        String msg = e.getMessage();
+        if (msg == null) return false;
+        if (msg.contains("timed out") || msg.contains("timeout")
+                || msg.contains("refused") || msg.contains("reset")) {
+            return true;
+        }
+        return msg.contains("status 429") || msg.contains("status 5");
     }
 
     private String callLLMApiDirect(String prompt, int maxTokens, int timeoutMs) throws IOException, InterruptedException {
+        if (rateLimiter != null) {
+            rateLimiter.acquire();
+        }
         long startedAt = System.nanoTime();
 
         URI uri = URI.create(apiUrl);
@@ -386,20 +497,6 @@ public class LLMService {
             DevLog.warn("LLM_ACTION_PARSE_ERROR", "failed to parse actions from content: {}", e.getMessage());
         }
         return actions;
-    }
-
-    private String readStream(InputStream stream) throws IOException {
-        if (stream == null) {
-            return "";
-        }
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            StringBuilder response = new StringBuilder();
-            String responseLine;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-            return response.toString();
-        }
     }
 
     private long elapsedMs(long startedAt) {

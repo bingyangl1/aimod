@@ -83,6 +83,27 @@ public class ModConfig {
             )
             .defineInRange("healthCheckTimeoutSeconds", 20, 1, 300);
 
+    public static final ModConfigSpec.ConfigValue<Boolean> RATE_LIMIT_ENABLED = BUILDER
+            .comment(
+                "Enable rate limiting for LLM API requests to avoid hitting provider rate limits",
+                "When enabled, the bot will throttle requests to rateLimitRequestsPerMinute per minute."
+            )
+            .define("rateLimitEnabled", false);
+
+    public static final ModConfigSpec.ConfigValue<Integer> RATE_LIMIT_REQUESTS_PER_MINUTE = BUILDER
+            .comment(
+                "Maximum number of LLM API requests per minute when rate limiting is enabled",
+                "Set to match your LLM provider's rate limits (e.g., 30 for most OpenAI tiers)."
+            )
+            .defineInRange("rateLimitRequestsPerMinute", 30, 1, 600);
+
+    public static final ModConfigSpec.ConfigValue<Integer> MAX_RETRIES = BUILDER
+            .comment(
+                "Maximum number of retries for transient API errors (timeouts, 429, 5xx)",
+                "Uses exponential backoff with jitter. Set to 0 to disable retries."
+            )
+            .defineInRange("maxRetries", 3, 0, 10);
+
     public static final ModConfigSpec.ConfigValue<Boolean> ALLOW_DEV_CREATIVE_ITEM_PROVISIONING = BUILDER
             .comment(
                 "Development escape hatch: allow give_item to create missing items from thin air",
@@ -134,6 +155,18 @@ public class ModConfig {
 
     public static int getHealthCheckTimeoutSeconds() {
         return HEALTH_CHECK_TIMEOUT_SECONDS.get();
+    }
+
+    public static boolean getRateLimitEnabled() {
+        return RATE_LIMIT_ENABLED.get();
+    }
+
+    public static int getRateLimitRequestsPerMinute() {
+        return RATE_LIMIT_REQUESTS_PER_MINUTE.get();
+    }
+
+    public static int getMaxRetries() {
+        return MAX_RETRIES.get();
     }
 
     public static boolean getAllowDevCreativeItemProvisioning() {
