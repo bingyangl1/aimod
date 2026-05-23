@@ -1,5 +1,6 @@
 package com.aimod.ai;
 
+import com.aimod.ai.cache.ChunkCache;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
@@ -24,6 +25,8 @@ public class WorldScanner {
 
     private final net.minecraft.world.entity.Entity bot;
     private final int defaultScanRadius;
+    @Nullable
+    private ChunkCache chunkCache;
 
     public WorldScanner(net.minecraft.world.entity.Entity bot) {
         this(bot, 32);
@@ -32,6 +35,14 @@ public class WorldScanner {
     public WorldScanner(net.minecraft.world.entity.Entity bot, int defaultScanRadius) {
         this.bot = bot;
         this.defaultScanRadius = defaultScanRadius;
+    }
+
+    /** Set a chunk cache for O(1) block lookups instead of level.getBlockState(). */
+    public void setChunkCache(@Nullable ChunkCache cache) { this.chunkCache = cache; }
+
+    private BlockState getState(BlockPos pos) {
+        if (chunkCache != null) return chunkCache.getBlockState(pos);
+        return bot.level().getBlockState(pos);
     }
 
     /**
@@ -62,7 +73,7 @@ public class WorldScanner {
             int dy = pos.getY() - botPos.getY();
             int dz = pos.getZ() - botPos.getZ();
             if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
-            BlockState state = bot.level().getBlockState(pos);
+            BlockState state = getState(pos);
             if (state.is(targetBlock)) {
                 results.add(pos.immutable());
             }
@@ -253,7 +264,7 @@ public class WorldScanner {
         for (BlockPos pos : BlockPos.betweenClosed(
                 botPos.offset(-radius, -radius, -radius),
                 botPos.offset(radius, radius, radius))) {
-            if (bot.level().getBlockState(pos).is(targetBlock)) {
+            if (getState(pos).is(targetBlock)) {
                 count++;
             }
         }

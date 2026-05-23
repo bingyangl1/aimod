@@ -3,6 +3,11 @@ package com.aimod.fakeplayer;
 import com.aimod.ai.BotAIManager;
 import com.aimod.ai.InventoryUtils;
 import com.aimod.ai.Task;
+import com.aimod.ai.chain.ChainManager;
+import com.aimod.ai.chain.DangerChain;
+import com.aimod.ai.chain.DefenseChain;
+import com.aimod.ai.chain.FoodChain;
+import com.aimod.ai.chain.UnstuckChain;
 import com.aimod.ai.movement.MovementController;
 import com.aimod.util.DevLog;
 import com.mojang.authlib.GameProfile;
@@ -64,6 +69,9 @@ public class FakePlayer extends ServerPlayer {
     // ── Movement ────────────────────────────────────────────────────────
     private final MovementController movementController;
 
+    // ── Behavior Chains ──────────────────────────────────────────────────
+    private final ChainManager chainManager;
+
     // ── Construction ────────────────────────────────────────────────────
 
     public Runnable fixStartingPosition = () -> {};
@@ -73,6 +81,11 @@ public class FakePlayer extends ServerPlayer {
         // NetHandler is set by PlayerListMixin during placeNewPlayer()
         this.aiManager = new BotAIManager(this);
         this.movementController = new MovementController(this);
+        this.chainManager = new ChainManager();
+        this.chainManager.addChain(new DangerChain());
+        this.chainManager.addChain(new DefenseChain());
+        this.chainManager.addChain(new FoodChain());
+        this.chainManager.addChain(new UnstuckChain());
     }
 
     /**
@@ -202,8 +215,11 @@ public class FakePlayer extends ServerPlayer {
         // Tick the movement controller (handles async pathfinding delivery + movement execution)
         movementController.tick();
 
-        // AI tick
-        if (!paused && this.currentTask != null && !this.currentTask.isCompleted()) {
+        // Behavior chains (survival: danger > defense > food > unstuck)
+        boolean preempted = chainManager.tick(this);
+
+        // AI tick — skip if survival chain is preempting
+        if (!preempted && !paused && this.currentTask != null && !this.currentTask.isCompleted()) {
             aiManager.updateTask(this.currentTask);
         }
 
@@ -489,4 +505,7 @@ public class FakePlayer extends ServerPlayer {
 
     /** Get the centralized movement controller. */
     public MovementController getMovementController() { return movementController; }
+
+    /** Get the behavior chain manager. */
+    public ChainManager getChainManager() { return chainManager; }
 }
