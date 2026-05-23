@@ -5,19 +5,31 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class LLMService {
     private static final String DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions";
     private static final int HEALTH_CHECK_MAX_TOKENS = 1;
-    private static final Object HEALTH_CHECK_LOCK = new Object();
-    private static volatile String cachedHealthKey = "";
-    private static volatile long cachedHealthCheckedAtMs = 0L;
-    private static volatile boolean cachedHealthOk = false;
+    
+    // HTTP client for connection reuse
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_2)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+    
+    // Improved health check caching with AtomicReference
+    private static final AtomicReference<HealthCheckResult> HEALTH_CHECK_CACHE = 
+            new AtomicReference<>(new HealthCheckResult("", 0L, false));
 
     private String apiUrl;
     private String apiKey;
@@ -30,6 +42,19 @@ public class LLMService {
     private boolean modelHealthCheck;
     private int healthCheckIntervalMs;
     private int healthCheckTimeoutMs;
+
+    /** Simple container for health check cache */
+    private static class HealthCheckResult {
+        final String key;
+        final long checkedAtMs;
+        final boolean isOk;
+        
+        HealthCheckResult(String key, long checkedAtMs, boolean isOk) {
+            this.key = key;
+            this.checkedAtMs = checkedAtMs;
+            this.isOk = isOk;
+        }
+    }
 
     public LLMService() {
         // 从配置文件读取API设置
@@ -86,30 +111,23 @@ public class LLMService {
 
         String healthKey = apiUrl + "|" + model;
         long now = System.currentTimeMillis();
-        synchronized (HEALTH_CHECK_LOCK) {
-            if (cachedHealthOk && healthKey.equals(cachedHealthKey) &&
-                    healthCheckIntervalMs > 0 && now - cachedHealthCheckedAtMs < healthCheckIntervalMs) {
-                DevLog.info("LLM_HEALTH_CACHE", "status=ok, ageMs={}, intervalMs={}",
-                        now - cachedHealthCheckedAtMs, healthCheckIntervalMs);
-                return true;
-            }
+        HealthCheckResult cached = HEALTH_CHECK_CACHE.get();
+        if (cached.isOk && healthKey.equals(cached.key) &&
+                healthCheckIntervalMs > 0 && now - cached.checkedAtMs < healthCheckIntervalMs) {
+            DevLog.info("LLM_HEALTH_CACHE", "status=ok, ageMs={}, intervalMs={}",
+                    now - cached.checkedAtMs, healthCheckIntervalMs);
+            return true;
         }
 
         DevLog.info("LLM_HEALTH_START", "url={}, model={}, maxTokens={}, timeoutMs={}",
                 apiUrl, model, HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
         try {
             callLLMApiDirect("ping", HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
-            synchronized (HEALTH_CHECK_LOCK) {
-                cachedHealthOk = true;
-                cachedHealthKey = healthKey;
-                cachedHealthCheckedAtMs = now;
-            }
-            DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", now - cachedHealthCheckedAtMs);
+            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, true));
+            DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", now - cached.checkedAtMs);
             return true;
         } catch (Exception e) {
-            synchronized (HEALTH_CHECK_LOCK) {
-                cachedHealthOk = false;
-            }
+            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, false));
             DevLog.warn("LLM_HEALTH_FAIL", "error={}", e.getMessage());
             return false;
         }
@@ -185,22 +203,14 @@ public class LLMService {
         return prompt.toString();
     }
 
-    private String callLLMApi(String prompt) throws IOException {
+    private String callLLMApi(String prompt) throws IOException, InterruptedException {
         return callLLMApiDirect(prompt, maxTokens, readTimeoutMs);
     }
 
-    private String callLLMApiDirect(String prompt, int maxTokens, int timeoutMs) throws IOException {
+    private String callLLMApiDirect(String prompt, int maxTokens, int timeoutMs) throws IOException, InterruptedException {
         long startedAt = System.nanoTime();
 
-        URL url = new URL(apiUrl);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setConnectTimeout(connectTimeoutMs);
-        conn.setReadTimeout(timeoutMs);
-        conn.setDoOutput(true);
-
+        URI uri = URI.create(apiUrl);
         JsonObject requestBody = new JsonObject();
         requestBody.addProperty("model", model);
         requestBody.addProperty("max_tokens", maxTokens);
@@ -226,56 +236,63 @@ public class LLMService {
         String jsonBody = requestBody.toString();
         DevLog.info("LLM_REQUEST_BODY", "{}", DevLog.compact(jsonBody));
 
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
-            os.flush();
-        }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .timeout(Duration.ofMillis(timeoutMs))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
 
-        int responseCode = conn.getResponseCode();
+        HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        int responseCode = response.statusCode();
+        String responseBody = response.body();
+
         DevLog.info("LLM_RESPONSE_CODE", "code={}, elapsedMs={}", responseCode, elapsedMs(startedAt));
 
         if (responseCode != 200) {
-            String errorBody = readStream(conn.getErrorStream());
-            DevLog.warn("LLM_ERROR_RESPONSE", "code={}, body={}", responseCode, DevLog.compact(errorBody));
-            throw new IOException("API returned status " + responseCode + ": " + errorBody);
+            DevLog.warn("LLM_ERROR_RESPONSE", "code={}, body={}", responseCode, DevLog.compact(responseBody));
+            throw new IOException("API returned status " + responseCode + ": " + responseBody);
         }
 
         if (requestBody.has("stream") && requestBody.get("stream").getAsBoolean()) {
-            return readSSEStream(conn, startedAt);
+            return readSSEStream(responseBody, startedAt);
         }
 
-        String responseBody = readStream(conn.getInputStream());
         DevLog.info("LLM_HTTP_RESPONSE", "elapsedMs={}, body={}", elapsedMs(startedAt), DevLog.compact(responseBody));
         return responseBody;
     }
 
-    private String readSSEStream(HttpURLConnection conn, long startedAt) throws IOException {
-        InputStream inputStream = conn.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
+    private String readSSEStream(String responseBody, long startedAt) {
+        // Process SSE format from the response body
+        BufferedReader reader = new BufferedReader(new StringReader(responseBody));
         StringBuilder content = new StringBuilder();
-        String fallbackBody = null;
 
         String line;
-        while ((line = reader.readLine()) != null) {
-            if (line.startsWith("data: ")) {
-                String data = line.substring(6).trim();
-                if (data.equals("[DONE]")) {
-                    break;
-                }
-                try {
-                    JsonObject chunk = JsonParser.parseString(data).getAsJsonObject();
-                    appendStreamingChoice(chunk, content);
-                } catch (Exception e) {
-                    DevLog.warn("LLM_STREAM_PARSE_ERROR", "data={}", DevLog.compact(data));
+        try {
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("data: ")) {
+                    String data = line.substring(6).trim();
+                    if (data.equals("[DONE]")) {
+                        break;
+                    }
+                    try {
+                        JsonObject chunk = JsonParser.parseString(data).getAsJsonObject();
+                        appendStreamingChoice(chunk, content);
+                    } catch (Exception e) {
+                        DevLog.warn("LLM_STREAM_PARSE_ERROR", "data={}", DevLog.compact(data));
+                    }
                 }
             }
+        } catch (IOException e) {
+            DevLog.warn("LLM_STREAM_READ_ERROR", "{}", e.getMessage());
         }
 
         if (content.length() == 0) {
-            DevLog.warn("LLM_STREAM_EMPTY", "stream returned no content; falling back to non-streaming");
-            fallbackBody = readStream(inputStream);
-            DevLog.info("LLM_HTTP_RESPONSE", "elapsedMs={}, body={}", elapsedMs(startedAt), DevLog.compact(fallbackBody));
-            return fallbackBody;
+            DevLog.warn("LLM_STREAM_EMPTY", "stream returned no content");
+            // Return the original response body as fallback
+            DevLog.info("LLM_HTTP_RESPONSE", "elapsedMs={}, body={}", elapsedMs(startedAt), DevLog.compact(responseBody));
+            return responseBody;
         }
 
         DevLog.info("LLM_STREAM_DONE", "elapsedMs={}, content={}", elapsedMs(startedAt), DevLog.compact(content.toString()));

@@ -2,10 +2,13 @@ package com.example.aimod.ai.llm;
 
 import com.example.aimod.util.DevLog;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class LLMResponseParser {
     private LLMResponseParser() {}
@@ -34,6 +37,7 @@ public final class LLMResponseParser {
     public static List<String> parseActionsFromContent(String content) {
         List<String> actions = new ArrayList<>();
         try {
+            // 首先尝试标准解析：查找完整的JSON对象
             if (content.contains("{") && content.contains("}")) {
                 int start = content.indexOf("{");
                 int end = content.lastIndexOf("}") + 1;
@@ -44,10 +48,68 @@ public final class LLMResponseParser {
                     for (int i = 0; i < actionsArray.size(); i++) {
                         actions.add(actionsArray.get(i).toString());
                     }
+                    return actions; // 如果成功，直接返回
+                }
+            }
+            
+            // 如果标准解析失败，尝试宽松解析：查找actions数组
+            actions = findActionsArrayLoosely(content);
+            if (!actions.isEmpty()) {
+                return actions;
+            }
+            
+            // 最后尝试：查找看起来像action对象的内容
+            return extractActionObjects(content);
+        } catch (Exception e) {
+            DevLog.warn("LLM_ACTION_PARSE_ERROR", "failed to parse actions from content: {}", e.getMessage());
+        }
+        return actions;
+    }
+
+    /**
+     * 宽松解析：直接查找"actions": [...]模式
+     */
+    private static List<String> findActionsArrayLoosely(String content) {
+        List<String> actions = new ArrayList<>();
+        try {
+            // 使用正则表达式查找"actions": [ ... ] 模式
+            Pattern pattern = Pattern.compile("\"actions\"\\s*:\\s*(\\[[^\\]]*\\])");
+            Matcher matcher = pattern.matcher(content);
+            if (matcher.find()) {
+                String jsonArrayStr = matcher.group(1);
+                // 尝试解析这个数组
+                JsonElement element = JsonParser.parseString(jsonArrayStr);
+                if (element.isJsonArray()) {
+                    JsonArray actionsArray = element.getAsJsonArray();
+                    for (int i = 0; i < actionsArray.size(); i++) {
+                        actions.add(actionsArray.get(i).toString());
+                    }
                 }
             }
         } catch (Exception e) {
-            DevLog.warn("LLM_ACTION_PARSE_ERROR", "failed to parse actions from content: {}", e.getMessage());
+            DevLog.warn("LLM_ACTION_PARSE_LOOSE_ERROR", "loose parsing failed: {}", e.getMessage());
+        }
+        return actions;
+    }
+
+    /**
+     * 提取看起来像action对象的内容（最后的备选方案）
+     */
+    private static List<String> extractActionObjects(String content) {
+        List<String> actions = new ArrayList<>();
+        try {
+            // 查找所有看起来像独立JSON对象的内容
+            Pattern pattern = Pattern.compile("\\{[^}]*\\}");
+            Matcher matcher = pattern.matcher(content);
+            while (matcher.find()) {
+                String potentialAction = matcher.group();
+                // 验证这是否包含action类型字段
+                if (potentialAction.contains("\"type\"")) {
+                    actions.add(potentialAction);
+                }
+            }
+        } catch (Exception e) {
+            DevLog.warn("LLM_ACTION_EXTRACT_ERROR", "action extraction failed: {}", e.getMessage());
         }
         return actions;
     }
