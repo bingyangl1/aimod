@@ -383,3 +383,20 @@
 - Baritone 风格 A* 路径（AI-Player 基础寻路）
 - 原版配方合成系统（AI-Player 无）
 - 流式 LLM 输出（AI-Player 不支持）
+
+### Meteor Client (MeteorDevelopment/meteor-client)
+- **类型**：Fabric/NeoForge 外挂端（模块化自动化）
+- **分析文档**：`docs/METEOR_CLIENT_ANALYSIS.md`
+
+**高价值模块**：
+1. **IPathManager 接口** — 路径管理抽象（moveTo/mine/follow/pause/resume），可插拔实现
+2. **KillAura 战斗系统** — 目标筛选（类型/距离/血量/幼崽/好友）、TPS同步攻击间隔、盾牌破防（切斧）、多目标
+3. **InvUtils 背包工具** — Predicate 驱动查找、findFastestTool()、流式容器操作 API
+4. **BlockUtils 方块交互** — 智能放置面检测 getPlaceSide()、挖掘速度精确计算 getBreakDelta()、暴露检测 isExposed()
+5. **AutoEat 自动进食** — 饥饿/血量阈值触发、食物优先级、黑名单
+
+**核心设计哲学**：
+- 工具类优先（静态 InvUtils/BlockUtils/EntityUtils）
+- Predicate 驱动筛选（灵活可组合）
+- FindItemResult 统一返回格式 (slot, count)
+- 事件驱动 tick 处理
