@@ -13,7 +13,12 @@ import net.neoforged.neoforge.network.connection.ConnectionType;
 /**
  * Fake network handler for FakePlayer.
  * All packets sent to the client are discarded.
+ *
+ * @deprecated Use {@link FakePlayerNetHandler} instead, which accepts the
+ *             standard 4-parameter constructor and integrates with the
+ *             {@link com.aimod.mixin.PlayerListMixin} handler replacement.
  */
+@Deprecated
 public class FakeNetHandler extends ServerGamePacketListenerImpl {
 
     private static final Connection FAKE_CONNECTION = new FakeConnection();

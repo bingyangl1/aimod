@@ -11,7 +11,11 @@ import javax.annotation.Nullable;
 /**
  * Fake network connection for FakePlayer.
  * Extends Connection and discards all packets.
+ *
+ * @deprecated Use {@link FakeClientConnection} instead, which uses an EmbeddedChannel
+ *             and integrates with the Mixin-based packet defense system.
  */
+@Deprecated
 public class FakeConnection extends Connection {
 
     public FakeConnection() {

@@ -66,6 +66,8 @@ public class FakePlayer extends ServerPlayer {
 
     // ── Construction ────────────────────────────────────────────────────
 
+    public Runnable fixStartingPosition = () -> {};
+
     private FakePlayer(MinecraftServer server, ServerLevel level, GameProfile profile, ClientInformation clientInfo) {
         super(server, level, profile, clientInfo);
         this.connection = new FakePlayerNetHandler(server, new FakeClientConnection(PacketFlow.SERVERBOUND), this,
@@ -77,6 +79,9 @@ public class FakePlayer extends ServerPlayer {
     /**
      * Create and register a FakePlayer with the server.
      * The player will appear in the tab list and be tracked like a real player.
+     *
+     * <p>Skin: attempts to use the profile from server cache (which may include
+     * skin data from Mojang). Falls back to offline UUID if no cached profile.</p>
      *
      * @param server  the Minecraft server
      * @param level   the server level to spawn in
@@ -92,21 +97,38 @@ public class FakePlayer extends ServerPlayer {
             Vec3 pos, GameType gamemode, Consumer<FakePlayer> callback,
             @Nullable UUID persistentUUID
     ) {
-        UUID botUUID = (persistentUUID != null) ? persistentUUID : UUIDUtil.createOfflinePlayerUUID("AI:" + name);
-        GameProfile profile = new GameProfile(botUUID, name);
+        // Try server profile cache first (may include Mojang skin data)
+        GameProfile profile;
+        net.minecraft.server.players.GameProfileCache profileCache = server.getProfileCache();
+        if (profileCache != null) {
+            profile = profileCache.get(name).orElse(null);
+        } else {
+            profile = null;
+        }
+
+        UUID botUUID;
+        if (profile != null) {
+            botUUID = profile.getId();
+        } else {
+            botUUID = (persistentUUID != null) ? persistentUUID : UUIDUtil.createOfflinePlayerUUID("AI:" + name);
+            profile = new GameProfile(botUUID, name);
+        }
 
         FakePlayer instance = new FakePlayer(server, level, profile, ClientInformation.createDefault());
 
         // Set spawn position
         instance.fixStartingPosition = () -> instance.moveTo(pos.x, pos.y, pos.z, 0, 0);
 
-        // Register with server player list - THIS is the key step
+        // Register with server player list — FakePlayerNetHandler set in constructor
         //noinspection deprecation
         server.getPlayerList().placeNewPlayer(
                 new FakeClientConnection(PacketFlow.SERVERBOUND),
                 instance,
                 new CommonListenerCookie(profile, 0, instance.clientInformation(), false)
         );
+
+        // Run fixStartingPosition after placeNewPlayer loads the player
+        instance.fixStartingPosition.run();
 
         // Post-registration setup
         instance.teleportTo(level, pos.x, pos.y, pos.z, 0, 0);
@@ -148,9 +170,6 @@ public class FakePlayer extends ServerPlayer {
     public static FakePlayer createAndRegister(MinecraftServer server, ServerLevel level, String name, Vec3 pos, GameType gamemode, Consumer<FakePlayer> callback) {
         return createAndRegister(server, level, name, pos, gamemode, callback, null);
     }
-
-    // Placeholder for fixStartingPosition (called by super.tick via placeNewPlayer)
-    private Runnable fixStartingPosition = () -> {};
 
     // ── ServerPlayer Overrides ──────────────────────────────────────────
 
