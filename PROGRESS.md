@@ -2,13 +2,16 @@
 
 ## 项目概况
 
-**目标**：实现类似"Minecraft版Claude Code"的模组，通过自然语言下达任务，大模型解析、规划任务，假人玩家执行、实现。
+**目标**：实现类似"Minecraft 版 Claude Code"的模组，通过自然语言下达任务，大模型解析、规划任务，假人玩家执行、实现。
+
 **版本**：Minecraft 1.21.1 + NeoForge 21.1.176
 
 **参考资源**：
 - [SiliconeDolls](https://github.com/Anvil-Dev/SiliconeDolls)（假人实现参考）
 - [Baritone](https://github.com/cabaletta/baritone/tree/1.21.1)（路径规划/挖矿）
 - [RollingGate](https://github.com/Anvil-Dev/RollingGate)（配置风格）
+- [AI-Player](https://github.com/shasankp000/AI-Player)（AI 机器人参考）
+- [Meteor Client](https://github.com/MeteorDevelopment/meteor-client)（外挂端模块参考）
 
 ---
 
@@ -20,33 +23,37 @@
 | FakePlayer 系统 | ✅ 完成 | 95% | FakePlayer extends ServerPlayer，直接注册到服务器 |
 | LLM 集成 | ✅ 功能完整 | 95% | OpenAI 兼容 API，流式支持，世界上下文，结构化提示词 |
 | 动作系统 | ✅ 大部分完成 | 85% | 14 种动作，含挖矿/采集/交互/装备 |
-| 世界感知 | ✅ 新增 | 80% | WorldScanner 支持方块/实体/玩家扫描 |
+| 世界感知 | ✅ 完成 | 80% | WorldScanner 支持方块/实体/玩家扫描 |
 | 任务调度 | ✅ 改进 | 50% | 顺序执行 + 错误处理 + 状态反馈 |
 | 合成系统 | ✅ 改进 | 60% | 使用 Minecraft 配方系统，支持工作台交互 |
-| 任务反馈 | ✅ 完成 | 90% | 向玩家报告执行状态，支持进度报告 |
+| 任务反馈 | ✅ 完成 | 90% | 向玩家报告执行状态，支持进度报告和 i18n |
 | 研发日志 | ✅ 完成 | 100% | DevLog 统一日志，关键 tag 全覆盖 |
 | 路径寻找 | ✅ 重构完成 | 70% | Baritone 风格 A* 寻路 + Goal 系统 |
+| 命令系统 | ✅ 完成 | 90% | 16 个子命令 + 直接命令 + i18n |
+| 测试 | ✅ 基础完成 | 20% | 8 个测试文件，约 50 个单元测试通过 |
 | 持久化 | ❌ 未实现 | 0% | 背包、任务不保存 |
-| 测试 | ✅ 基础完成 | 20% | 17 个单元测试通过 |
 
 **总体完成度：约 70%**
 
 ---
 
 ## 构建状态
+
 **✅ BUILD SUCCESSFUL**（`.\gradlew.bat build --init-script init-local.gradle`）
+
 最后验证：2026-05-23
 
 ### 构建环境备注
 - 必须使用 `--init-script init-local.gradle`（本地依赖仓库，SSL 限制）
 - Java 21 required（`gradle.properties` 中 `systemProp.java.home` 配置 JDK 路径）
 - Gradle daemon 已禁用
+- 测试依赖：JUnit 5.10.2 + Mockito 5.11.0
 
 ---
 
 ## 最新更新 (2026-05-23)
 
-### 本次会话：FakePlayer-first 架构重构 + Baritone 路径系统
+### FakePlayer-first 架构重构 + Baritone 路径系统
 
 **架构重大变更**：
 - **FakePlayer IS the bot** — 直接继承 `ServerPlayer`，不再通过 `AIBotEntity` (PathfinderMob) 封装
@@ -55,11 +62,24 @@
 - 所有 14 个 Action 更新为直接使用 `FakePlayer`
 
 **新增 Baritone 风格路径系统**：
+- `Pathfinder` — A* 核心算法（HashMap + PriorityQueue）
+- `PathNode` — 路径节点（含 hash 和 heuristic）
+- `PathResult` — 路径结果
+- `PathExecutor` — 路径执行器（逐步移动 + 卡住检测）
 - `BinaryHeapOpenSet` — 二叉堆优化 A* 开放列表
 - `MovementHelper` — 移动辅助（方块可通行性检测）
-- `PathExecutor` — 路径执行器（逐步移动）
+- `MoveCost` — 移动代价常量
 - `ToolSet` — 工具选择优化（挖掘速度计算）
-- `Goal` 系统 — `GoalBlock`, `GoalXZ`, `GoalYLevel`, `GoalComposite`
+- Goal 系统 — `GoalBlock`, `GoalXZ`, `GoalYLevel`, `GoalComposite`
+
+**新增命令系统**：
+- `DirectCommandHandler` — 绕过 LLM 直接创建任务
+- 16 个子命令（spawn, task, status, stop, cancel, pause, resume, goto, mine, follow, gather, craft, say, give, equip, help）
+- 所有面向用户字符串使用 `Component.translatable()` 支持 i18n
+
+**新增 LLM 解析器**：
+- `LLMResponseParser` — 独立的响应解析器
+- `ActionDescriptor` — 动作描述符，封装 JSON 参数
 
 **构建修复**：
 - MineBlockAction/GatherResourceAction 导航参数修复
@@ -99,11 +119,13 @@
 
 ## 文件清单
 
-### 源文件（46 个）
+### 源文件（约 50 个）
+
 **入口与配置**：
 - `AIMod.java` — @Mod 入口，注册事件
 - `config/ModConfig.java` — 配置定义（12 项）
-- `command/BotCommand.java` — `/ai_bot` 命令树
+- `command/BotCommand.java` — `/ai_bot` 命令树（16 个子命令）
+- `command/DirectCommandHandler.java` — 直接命令处理
 
 **FakePlayer 系统**：
 - `fakeplayer/FakePlayer.java` — 核心假人，extends ServerPlayer
@@ -116,7 +138,7 @@
 **AI 核心**：
 - `ai/BotAIManager.java` — LLM 响应解析 → 动作序列
 - `ai/Task.java` — 任务模型
-- `ai/TaskFeedback.java` — 任务状态反馈
+- `ai/TaskFeedback.java` — 任务状态反馈（支持 i18n）
 - `ai/WorldScanner.java` — 世界扫描
 - `ai/InventoryUtils.java` — 库存操作
 
@@ -153,8 +175,10 @@
 - `ai/pathing/goals/GoalComposite.java` — 组合目标
 
 **LLM 服务**：
-- `ai/llm/LLMService.java` — HTTP 调用（流式 + 预检）
+- `ai/llm/LLMService.java` — HTTP 调用（流式 + 健康检查）
 - `ai/llm/LLMResponse.java` — 响应模型
+- `ai/llm/LLMResponseParser.java` — 响应解析器
+- `ai/llm/ActionDescriptor.java` — 动作描述符
 
 **客户端**：
 - `client/ClientModEvents.java` — 空（FakePlayer 渲染为原版玩家）
@@ -162,16 +186,22 @@
 **工具**：
 - `util/DevLog.java` — 开发日志
 
-### 测试文件（3 个）
-- `src/test/.../ai/TaskTest.java`
-- `src/test/.../ai/llm/LLMResponseTest.java`
-- `src/test/.../ai/pathing/PathNodeTest.java`
+### 测试文件（8 个）
+- `src/test/.../ai/TaskTest.java` — 任务模型测试
+- `src/test/.../ai/llm/LLMResponseTest.java` — 响应模型测试
+- `src/test/.../ai/llm/LLMServiceParseTest.java` — 解析逻辑测试
+- `src/test/.../ai/pathing/BinaryHeapOpenSetTest.java` — 二叉堆测试
+- `src/test/.../ai/pathing/MoveCostTest.java` — 移动代价测试
+- `src/test/.../ai/pathing/PathNodeTest.java` — 路径节点测试
+- `src/test/.../ai/pathing/goals/GoalsTest.java` — 目标系统测试
+- `src/test/.../util/DevLogTest.java` — 日志工具测试
 
 ### 文档文件
-- `PROGRESS.md`（本文档）
-- `AGENTS.md`（Claude Code 指引）
-- `CODE_REVIEW.md`（代码审查报告）
-- `独立Minecraft Mod架构规划文档.md`（架构设计）
+- `README.md` — 项目说明文档（中文）
+- `AGENTS.md` — 开发代理指引（中文）
+- `PROGRESS.md` — 项目进度文档（中文，本文档）
+- `CODE_REVIEW.md` — 代码审查报告（中文）
+- `独立Minecraft Mod架构规划文档.md` — 架构设计文档
 
 ---
 
@@ -181,19 +211,18 @@
 1. **运行时测试** — 启动游戏，验证 `/ai_bot spawn`、`/ai_bot task`
 2. **FakeClientConnection 反射验证** — 确认 EmbeddedChannel 注入在 NeoForge 环境正常工作
 3. **HttpClient 复用** — LLMService 共享 HttpClient 实例
+4. **语言文件编码修复** — 确保 zh_cn.json 无乱码
 
 ### 中期（按架构文档）
-4. **持久化系统** — 保存/加载假人状态和背包
-5. **多假人协作** — 多个假人分工执行复杂任务
-6. **任务队列优化** — 优先级、中断、恢复
+5. **移动精度升级** — 从 setDeltaMovement 升级为输入模拟
+6. **高级移动类型** — 7 种 Baritone 风格移动
+7. **持久化系统** — 保存/加载假人状态和背包
 
 ### 长期
-7. **Baritone 深度集成** — 挖矿策略、矿脉追踪
-8. **GUI 界面** — 任务编辑器、假人状态面板
-9. **Mod 发布** — CurseForge / Modrinth
-
----
-
+8. **多假人协作** — 多个假人分工执行复杂任务
+9. **Baritone 深度集成** — 挖矿策略、矿脉追踪
+10. **GUI 界面** — 任务编辑器、假人状态面板
+11. **Mod 发布** — CurseForge / Modrinth
 
 ---
 
@@ -203,50 +232,50 @@
 
 | 维度 | aimod | Baritone 1.21.1 | 差距 |
 |------|-------|-----------------|------|
-| 源文件数 | ~46 | ~200+ | 4x |
-| 代码行数 | ~2,855 | ~14,800 | 5x |
-| 移动类型 | 1 (基础移动) | 7+ (Traverse/Ascend/Descend/Diagonal/Fall/Pillar/Jump) | 7x |
-| 命令数 | 16 | 30+ (含相对坐标/航点/建筑) | 2x |
-| 测试覆盖 | 3 文件 / 17 测试 | 6+ 测试文件 | 2x |
+| 源文件数 | ~50 | ~200+ | 4x |
+| 代码行数 | ~3,500 | ~14,800 | 4x |
+| 移动类型 | 1（基础移动） | 7+（Traverse/Ascend/Descend/Diagonal/Fall/Pillar/Jump） | 7x |
+| 命令数 | 16 | 30+（含相对坐标/航点/建筑） | 2x |
+| 测试覆盖 | 8 文件 / ~50 测试 | 6+ 测试文件 | 持平 |
 
 ### Baritone 优于我们的关键点
 
 #### 1. 移动系统（最大差距）
-- **Baritone**: 使用 `PlayerMovementInput` + `InputOverrideHandler` 模拟真实玩家输入（前进/ strafing/跳跃/潜行），通过 `MovementState` 管理每帧的输入状态
-- **我们**: 使用 `setDeltaMovement()` 设置速度向量，是物理滑动而非真实行走
-- **影响**: 我们的机器人无法精确行走、无法攀爬梯子、无法游泳、无法使用鞘翅
-- **优先级**: P0 — 这是最大的技术债
+- **Baritone**：使用 `PlayerMovementInput` + `InputOverrideHandler` 模拟真实玩家输入（前进/strafing/跳跃/潜行），通过 `MovementState` 管理每帧的输入状态
+- **我们**：使用 `setDeltaMovement()` 设置速度向量，是物理滑动而非真实行走
+- **影响**：我们的机器人无法精确行走、无法攀爬梯子、无法游泳、无法使用鞘翅
+- **优先级**：P0 — 这是最大的技术债
 
 #### 2. 移动类型多样性
-- **Baritone 7种移动类型**:
+- **Baritone 7 种移动类型**：
   - `MovementTraverse` — 平地行走（含搭桥）
   - `MovementAscend` — 斜坡上升（跳跃上方方块）
   - `MovementDescend` — 斜坡下降（含安全着陆检测）
-  - `MovementDiagonal` — 对角移动（节省29%距离）
+  - `MovementDiagonal` — 对角移动（节省 29% 距离）
   - `MovementFall` — 下落（大高度差）
   - `MovementPillar` — 搭柱向上（放置+跳跃）
-  - `MovementJump` — 跳跃（4格跳）
-- **我们**: 只有基础 `navigateTo()` — 直线移动 + 简单跳跃
+  - `MovementJump` — 跳跃（4 格跳）
+- **我们**：只有基础 `navigateTo()` — 直线移动 + 简单跳跃
 
 #### 3. 异步寻路
-- **Baritone**: `PathingBehavior` 在独立线程运行寻路，时间限制（默认2秒），不阻塞服务器tick
-- **我们**: `Pathfinder` 同步运行，可能阻塞服务器tick导致卡顿
+- **Baritone**：`PathingBehavior` 在独立线程运行寻路，时间限制（默认 2 秒），不阻塞服务器 tick
+- **我们**：`Pathfinder` 同步运行，可能阻塞服务器 tick 导致卡顿
 
 #### 4. 世界缓存
-- **Baritone**: `CachedWorld` + `CachedRegion` 缓存区块数据，O(1) 方块查询
-- **我们**: `WorldScanner` 暴力扫描立方体区域 O(n³)
+- **Baritone**：`CachedWorld` + `CachedRegion` 缓存区块数据，O(1) 方块查询
+- **我们**：`WorldScanner` 暴力扫描立方体区域 O(n³)
 
 #### 5. 挖矿智能
-- **Baritone `MineProcess`**: 矿脉追踪、矿石黑名单、分支采矿策略、高效扫描
-- **我们 `MineBlockAction`**: 基础方块搜索 + A* 寻路
+- **Baritone `MineProcess`**：矿脉追踪、矿石黑名单、分支采矿策略、高效扫描
+- **我们 `MineBlockAction`**：基础方块搜索 + A* 寻路
 
 #### 6. 路径执行器
-- **Baritone `PathExecutor`**: 冲刺控制、精确卡点检测（`MAX_DIST_FROM_PATH=2`）、`ticksAway` 超时重算、`MovementState` 输入状态管理
-- **我们 `PathExecutor`**: 基础距离检测 + 简单卡住超时
+- **Baritone `PathExecutor`**：冲刺控制、精确卡点检测（`MAX_DIST_FROM_PATH=2`）、`ticksAway` 超时重算、`MovementState` 输入状态管理
+- **我们 `PathExecutor`**：基础距离检测 + 简单卡住超时
 
 #### 7. 命令系统
-- **Baritone**: 自定义命令框架（`ICommand`/`Command`）、数据类型系统（`IDatatype`）、参数解析器、相对坐标、航点系统
-- **我们**: Brigadier 命令（16个子命令），功能完整但缺少相对坐标和航点
+- **Baritone**：自定义命令框架（`ICommand`/`Command`）、数据类型系统（`IDatatype`）、参数解析器、相对坐标、航点系统
+- **我们**：Brigadier 命令（16 个子命令），功能完整但缺少相对坐标和航点
 
 ### 我们优于 Baritone 的点
 
@@ -254,116 +283,18 @@
 |-----------|------|
 | LLM 自然语言集成 | Baritone 无此功能 — 这是我们的核心差异化 |
 | 服务端 FakePlayer | Baritone 控制本地客户端玩家；我们是服务端实体 |
-| 战斗系统 `AttackAction` | Baritone 无战斗 AI |
-| 合成系统 `CraftAction` | 使用 Minecraft 配方系统，Baritone 无此功能 |
+| 战斗系统 AttackAction | Baritone 无战斗 AI |
+| 合成系统 CraftAction | 使用 Minecraft 配方系统，Baritone 无此功能 |
 | 任务队列 + 反馈 | Task + TaskFeedback 实时状态报告 |
 | i18n 国际化 | 中英文支持，Baritone 无多语言 |
-| 给予/装备动作 | `GiveItemAction` / `EquipItemAction`，Baritone 无此功能 |
+| 给予/装备动作 | GiveItemAction / EquipItemAction，Baritone 无此功能 |
 
 ---
 
-## 研发路线图（基于 Baritone 对比）
-
-### Phase 1: 移动精度升级（P0 — 最高优先级）
-**目标**: 从 `setDeltaMovement()` 滑动升级为输入模拟行走
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 1.1 InputSimulation 系统 | 创建 `MovementInput` 类，模拟 forward/backward/strafe/jump/sneak 输入 | 3天 |
-| 1.2 朝向控制 | 机器人自动面向移动方向（yaw/pitch 计算） | 1天 |
-| 1.3 卡住检测升级 | 从简单距离检测升级为路径偏离检测 + 自动重寻路 | 1天 |
-| 1.4 基础移动验证 | 验证机器人能正常走斜坡、跳1格、下楼梯 | 1天 |
-
-### Phase 2: 高级移动类型（P1）
-**目标**: 实现 Baritone 的核心移动类型
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 2.1 Movement 框架 | 创建 `Movement` 基类，含 src/dest/positionsToBreak/status | 2天 |
-| 2.2 MovementTraverse | 平地行走 + 搭桥（放置脚下空位） | 2天 |
-| 2.3 MovementAscend/Descend | 斜坡上下移动 | 2天 |
-| 2.4 MovementDiagonal | 对角移动（节省距离） | 1天 |
-| 2.5 MovementFall | 安全下落（检测落地点） | 1天 |
-| 2.6 MovementPillar | 搭柱向上（放置+跳跃） | 2天 |
-
-### Phase 3: 世界缓存与挖矿智能（P1）
-**目标**: 替换暴力扫描，提升性能
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 3.1 ChunkCache | 缓存已加载区块的方块数据，O(1) 查询 | 2天 |
-| 3.2 OreVeinTracker | 矿脉追踪：挖掘一个矿石后搜索相邻同类 | 1天 |
-| 3.3 BranchMining | 分支采矿策略（鱼骨矿道） | 2天 |
-| 3.4 MineBlockAction 重写 | 使用 ChunkCache + OreVeinTracker | 1天 |
-
-### Phase 4: 异步寻路（P2）
-**目标**: 寻路不阻塞服务器
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 4.1 AsyncPathfinder | 在独立线程运行寻路，超时返回最佳路径 | 2天 |
-| 4.2 PathingBehavior | 管理寻路生命周期（请求/取消/重试） | 1天 |
-| 4.3 路径缓存 | 缓存最近使用的路径，避免重复计算 | 1天 |
-
-### Phase 5: 战斗 AI 增强（P2）
-**目标**: 从简单攻击升级为智能战斗
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 5.1 武器选择 | 根据目标类型自动选择最佳武器 | 1天 |
-| 5.2 盾牌格挡 | 检测远程攻击，自动举盾 | 1天 |
-| 5.3 走位（Kiting） | 保持距离 + 绕圈攻击 | 2天 |
-| 5.4 远程攻击 | 弓/弩/三叉戟瞄准 + 抛物线计算 | 2天 |
-
-### Phase 6: 任务系统增强（P2）
-**目标**: 更健壮的任务管理
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 6.1 优先级任务 | 紧急任务可中断低优先级任务 | 1天 |
-| 6.2 持久化 | 保存/加载假人状态和背包 | 2天 |
-| 6.3 多任务队列 | 支持顺序执行多个任务 | 1天 |
-| 6.4 航点系统 | 保存/加载/导航到命名位置 | 1天 |
-
-### Phase 7: 命令系统增强（P3）
-**目标**: 对齐 Baritone 的命令体验
-
-| 任务 | 说明 | 预计工时 |
-|------|------|---------|
-| 7.1 相对坐标 | goto ~ ~10 ~ 等相对坐标支持 | 1天 |
-| 7.2 航点命令 | /ai_bot waypoint save/load/list/goto | 1天 |
-| 7.3 建筑命令 | /ai_bot build <schematic> | 3天 |
-| 7.4 重复任务 | /ai_bot repeat mine diamond_ore | 1天 |
-
-### 总体时间估算
-
-| Phase | 优先级 | 预计工时 | 依赖 |
-|-------|--------|---------|------|
-| Phase 1: 移动精度 | P0 | 6天 | 无 |
-| Phase 2: 高级移动 | P1 | 10天 | Phase 1 |
-| Phase 3: 世界缓存 | P1 | 6天 | 无 |
-| Phase 4: 异步寻路 | P2 | 4天 | Phase 1 |
-| Phase 5: 战斗 AI | P2 | 6天 | Phase 1 |
-| Phase 6: 任务系统 | P2 | 5天 | 无 |
-| Phase 7: 命令增强 | P3 | 6天 | 无 |
-
-**关键路径**: Phase 1 → Phase 2 → Phase 4（移动精度是所有高级功能的基础）
-
-
-## 已知问题
-
-- `FakeClientConnection` 使用反射设置 `EmbeddedChannel`，NeoForge patched 字段名可能不同
-- 路径执行基础（vanilla navigation + 简单移动控制）
-- 无持久化（假人背包和任务不保存）
-- WorldScanner 暴力扫描立方体区域（O(n³)）
-- 语言文件有编码问题（zh_cn.json 部分乱码）
----
-
-## 外部参考项目分析 (2026-05-23)
+## 外部参考项目分析
 
 ### AI-Player (shasankp000/AI-Player)
 - **加载器**：Fabric | **版本**：1.21.1 | **Stars**：124
-- **分析文档**：`docs/AI_PLAYER_ANALYSIS.md`
 
 **可借鉴的高价值模式**：
 1. **GameProfile 持久化** — 假人 UUID 跨重启保存（我们缺失）
@@ -386,11 +317,10 @@
 
 ### Meteor Client (MeteorDevelopment/meteor-client)
 - **类型**：Fabric/NeoForge 外挂端（模块化自动化）
-- **分析文档**：`docs/METEOR_CLIENT_ANALYSIS.md`
 
 **高价值模块**：
 1. **IPathManager 接口** — 路径管理抽象（moveTo/mine/follow/pause/resume），可插拔实现
-2. **KillAura 战斗系统** — 目标筛选（类型/距离/血量/幼崽/好友）、TPS同步攻击间隔、盾牌破防（切斧）、多目标
+2. **KillAura 战斗系统** — 目标筛选（类型/距离/血量/幼崽/好友）、TPS 同步攻击间隔、盾牌破防（切斧）、多目标
 3. **InvUtils 背包工具** — Predicate 驱动查找、findFastestTool()、流式容器操作 API
 4. **BlockUtils 方块交互** — 智能放置面检测 getPlaceSide()、挖掘速度精确计算 getBreakDelta()、暴露检测 isExposed()
 5. **AutoEat 自动进食** — 饥饿/血量阈值触发、食物优先级、黑名单
@@ -400,26 +330,14 @@
 - Predicate 驱动筛选（灵活可组合）
 - FindItemResult 统一返回格式 (slot, count)
 - 事件驱动 tick 处理
-### EMI (emilyploszaj/emi) & JEI (mezz/JustEnoughItems)
-- **类型**：配方查看器（最成熟的配方系统参考）
-- **分析文档**：`docs/RECIPE_SYSTEM_ANALYSIS.md`
 
-**核心发现**：
-1. **配方索引** — EMI/JEI 预建 byOutput/byInput 索引，查找 O(1)；我们遍历全部配方 O(n)
-2. **EmiIngredient 抽象** — 支持 Tag（#minecraft:planks = 任意木板）、数量、概率；我们只认具体物品
-3. **inputs vs catalysts** — EMI 区分消耗物（木板）和催化物（工作台）；我们不区分
-4. **Bill of Materials (BoM)** — EMI 独有的配方树，递归解析完整依赖链（钻石镐→木棍→木板→原木）
-5. **可合成检测** — EMI 可根据当前库存显示"能合成什么"；我们无此功能
-6. **RecipeType/Category** — JEI 按类型组织配方（crafting/smelting/stonecutting）；我们只处理 CraftingRecipe
+---
 
-**当前 CraftAction 主要缺陷**：
-- O(n) 遍历查找配方
-- 不支持 Tag
-- 不区分输入/催化物
-- 无配方树（无法规划多步合成）
-- 只支持工作台合成
+## 已知问题
 
-**推荐开发优先级**：
-- P0：配方索引 + Tag感知 + 催化物区分
-- P1：可合成检测 + 多配方类型
-- P2：多步配方树 + 完整合成规划引擎
+- `FakeClientConnection` 使用反射设置 `EmbeddedChannel`，NeoForge patched 字段名可能不同
+- 路径执行基础（vanilla navigation + 简单移动控制）
+- 无持久化（假人背包和任务不保存）
+- WorldScanner 暴力扫描立方体区域（O(n³)）
+- HttpClient 每次 LLM 调用创建新实例
+- LLMService 健康检查缓存存在线程安全顾虑

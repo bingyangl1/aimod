@@ -120,7 +120,9 @@ public class GatherResourceAction extends Action {
         double distSqr = dx * dx + dy * dy + dz * dz;
 
         // === Close enough to break? ===
-        if (distSqr <= REACH_DISTANCE_SQR) {
+        double dxzSqr = dx * dx + dz * dz;
+        boolean canReach = (dxzSqr <= 9.0 && dy >= -1.5 && dy <= 4.0);
+        if (canReach) {
             stopNavigation(bot);
             breakTarget(bot, blockState);
             return;
@@ -173,10 +175,16 @@ public class GatherResourceAction extends Action {
             lastDistSqr = distSqr;
 
             if (stuckTicks > STUCK_TIMEOUT) {
-                DevLog.warn("GATHER_STUCK", "type={}, target={}, dist={}, skipping",
-                        resourceType, currentTarget.toShortString(),
-                        String.format("%.1f", Math.sqrt(distSqr)));
-                resetTarget();
+                // Before skipping elevated targets, try to pillar up
+                if (currentTarget.getY() > bot.blockPosition().getY() && tryPillarUp(bot)) {
+                    stuckTicks = STUCK_TIMEOUT / 2;
+                    DevLog.info("GATHER_STUCK_PILLAR", "type={}, target={}", resourceType, currentTarget.toShortString());
+                } else {
+                    DevLog.warn("GATHER_STUCK", "type={}, target={}, dist={}, skipping",
+                            resourceType, currentTarget.toShortString(),
+                            String.format("%.1f", Math.sqrt(distSqr)));
+                    resetTarget();
+                }
             }
         } else {
             // No strategy worked -?skip this target
@@ -362,67 +370,73 @@ public class GatherResourceAction extends Action {
     private boolean tryPillarUp(FakePlayer bot) {
         if (placeBlockCooldown > 0) {
             placeBlockCooldown--;
-            return true; // Wait, don't skip
-        }
-
-        // Find a throwaway block in bot inventory
-        ItemStack throwaway = findThrowawayBlock(bot);
-        if (throwaway.isEmpty()) {
-            DevLog.warn("GATHER_PILLAR_NO_BLOCKS", "no throwaway blocks in inventory");
-            return false;
-        }
-
-        BlockPos belowBot = bot.blockPosition().below();
-        BlockState belowState = bot.level().getBlockState(belowBot);
-
-        // If there's already a solid block below, try to jump up
-        if (Block.isShapeFullBlock(belowState.getCollisionShape(bot.level(), belowBot))) {
-            // Jump and place
-            if (bot.onGround()) {
-                bot.jumpFromGround();
-                placeBlockCooldown = PLACE_BLOCK_COOLDOWN;
-                DevLog.info("GATHER_PILLAR_JUMP", "pos={}", bot.blockPosition().toShortString());
-            }
             return true;
         }
 
-        // Place a block below the bot
+        ItemStack throwaway = findThrowawayBlock(bot);
+        if (throwaway.isEmpty()) {
+            DevLog.warn("GATHER_PILLAR_NO_BLOCKS", "no blocks in inventory");
+            return false;
+        }
+
+        BlockPos feetPos = bot.blockPosition();
+        BlockPos belowFeet = feetPos.below();
+        BlockState belowState = bot.level().getBlockState(belowFeet);
+        boolean solidBelow = Block.isShapeFullBlock(belowState.getCollisionShape(bot.level(), belowFeet));
+
         Block block = throwaway.getItem() instanceof BlockItem blockItem ? blockItem.getBlock() : null;
-        if (block != null) {
+        if (block == null) return false;
+
+        if (solidBelow && bot.onGround()) {
+            // Phase 1: Place block at feet position, pushing bot up, then jump
             BlockState placeState = block.defaultBlockState();
-            bot.level().setBlock(belowBot, placeState, 3);
+            BlockPos placeAt = feetPos; // Place at bot's feet level
+            bot.level().setBlock(placeAt, placeState, 3);
+            throwaway.shrink(1);
+            // The block placement pushes the bot up, then jump to land on top
+            bot.jumpFromGround();
+            placeBlockCooldown = PLACE_BLOCK_COOLDOWN;
+            DevLog.info("GATHER_PILLAR_UP", "block={}, at={}", block.getName().getString(), placeAt.toShortString());
+            return true;
+        } else if (!solidBelow) {
+            // Phase 2: No solid below (in air or gap) — place block below
+            BlockState placeState = block.defaultBlockState();
+            bot.level().setBlock(belowFeet, placeState, 3);
             throwaway.shrink(1);
             placeBlockCooldown = PLACE_BLOCK_COOLDOWN;
-            DevLog.info("GATHER_PILLAR_PLACED", "block={}, pos={}", block.getName().getString(), belowBot.toShortString());
+            DevLog.info("GATHER_PILLAR_FILL", "block={}, at={}", block.getName().getString(), belowFeet.toShortString());
             return true;
         }
 
         return false;
     }
 
-    /**
-     * Find a throwaway block in the bot's inventory (dirt, cobblestone, etc.)
-     */
-    private ItemStack findThrowawayBlock(FakePlayer bot) {
+        private ItemStack findThrowawayBlock(FakePlayer bot) {
         var inventory = bot.getInventory();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() instanceof BlockItem blockItem) {
                 Block block = blockItem.getBlock();
-                // Only use "cheap" blocks for scaffolding
                 if (isThrowawayBlock(block)) {
                     return stack;
                 }
             }
         }
+        // Fallback: use ANY placeable block when no cheap blocks available
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!stack.isEmpty() && stack.getItem() instanceof BlockItem) {
+                return stack;
+            }
+        }
         return ItemStack.EMPTY;
     }
 
-    private boolean isThrowawayBlock(Block block) {
+        private boolean isThrowawayBlock(Block block) {
         return block == Blocks.DIRT || block == Blocks.COBBLESTONE
                 || block == Blocks.GRASS_BLOCK || block == Blocks.COARSE_DIRT
                 || block == Blocks.STONE || block == Blocks.NETHERRACK
-                || block == Blocks.OAK_PLANKS || block == Blocks.COBBLESTONE;
+                || block == Blocks.OAK_PLANKS;
     }
 
     // ========== Water Handling ==========

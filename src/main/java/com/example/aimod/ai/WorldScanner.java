@@ -22,14 +22,14 @@ import java.util.stream.Collectors;
  */
 public class WorldScanner {
 
-    private final FakePlayer bot;
+    private final net.minecraft.world.entity.Entity bot;
     private final int defaultScanRadius;
 
-    public WorldScanner(FakePlayer bot) {
+    public WorldScanner(net.minecraft.world.entity.Entity bot) {
         this(bot, 32);
     }
 
-    public WorldScanner(FakePlayer bot, int defaultScanRadius) {
+    public WorldScanner(net.minecraft.world.entity.Entity bot, int defaultScanRadius) {
         this.bot = bot;
         this.defaultScanRadius = defaultScanRadius;
     }
@@ -58,21 +58,28 @@ public class WorldScanner {
         for (BlockPos pos : BlockPos.betweenClosed(
                 botPos.offset(-radius, -radius, -radius),
                 botPos.offset(radius, radius, radius))) {
+            int dx = pos.getX() - botPos.getX();
+            int dy = pos.getY() - botPos.getY();
+            int dz = pos.getZ() - botPos.getZ();
+            if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
             BlockState state = bot.level().getBlockState(pos);
             if (state.is(targetBlock)) {
                 results.add(pos.immutable());
-                if (results.size() >= MAX_RESULTS) { break; }
             }
         }
 
-        // 按距离排序
         results.sort(Comparator.comparingDouble(pos -> bot.distanceToSqr(
                 pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)));
+
+        if (results.size() > MAX_RESULTS) {
+            results = new ArrayList<>(results.subList(0, MAX_RESULTS));
+        }
 
         DevLog.info("SCAN_BLOCKS", "block={}, radius={}, found={}",
                 BuiltInRegistries.BLOCK.getKey(targetBlock), radius, results.size());
         return results;
     }
+
 
     /**
      * 查找最近的指定类型方块

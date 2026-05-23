@@ -54,6 +54,7 @@ public class FakePlayer extends ServerPlayer {
     private BotAIManager aiManager;
     private Task currentTask;
     private volatile boolean parsingTask = false;
+    private volatile boolean paused = false;
 
     // ── Construction ────────────────────────────────────────────────────
 
@@ -180,7 +181,7 @@ public class FakePlayer extends ServerPlayer {
         }
 
         // AI tick
-        if (this.currentTask != null && !this.currentTask.isCompleted()) {
+        if (!paused && this.currentTask != null && !this.currentTask.isCompleted()) {
             aiManager.updateTask(this.currentTask);
         }
 
@@ -374,6 +375,68 @@ public class FakePlayer extends ServerPlayer {
     public Task getCurrentTask() {
         return currentTask;
     }
+
+    /**
+     * Assign a pre-built task directly, bypassing the LLM.
+     */
+    public void assignDirectTask(Task task, @Nullable Player owner) {
+        if (parsingTask) {
+            DevLog.warn("BOT_ALREADY_PARSING", "bot={}, task={}", this.getStringUUID(), task.getDescription());
+            return;
+        }
+        if (this.currentTask != null && !this.currentTask.isCompleted()) {
+                        this.currentTask.setStatus(Task.TaskStatus.FAILED);
+        }
+        this.currentTask = null;
+        this.paused = false;
+        if (owner != null) {
+            aiManager.getFeedback().setOwner(owner);
+        }
+        DevLog.info("BOT_DIRECT_TASK", "bot={}, task={}, actions={}",
+                this.getStringUUID(), task.getDescription(), task.getActionCount());
+        aiManager.getFeedback().reportTaskStart(task.getDescription());
+        this.currentTask = task;
+        aiManager.executeTask(this.currentTask);
+    }
+
+    /**
+     * Cancel the current task, stopping all bot activity.
+     */
+    public void cancelTask() {
+        if (this.currentTask != null) {
+                        String desc = this.currentTask.getDescription();
+            this.currentTask.setStatus(Task.TaskStatus.FAILED);
+            aiManager.getFeedback().sendToOwnerTranslatable("feedback.task.cancelled", desc);
+            DevLog.info("BOT_TASK_CANCELLED", "bot={}, task={}", this.getStringUUID(), desc);
+            this.currentTask = null;
+        }
+        this.paused = false;
+    }
+
+    /**
+     * Pause task execution (bot stays in place but stops acting).
+     */
+    public void pauseExecution() {
+        if (!this.paused) {
+            this.paused = true;
+                        aiManager.getFeedback().sendToOwnerTranslatable("feedback.bot_paused");
+            DevLog.info("BOT_PAUSED", "bot={}", this.getStringUUID());
+        }
+    }
+
+    /**
+     * Resume task execution after a pause.
+     */
+    public void resumeExecution() {
+        if (this.paused) {
+            this.paused = false;
+            aiManager.getFeedback().sendToOwnerTranslatable("feedback.bot_resumed");
+            DevLog.info("BOT_RESUMED", "bot={}", this.getStringUUID());
+        }
+    }
+
+    /** Check if the bot is paused. */
+    public boolean isPaused() { return paused; }
 
     public boolean hasActiveTask() {
         return currentTask != null && !currentTask.isCompleted();

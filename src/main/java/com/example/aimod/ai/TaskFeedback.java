@@ -14,13 +14,13 @@ import java.util.UUID;
  */
 public class TaskFeedback {
 
-    private final FakePlayer bot;
+    private final net.minecraft.world.entity.Entity bot;
     @Nullable
     private UUID ownerUUID;
     @Nullable
     private String ownerName;
 
-    public TaskFeedback(FakePlayer bot) {
+    public TaskFeedback(net.minecraft.world.entity.Entity bot) {
         this.bot = bot;
     }
 
@@ -45,6 +45,20 @@ public class TaskFeedback {
         if (owner != null) {
             owner.sendSystemMessage(Component.literal("§e[AI Bot]§r " + message));
             DevLog.info("FEEDBACK_SENT", "to={}, message={}", ownerName, DevLog.compact(message));
+        }
+    }
+
+    /**
+     * Send a translatable message to the task owner.
+     */
+    public void sendToOwnerTranslatable(String key, Object... args) {
+        if (ownerUUID == null) return;
+
+        ServerLevel level = (ServerLevel) bot.level();
+        Player owner = level.getServer().getPlayerList().getPlayer(ownerUUID);
+        if (owner != null) {
+            owner.sendSystemMessage(Component.literal("§e[AI Bot]§r ").append(Component.translatable(key, args)));
+            DevLog.info("FEEDBACK_SENT", "to={}, key={}", ownerName, key);
         }
     }
 
