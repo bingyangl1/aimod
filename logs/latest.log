@@ -1,20 +1,20 @@
-[235月2026 21:43:11.670] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content=I do not understand the request.
-[235月2026 21:43:11.673] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=0, actions=[]
-[235月2026 21:43:11.677] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content={"actions": [{"type":"say","message":"Hello!"}]}
-[235月2026 21:43:11.681] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=1, actions=[{"type":"say","message":"Hello!"}]
-[235月2026 21:43:11.682] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_ERROR] failed to parse provider response: class com.google.gson.JsonPrimitive cannot be cast to class com.google.gson.JsonArray (com.google.gson.JsonPrimitive and com.google.gson.JsonArray are in unnamed module of loader 'app')
-[235月2026 21:43:11.685] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content=Based on your request: {"actions": [{"type":"mine","block_id":"minecraft:diamond_ore","count":5}]} Done.
-[235月2026 21:43:11.686] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=1, actions=[{"type":"mine","block_id":"minecraft:diamond_ore","count":5}]
-[235月2026 21:43:11.690] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 17 path $
-[235月2026 21:43:11.692] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 22 path $
-[235月2026 21:43:11.698] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 21 path $
-[235月2026 21:43:11.700] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 39 path $.actions[2]
-[235月2026 21:43:11.701] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_ACTION_PARSE_LOOSE_ERROR] loose parsing failed: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 27 path $[2]
-[235月2026 21:43:11.705] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_STREAM_CHUNK] world
-[235月2026 21:43:11.706] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_STREAM_CHUNK] hello
-[235月2026 21:43:11.719] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [ACTION_DESCRIPTOR_ERROR] failed to parse action: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 6 path $
-[235月2026 21:43:11.727] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content=hello
-[235月2026 21:43:11.728] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=0, actions=[]
-[235月2026 21:43:11.731] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content={"actions": [{"type":"say","message":"hi"}]}
-[235月2026 21:43:11.731] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=1, actions=[{"type":"say","message":"hi"}]
-[235月2026 21:43:11.732] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_ERROR] failed to parse provider response: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 6 path $
+[245月2026 00:04:19.929] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content=I do not understand the request.
+[245月2026 00:04:20.064] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=0, actions=[]
+[245月2026 00:04:20.066] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content={"actions": [{"type":"say","message":"Hello!"}]}
+[245月2026 00:04:20.068] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=1, actions=[{"type":"say","message":"Hello!"}]
+[245月2026 00:04:20.069] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_ERROR] failed to parse provider response: class com.google.gson.JsonPrimitive cannot be cast to class com.google.gson.JsonArray (com.google.gson.JsonPrimitive and com.google.gson.JsonArray are in unnamed module of loader 'app')
+[245月2026 00:04:20.071] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content=Based on your request: {"actions": [{"type":"mine","block_id":"minecraft:diamond_ore","count":5}]} Done.
+[245月2026 00:04:20.071] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=1, actions=[{"type":"mine","block_id":"minecraft:diamond_ore","count":5}]
+[245月2026 00:04:20.075] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 17 path $
+[245月2026 00:04:20.076] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 22 path $
+[245月2026 00:04:20.077] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 21 path $
+[245月2026 00:04:20.078] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_STANDARD_FAILED] standard parse failed: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 39 path $.actions[2]
+[245月2026 00:04:20.079] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_ACTION_PARSE_LOOSE_ERROR] loose parsing failed: com.google.gson.stream.MalformedJsonException: Unterminated array at line 1 column 27 path $[2]
+[245月2026 00:04:20.081] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_STREAM_CHUNK] world
+[245月2026 00:04:20.083] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_STREAM_CHUNK] hello
+[245月2026 00:04:20.095] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [ACTION_DESCRIPTOR_ERROR] failed to parse action: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 6 path $
+[245月2026 00:04:20.100] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content=hello
+[245月2026 00:04:20.101] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=0, actions=[]
+[245月2026 00:04:20.102] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_RESPONSE] content={"actions": [{"type":"say","message":"hi"}]}
+[245月2026 00:04:20.102] [Test worker/INFO] [AIModDev/]: [AIMOD-DEV] [LLM_ACTIONS] count=1, actions=[{"type":"say","message":"hi"}]
+[245月2026 00:04:20.103] [Test worker/WARN] [AIModDev/]: [AIMOD-DEV] [LLM_PARSE_ERROR] failed to parse provider response: com.google.gson.stream.MalformedJsonException: Use JsonReader.setLenient(true) to accept malformed JSON at line 1 column 6 path $
