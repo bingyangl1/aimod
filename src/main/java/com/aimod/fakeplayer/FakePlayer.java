@@ -70,8 +70,7 @@ public class FakePlayer extends ServerPlayer {
 
     private FakePlayer(MinecraftServer server, ServerLevel level, GameProfile profile, ClientInformation clientInfo) {
         super(server, level, profile, clientInfo);
-        this.connection = new FakePlayerNetHandler(server, new FakeClientConnection(PacketFlow.SERVERBOUND), this,
-                new CommonListenerCookie(profile, 0, clientInfo, false));
+        // NetHandler is set by PlayerListMixin during placeNewPlayer()
         this.aiManager = new BotAIManager(this);
         this.movementController = new MovementController(this);
     }
