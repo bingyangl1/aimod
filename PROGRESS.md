@@ -30,10 +30,10 @@
 | 研发日志 | ✅ 完成 | 100% | DevLog 统一日志，关键 tag 全覆盖 |
 | 路径寻找 | ✅ 重构完成 | 70% | Baritone 风格 A* 寻路 + Goal 系统 |
 | 命令系统 | ✅ 完成 | 90% | 16 个子命令 + 直接命令 + i18n |
-| 测试 | ✅ 基础完成 | 20% | 8 个测试文件，约 50 个单元测试通过 |
+| 测试 | ✅ 完成 | 40% | 9 个测试文件，87 个单元测试全部通过 |
 | 持久化 | ❌ 未实现 | 0% | 背包、任务不保存 |
 
-**总体完成度：约 70%**
+**总体完成度：约 75%**
 
 ---
 
@@ -41,7 +41,7 @@
 
 **✅ BUILD SUCCESSFUL**（`.\gradlew.bat build --init-script init-local.gradle`）
 
-最后验证：2026-05-23
+最后验证：2026-05-23 19:47
 
 ### 构建环境备注
 - 必须使用 `--init-script init-local.gradle`（本地依赖仓库，SSL 限制）
@@ -355,5 +355,27 @@
 - `BotProfileStore.java` — 新建，保存 name→UUID 到 `config/aimod/bots.json`
 - `FakePlayerManager.java` — 更新，使用持久化 UUID
 - `FakePlayer.java` — 接受 persistentUUID 参数 + 死亡后自动重生（40 tick 延迟）
+
+
+### LLM 解析器提取 + 单元测试扩展 (2026-05-23)
+
+**LLMResponseParser 提取**：
+- 从 LLMService 提取 JSON 解析逻辑到独立的 LLMResponseParser 工具类
+- 新增 ActionDescriptor 不可变动作描述符（type + params + 安全访问器）
+- LLMService.parseResponse() 和 ppendStreamingChoice() 委托给 LLMResponseParser
+- 所有解析方法无 Minecraft 运行时依赖，完全可单元测试
+
+**测试扩展**：
+- 新增 LLMResponseParserTest.java（25 个测试，5 个嵌套类）
+  - parseResponse — OpenAI 格式解析、无效 JSON、空 choices
+  - parseActionsFromContent — JSON 提取、文本包裹、空数组
+  - parseActionDescriptors — 结构化解析、畸形 JSON 跳过
+  - ActionDescriptor — getString/Int/Double、getItemsMap、null 处理
+  - ppendStreamingChunk — delta/message 格式、空/null choices
+- 修复 MoveCostTest 适配 4 元素 OFFSETS 格式（16 个偏移量含 type 元数据）
+- 修复 AIBotEntity 预存编译错误（aiManager 延迟初始化）
+- **总计 87 个单元测试全部通过**
+
+**构建产物**：uild/libs/aimod-1.0.0.jar (178 KB)
 
 **构建状态**：✅ BUILD SUCCESSFUL

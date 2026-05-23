@@ -1,4 +1,3 @@
-package com.example.aimod.ai;
 
 import com.example.aimod.ai.action.Action;
 import com.example.aimod.ai.action.AttackAction;
@@ -38,9 +37,6 @@ public class BotAIManager {
     private final LLMService llmService;
     private final TaskFeedback feedback;
     private final WorldScanner worldScanner;
-    private volatile String lastOwnerName = null;
-    private volatile String lastCommand = null;
-    private volatile boolean replanning = false;
 
     public BotAIManager(FakePlayer bot) {
         this.bot = bot;
@@ -68,8 +64,6 @@ public class BotAIManager {
     }
 
     public Task parseCommand(String naturalLanguageCommand, String ownerName) {
-        this.lastOwnerName = ownerName;
-        this.lastCommand = naturalLanguageCommand;
         DevLog.info("TASK_PARSE_START", "bot={}, owner={}, command={}",
                 bot.getStringUUID(), ownerName, DevLog.compact(naturalLanguageCommand));
         try {
@@ -167,12 +161,7 @@ public class BotAIManager {
      * 执行任务
      */
     public void executeTask(Task task) {
-        if (task == null) {
-            return;
-        }
-        // If task already completed (via advanceToNextAction), still check deficits
-        if (task.isCompleted()) {
-            checkDeficitsAndReplan(task);
+        if (task == null || task.isCompleted()) {
             return;
         }
 
@@ -180,8 +169,6 @@ public class BotAIManager {
         if (currentAction == null) {
             task.setStatus(Task.TaskStatus.COMPLETED);
             feedback.reportTaskComplete(task.getDescription());
-            // Task completed — check for deficits and replan if needed
-            checkDeficitsAndReplan(task);
             return;
         }
 
@@ -209,105 +196,16 @@ public class BotAIManager {
                         task.getActionCount(),
                         currentAction.getDescription());
                 task.advanceToNextAction();
-                // Check deficits right when task transitions to COMPLETED
-                if (task.isCompleted()) {
-                    checkDeficitsAndReplan(task);
-                }
             } else {
-                // Action failed — but check if it was a GiveItemAction with partial success
-                boolean isGiveItemPartial = (currentAction instanceof GiveItemAction g && g.getGivenCount() > 0);
                 feedback.reportActionFailed(
                         task.getCurrentActionIndex() + 1,
                         task.getActionCount(),
                         currentAction.getDescription(),
                         "Action failed");
-                if (isGiveItemPartial) {
-                    // Skip failed give_item (partial) and continue
-                    DevLog.info("GIVE_ITEM_PARTIAL_SKIP", "continuing task after partial give");
-                    task.advanceToNextAction();
-                } else {
-                    task.setStatus(Task.TaskStatus.FAILED);
-                    feedback.reportTaskFailed(task.getDescription(), "Action failed");
-                    // Even on failure, check deficits for replanning
-                    checkDeficitsAndReplan(task);
-                }
+                task.setStatus(Task.TaskStatus.FAILED);
+                feedback.reportTaskFailed(task.getDescription(), "Action failed");
             }
         }
-    }
-
-    /**
-     * 检查任务中 GiveItemAction 的缺口，并触发重新规划
-     */
-    private void checkDeficitsAndReplan(Task task) {
-        if (replanning) {
-            return; // 避免递归重规划
-        }
-
-        // 收集所有 GiveItemAction 的缺口
-        Map<String, Integer> deficits = new LinkedHashMap<>();
-        String targetPlayer = null;
-        for (Action action : task.getActions()) {
-            if (action instanceof GiveItemAction g) {
-                if (g.getDeficit() > 0) {
-                    deficits.merge(g.getItemId(), g.getDeficit(), Integer::sum);
-                    targetPlayer = g.getTargetPlayerName();
-                }
-            }
-        }
-
-        if (deficits.isEmpty()) {
-            return;
-        }
-
-        DevLog.info("REPLAN_DEFICITS", "deficits={}, targetPlayer={}", deficits, targetPlayer);
-
-        // 构建重规划命令
-        StringBuilder cmd = new StringBuilder("You previously tried to give items but didn't have enough. ");
-        cmd.append("You still need to collect: ");
-        boolean first = true;
-        for (Map.Entry<String, Integer> entry : deficits.entrySet()) {
-            if (!first) cmd.append(", ");
-            cmd.append(entry.getValue()).append(" more ").append(entry.getKey());
-            first = false;
-        }
-        if (targetPlayer != null && !targetPlayer.isBlank()) {
-            cmd.append(". Give them to ").append(targetPlayer);
-        }
-        cmd.append(". Go collect them now.");
-
-        String replanCommand = cmd.toString();
-        String ownerName = lastOwnerName;
-
-        DevLog.info("REPLAN_SCHEDULED", "command={}", DevLog.compact(replanCommand));
-
-        // 在后台线程调用 LLM 重规划
-        replanning = true;
-        Thread replanThread = new Thread(() -> {
-            try {
-                Task newTask = parseCommand(replanCommand, ownerName);
-                if (newTask != null && newTask.getActionCount() > 0) {
-                    if (bot.level().getServer() != null) {
-                        bot.level().getServer().execute(() -> {
-                            replanning = false;
-                            DevLog.info("REPLAN_TASK_ASSIGNED", "actionCount={}", newTask.getActionCount());
-                            feedback.reportTaskStart(replanCommand);
-                            bot.setCurrentTask(newTask);
-                            executeTask(newTask);
-                        });
-                    } else {
-                        replanning = false;
-                    }
-                } else {
-                    replanning = false;
-                    DevLog.warn("REPLAN_NO_ACTIONS", "LLM returned no actions for replanning");
-                }
-            } catch (Exception e) {
-                replanning = false;
-                DevLog.error("REPLAN_FAILED", "replanning exception", e);
-            }
-        }, "AIMod-Replan-" + bot.getStringUUID().substring(0, 8));
-        replanThread.setDaemon(true);
-        replanThread.start();
     }
 
     /**

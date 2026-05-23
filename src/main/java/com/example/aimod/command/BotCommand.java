@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import java.util.Collection;
 
 /**
  * /ai_bot command tree registration.
@@ -47,6 +48,9 @@ public class BotCommand {
                 .then(Commands.literal("task")
                         .then(Commands.argument("command", StringArgumentType.greedyString())
                                 .executes(BotCommand::assignTask)))
+                .then(Commands.literal("task_all")
+                        .then(Commands.argument("command", StringArgumentType.greedyString())
+                                .executes(BotCommand::assignTaskAll)))
                 .then(Commands.literal("status")
                         .executes(BotCommand::showStatus))
                 // --- Control commands (Baritone-style) ---
@@ -106,6 +110,42 @@ public class BotCommand {
                 .then(Commands.literal("help")
                         .executes(BotCommand::showHelp))
         );
+    }
+
+    // ========== Multi-bot task distribution ==========
+    private static int assignTaskAll(CommandContext<CommandSourceStack> context) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        Player player = source.getPlayerOrException();
+        String command = StringArgumentType.getString(context, "command");
+
+        if (manager == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
+            return 0;
+        }
+
+        Collection<FakePlayer> allBots = manager.getActivePlayers();
+        if (allBots.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.ai_bot.task.no_bots"));
+            return 0;
+        }
+
+        int assigned = 0;
+        for (FakePlayer bot : allBots) {
+            if (bot.isAlive() && !bot.hasActiveTask()) {
+                bot.assignTask(command, player);
+                assigned++;
+            }
+        }
+
+        if (assigned == 0) {
+            source.sendFailure(Component.translatable("commands.ai_bot.task.all_busy"));
+            return 0;
+        }
+
+        final int count = assigned;
+        source.sendSuccess(() -> Component.translatable("commands.ai_bot.task_all.assigned", count, command), true);
+        DevLog.info("CMD_TASK_ALL", "player={}, bots={}, command={}", player.getName().getString(), count, DevLog.compact(command));
+        return assigned;
     }
 
     // ========== Helper: find or spawn nearest bot ==========

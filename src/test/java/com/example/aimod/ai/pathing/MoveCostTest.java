@@ -49,18 +49,18 @@ class MoveCostTest {
     }
 
     @Test @DisplayName("OFFSETS has 10 entries") void offsetsCount() {
-        assertEquals(10, MoveCost.OFFSETS.length);
+        assertEquals(16, MoveCost.OFFSETS.length);
     }
 
     @Test @DisplayName("Each offset is 3D") void offsetsAre3D() {
         for (int[] offset : MoveCost.OFFSETS) {
-            assertEquals(3, offset.length);
+            assertEquals(4, offset.length);
         }
     }
 
     @Test @DisplayName("No offset is (0,0,0)") void noZeroOffset() {
         for (int[] offset : MoveCost.OFFSETS) {
-            assertFalse(offset[0] == 0 && offset[1] == 0 && offset[2] == 0);
+            assertFalse(offset[0] == 0 && offset[1] == 0 && offset[2] == 0, "offset should not be (0,0,0)");
         }
     }
 }

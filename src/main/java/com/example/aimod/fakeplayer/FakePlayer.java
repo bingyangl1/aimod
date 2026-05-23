@@ -24,6 +24,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -102,6 +103,7 @@ public class FakePlayer extends ServerPlayer {
         // Post-registration setup
         instance.teleportTo(level, pos.x, pos.y, pos.z, 0, 0);
         instance.setHealth(20.0F);
+        instance.setInvulnerable(true); // Make bot invulnerable like other fake player mods
         instance.unsetRemoved();
 
         AttributeInstance stepAttr = instance.getAttribute(Attributes.STEP_HEIGHT);
@@ -174,12 +176,6 @@ public class FakePlayer extends ServerPlayer {
         MinecraftServer srv = this.getServer();
         if (srv == null) return;
 
-        // Periodic position reset (same pattern as SiliconeDolls)
-        if (srv.getTickCount() % 10 == 0) {
-            this.connection.resetPosition();
-            this.serverLevel().getChunkSource().move(this);
-        }
-
         try {
             super.tick();
             this.doTick();
@@ -192,10 +188,42 @@ public class FakePlayer extends ServerPlayer {
             aiManager.updateTask(this.currentTask);
         }
 
+        // Periodic position sync (after AI tick so movement isn't overridden)
+        if (srv.getTickCount() % 20 == 0) {
+            this.connection.resetPosition();
+            this.serverLevel().getChunkSource().move(this);
+        }
+
         // Auto-pickup nearby items
         pickupNearbyItems();
     }
 
+    /**
+     * Override travel to prevent vanilla movement when AI is active.
+     * When AI controls the bot, only gravity is applied here;
+     * actual movement is handled by Action.navigateTo().
+     * This prevents the double-move bug that causes twitching.
+     */
+    @Override
+    public void travel(net.minecraft.world.phys.Vec3 travelVector) {
+        if (currentTask != null && !currentTask.isCompleted() && !paused) {
+            if (!onGround()) {
+                double gravY = getDeltaMovement().y - 0.08;
+                setDeltaMovement(0, gravY * 0.98, 0);
+            } else {
+                setDeltaMovement(0, 0, 0);
+            }
+            move(MoverType.SELF, getDeltaMovement());
+            return;
+        }
+        super.travel(travelVector);
+    }
+
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        // FakePlayer is invulnerable - ignore all damage
+        return false;
+    }
     @Override
     public void die(@NotNull DamageSource cause) {
         String botName = this.getName().getString();
@@ -405,6 +433,13 @@ public class FakePlayer extends ServerPlayer {
     }
 
     /**
+     * Set the current task directly (used by BotAIManager for replanning).
+     */
+    public void setCurrentTask(Task task) {
+        this.currentTask = task;
+    }
+
+    /**
      * Assign a pre-built task directly, bypassing the LLM.
      */
     public void assignDirectTask(Task task, @Nullable Player owner) {
@@ -455,6 +490,7 @@ public class FakePlayer extends ServerPlayer {
     /**
      * Resume task execution after a pause.
      */
+
     public void resumeExecution() {
         if (this.paused) {
             this.paused = false;

@@ -37,14 +37,10 @@ public class FollowAction extends Action {
     public boolean isComplete(FakePlayer bot) {
         if (status == ActionStatus.IN_PROGRESS) {
             if (targetPlayer != null) {
-                double dx = targetPlayer.getX() - bot.getX();
-                double dz = targetPlayer.getZ() - bot.getZ();
-                double dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist > 2.0) {
-                    double speed = 1.0;
-                    bot.setDeltaMovement((dx / dist) * speed * 0.05, bot.getDeltaMovement().y, (dz / dist) * speed * 0.05);
-                } else {
-                    bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);
+                net.minecraft.core.BlockPos targetPos = targetPlayer.blockPosition();
+                double distSqr = navigateTo(bot, targetPos, 1.0);
+                if (distSqr < 4.0) {
+                    stopNavigation(bot);
                     status = ActionStatus.COMPLETED;
                 }
             }

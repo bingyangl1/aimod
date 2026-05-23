@@ -60,7 +60,7 @@ public class ModConfig {
                 "Request OpenAI-compatible streaming responses",
                 "Useful during development because streamed chunks prove the model is working instead of unreachable."
             )
-            .define("streamResponses", true);
+            .define("streamResponses", false);
 
     public static final ModConfigSpec.ConfigValue<Boolean> MODEL_HEALTH_CHECK = BUILDER
             .comment(

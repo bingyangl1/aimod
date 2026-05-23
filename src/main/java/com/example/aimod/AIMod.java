@@ -9,6 +9,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import com.example.aimod.command.BotCommand;
+import com.example.aimod.entity.ModEntities;
+import com.example.aimod.entity.AIBotEntity;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -21,7 +23,13 @@ public class AIMod {
         modEventBus.addListener(this::commonSetup);
         NeoForge.EVENT_BUS.addListener(this::registerCommands);
         NeoForge.EVENT_BUS.addListener(this::onServerStarted);
+        ModEntities.register(modEventBus);
+        modEventBus.addListener(this::registerAttributes);
         modContainer.registerConfig(ModConfig.Type.COMMON, com.example.aimod.config.ModConfig.SPEC);
+    }
+
+    private void registerAttributes(net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent event) {
+        event.put(ModEntities.AI_BOT.get(), AIBotEntity.createAttributes().build());
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -34,6 +42,6 @@ public class AIMod {
 
     private void onServerStarted(final ServerStartedEvent event) {
         BotCommand.init(event.getServer());
-        LOGGER.info("AI Mod: FakePlayerManager initialized");
+        LOGGER.info("AI Mod: Server started");
     }
 }
