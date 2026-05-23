@@ -1,4 +1,4 @@
-﻿# AI Mod 项目进度文档
+# AI Mod 项目进度文档
 
 ## 项目概况
 
@@ -27,7 +27,7 @@
 | 研发日志 | ✅ 完成 | 100% | DevLog 统一日志，关键 tag 全覆盖 |
 | 路径寻找 | ✅ 重构完成 | 70% | Baritone 风格 A* 寻路 + Goal 系统 |
 | 持久化 | ❌ 未实现 | 0% | 背包、任务不保存 |
-| 测试 | ✅ 基础完成 | 20% | 16 个单元测试通过 |
+| 测试 | ✅ 基础完成 | 20% | 17 个单元测试通过 |
 
 **总体完成度：约 70%**
 
@@ -194,6 +194,162 @@
 
 ---
 
+
+---
+
+## Baritone 1.21.1 对比分析
+
+### 代码规模对比
+
+| 维度 | aimod | Baritone 1.21.1 | 差距 |
+|------|-------|-----------------|------|
+| 源文件数 | ~46 | ~200+ | 4x |
+| 代码行数 | ~2,855 | ~14,800 | 5x |
+| 移动类型 | 1 (基础移动) | 7+ (Traverse/Ascend/Descend/Diagonal/Fall/Pillar/Jump) | 7x |
+| 命令数 | 16 | 30+ (含相对坐标/航点/建筑) | 2x |
+| 测试覆盖 | 3 文件 / 17 测试 | 6+ 测试文件 | 2x |
+
+### Baritone 优于我们的关键点
+
+#### 1. 移动系统（最大差距）
+- **Baritone**: 使用 `PlayerMovementInput` + `InputOverrideHandler` 模拟真实玩家输入（前进/ strafing/跳跃/潜行），通过 `MovementState` 管理每帧的输入状态
+- **我们**: 使用 `setDeltaMovement()` 设置速度向量，是物理滑动而非真实行走
+- **影响**: 我们的机器人无法精确行走、无法攀爬梯子、无法游泳、无法使用鞘翅
+- **优先级**: P0 — 这是最大的技术债
+
+#### 2. 移动类型多样性
+- **Baritone 7种移动类型**:
+  - `MovementTraverse` — 平地行走（含搭桥）
+  - `MovementAscend` — 斜坡上升（跳跃上方方块）
+  - `MovementDescend` — 斜坡下降（含安全着陆检测）
+  - `MovementDiagonal` — 对角移动（节省29%距离）
+  - `MovementFall` — 下落（大高度差）
+  - `MovementPillar` — 搭柱向上（放置+跳跃）
+  - `MovementJump` — 跳跃（4格跳）
+- **我们**: 只有基础 `navigateTo()` — 直线移动 + 简单跳跃
+
+#### 3. 异步寻路
+- **Baritone**: `PathingBehavior` 在独立线程运行寻路，时间限制（默认2秒），不阻塞服务器tick
+- **我们**: `Pathfinder` 同步运行，可能阻塞服务器tick导致卡顿
+
+#### 4. 世界缓存
+- **Baritone**: `CachedWorld` + `CachedRegion` 缓存区块数据，O(1) 方块查询
+- **我们**: `WorldScanner` 暴力扫描立方体区域 O(n³)
+
+#### 5. 挖矿智能
+- **Baritone `MineProcess`**: 矿脉追踪、矿石黑名单、分支采矿策略、高效扫描
+- **我们 `MineBlockAction`**: 基础方块搜索 + A* 寻路
+
+#### 6. 路径执行器
+- **Baritone `PathExecutor`**: 冲刺控制、精确卡点检测（`MAX_DIST_FROM_PATH=2`）、`ticksAway` 超时重算、`MovementState` 输入状态管理
+- **我们 `PathExecutor`**: 基础距离检测 + 简单卡住超时
+
+#### 7. 命令系统
+- **Baritone**: 自定义命令框架（`ICommand`/`Command`）、数据类型系统（`IDatatype`）、参数解析器、相对坐标、航点系统
+- **我们**: Brigadier 命令（16个子命令），功能完整但缺少相对坐标和航点
+
+### 我们优于 Baritone 的点
+
+| 我们的优势 | 说明 |
+|-----------|------|
+| LLM 自然语言集成 | Baritone 无此功能 — 这是我们的核心差异化 |
+| 服务端 FakePlayer | Baritone 控制本地客户端玩家；我们是服务端实体 |
+| 战斗系统 `AttackAction` | Baritone 无战斗 AI |
+| 合成系统 `CraftAction` | 使用 Minecraft 配方系统，Baritone 无此功能 |
+| 任务队列 + 反馈 | Task + TaskFeedback 实时状态报告 |
+| i18n 国际化 | 中英文支持，Baritone 无多语言 |
+| 给予/装备动作 | `GiveItemAction` / `EquipItemAction`，Baritone 无此功能 |
+
+---
+
+## 研发路线图（基于 Baritone 对比）
+
+### Phase 1: 移动精度升级（P0 — 最高优先级）
+**目标**: 从 `setDeltaMovement()` 滑动升级为输入模拟行走
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 1.1 InputSimulation 系统 | 创建 `MovementInput` 类，模拟 forward/backward/strafe/jump/sneak 输入 | 3天 |
+| 1.2 朝向控制 | 机器人自动面向移动方向（yaw/pitch 计算） | 1天 |
+| 1.3 卡住检测升级 | 从简单距离检测升级为路径偏离检测 + 自动重寻路 | 1天 |
+| 1.4 基础移动验证 | 验证机器人能正常走斜坡、跳1格、下楼梯 | 1天 |
+
+### Phase 2: 高级移动类型（P1）
+**目标**: 实现 Baritone 的核心移动类型
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 2.1 Movement 框架 | 创建 `Movement` 基类，含 src/dest/positionsToBreak/status | 2天 |
+| 2.2 MovementTraverse | 平地行走 + 搭桥（放置脚下空位） | 2天 |
+| 2.3 MovementAscend/Descend | 斜坡上下移动 | 2天 |
+| 2.4 MovementDiagonal | 对角移动（节省距离） | 1天 |
+| 2.5 MovementFall | 安全下落（检测落地点） | 1天 |
+| 2.6 MovementPillar | 搭柱向上（放置+跳跃） | 2天 |
+
+### Phase 3: 世界缓存与挖矿智能（P1）
+**目标**: 替换暴力扫描，提升性能
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 3.1 ChunkCache | 缓存已加载区块的方块数据，O(1) 查询 | 2天 |
+| 3.2 OreVeinTracker | 矿脉追踪：挖掘一个矿石后搜索相邻同类 | 1天 |
+| 3.3 BranchMining | 分支采矿策略（鱼骨矿道） | 2天 |
+| 3.4 MineBlockAction 重写 | 使用 ChunkCache + OreVeinTracker | 1天 |
+
+### Phase 4: 异步寻路（P2）
+**目标**: 寻路不阻塞服务器
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 4.1 AsyncPathfinder | 在独立线程运行寻路，超时返回最佳路径 | 2天 |
+| 4.2 PathingBehavior | 管理寻路生命周期（请求/取消/重试） | 1天 |
+| 4.3 路径缓存 | 缓存最近使用的路径，避免重复计算 | 1天 |
+
+### Phase 5: 战斗 AI 增强（P2）
+**目标**: 从简单攻击升级为智能战斗
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 5.1 武器选择 | 根据目标类型自动选择最佳武器 | 1天 |
+| 5.2 盾牌格挡 | 检测远程攻击，自动举盾 | 1天 |
+| 5.3 走位（Kiting） | 保持距离 + 绕圈攻击 | 2天 |
+| 5.4 远程攻击 | 弓/弩/三叉戟瞄准 + 抛物线计算 | 2天 |
+
+### Phase 6: 任务系统增强（P2）
+**目标**: 更健壮的任务管理
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 6.1 优先级任务 | 紧急任务可中断低优先级任务 | 1天 |
+| 6.2 持久化 | 保存/加载假人状态和背包 | 2天 |
+| 6.3 多任务队列 | 支持顺序执行多个任务 | 1天 |
+| 6.4 航点系统 | 保存/加载/导航到命名位置 | 1天 |
+
+### Phase 7: 命令系统增强（P3）
+**目标**: 对齐 Baritone 的命令体验
+
+| 任务 | 说明 | 预计工时 |
+|------|------|---------|
+| 7.1 相对坐标 | goto ~ ~10 ~ 等相对坐标支持 | 1天 |
+| 7.2 航点命令 | /ai_bot waypoint save/load/list/goto | 1天 |
+| 7.3 建筑命令 | /ai_bot build <schematic> | 3天 |
+| 7.4 重复任务 | /ai_bot repeat mine diamond_ore | 1天 |
+
+### 总体时间估算
+
+| Phase | 优先级 | 预计工时 | 依赖 |
+|-------|--------|---------|------|
+| Phase 1: 移动精度 | P0 | 6天 | 无 |
+| Phase 2: 高级移动 | P1 | 10天 | Phase 1 |
+| Phase 3: 世界缓存 | P1 | 6天 | 无 |
+| Phase 4: 异步寻路 | P2 | 4天 | Phase 1 |
+| Phase 5: 战斗 AI | P2 | 6天 | Phase 1 |
+| Phase 6: 任务系统 | P2 | 5天 | 无 |
+| Phase 7: 命令增强 | P3 | 6天 | 无 |
+
+**关键路径**: Phase 1 → Phase 2 → Phase 4（移动精度是所有高级功能的基础）
+
+
 ## 已知问题
 
 - `FakeClientConnection` 使用反射设置 `EmbeddedChannel`，NeoForge patched 字段名可能不同
@@ -201,3 +357,29 @@
 - 无持久化（假人背包和任务不保存）
 - WorldScanner 暴力扫描立方体区域（O(n³)）
 - 语言文件有编码问题（zh_cn.json 部分乱码）
+---
+
+## 外部参考项目分析 (2026-05-23)
+
+### AI-Player (shasankp000/AI-Player)
+- **加载器**：Fabric | **版本**：1.21.1 | **Stars**：124
+- **分析文档**：`docs/AI_PLAYER_ANALYSIS.md`
+
+**可借鉴的高价值模式**：
+1. **GameProfile 持久化** — 假人 UUID 跨重启保存（我们缺失）
+2. **危险区域检测** — 岩浆/悬崖检测集成到路径规划（我们缺失）
+3. **战斗 AI** — 投射物防御、威胁评估、盾牌格挡（我们 AttackAction 过于简单）
+4. **工具智能选择** — 考虑附魔和耐久度（我们 ToolSet 基础）
+
+**可借鉴的中价值模式**：
+5. 聊天消息分割（长消息自动拆分）
+6. 记忆/RAG 系统（SQLite + 向量嵌入）
+7. 死亡/重生处理（自动恢复任务）
+8. tick() 优化（每 10 tick 同步一次）
+
+**我们已有的优势**：
+- LLM 端到端任务规划（AI-Player 需多步 NLP 管线）
+- 14 种高层动作系统（AI-Player 是命令式）
+- Baritone 风格 A* 路径（AI-Player 基础寻路）
+- 原版配方合成系统（AI-Player 无）
+- 流式 LLM 输出（AI-Player 不支持）
