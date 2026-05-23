@@ -20,12 +20,12 @@
 | 模块 | 状态 | 完成度 | 说明 |
 |------|------|--------|------|
 | 模组基础框架 | ✅ 完成 | 100% | 注册、配置、命令系统 |
-| FakePlayer 系统 | ✅ 完成 | 95% | FakePlayer extends ServerPlayer，直接注册到服务器 |
+| FakePlayer 系统 | ✅ 完成 | 97% | 持久化GameProfile + 自动重生 + 死亡处理 |
 | LLM 集成 | ✅ 功能完整 | 95% | OpenAI 兼容 API，流式支持，世界上下文，结构化提示词 |
 | 动作系统 | ✅ 大部分完成 | 85% | 14 种动作，含挖矿/采集/交互/装备 |
 | 世界感知 | ✅ 完成 | 80% | WorldScanner 支持方块/实体/玩家扫描 |
 | 任务调度 | ✅ 改进 | 50% | 顺序执行 + 错误处理 + 状态反馈 |
-| 合成系统 | ✅ 改进 | 60% | 使用 Minecraft 配方系统，支持工作台交互 |
+| 合成系统 | ✅ 重构完成 | 80% | RecipeIndex O(1)查找 + Tag感知 + 催化物区分 |
 | 任务反馈 | ✅ 完成 | 90% | 向玩家报告执行状态，支持进度报告和 i18n |
 | 研发日志 | ✅ 完成 | 100% | DevLog 统一日志，关键 tag 全覆盖 |
 | 路径寻找 | ✅ 重构完成 | 70% | Baritone 风格 A* 寻路 + Goal 系统 |
@@ -341,3 +341,19 @@
 - WorldScanner 暴力扫描立方体区域（O(n³)）
 - HttpClient 每次 LLM 调用创建新实例
 - LLMService 健康检查缓存存在线程安全顾虑
+
+### P0 开发完成 (2026-05-23)
+
+**配方系统重构**（参考 EMI/JEI）：
+- `RecipeIndex.java` — 新建，byOutput/byInput 索引，O(1) 查找
+- `CraftAction.java` — 重写，使用 RecipeIndex + Tag 感知 + 催化物区分
+- 支持 Tag 匹配（如 `#minecraft:planks` 匹配任意木板）
+- 区分消耗物（材料）和催化物（工作台/熔炉）
+- 智能配方选择：根据库存选择最佳配方
+
+**FakePlayer 持久化**（参考 AI-Player）：
+- `BotProfileStore.java` — 新建，保存 name→UUID 到 `config/aimod/bots.json`
+- `FakePlayerManager.java` — 更新，使用持久化 UUID
+- `FakePlayer.java` — 接受 persistentUUID 参数 + 死亡后自动重生（40 tick 延迟）
+
+**构建状态**：✅ BUILD SUCCESSFUL
