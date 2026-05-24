@@ -12,34 +12,62 @@ import java.util.function.Consumer;
  * Inspired by Baritone's PathingBehavior.findPathInNewThread().
  *
  * Usage:
- * <pre>
  *   AsyncPathfinder async = new AsyncPathfinder();
- *   async.requestPath(level, start, goal, result -> {
- *       // Called on the server thread after pathfinding completes
+ *   CalculationContext ctx = new CalculationContext(level, bot);
+ *   ctx.preloadRegion(start, 20); // preload on server thread
+ *   async.requestPath(ctx, start, goal, result -> {
  *       if (result.isFound()) { ... }
  *   });
  *   // In tick loop:
  *   async.tick(); // delivers completed results to callbacks
- * </pre>
  */
 public class AsyncPathfinder {
 
-    /** The current in-progress pathfinding computation. */
     private volatile Pathfinder inProgress;
-    /** Result waiting to be delivered on the server thread. */
     private final AtomicReference<PathResult> pendingResult = new AtomicReference<>();
-    /** Callback for the pending result. */
     private volatile Consumer<PathResult> pendingCallback;
-    /** Whether a pathfinding request is active. */
     private volatile boolean computing;
 
     /**
-     * Request a path computation. If one is already in progress, it is cancelled first.
+     * Request a path computation using a pre-built CalculationContext (thread-safe, recommended).
+     * The context should have its region preloaded on the server thread before calling this.
      *
-     * @param level    the server level
+     * @param ctx      pre-built CalculationContext with preloaded block data
      * @param start    start position
      * @param goal     goal position
      * @param callback called on the server thread (via tick()) when computation finishes
+     */
+    public void requestPath(CalculationContext ctx, BlockPos start, BlockPos goal, Consumer<PathResult> callback) {
+        cancel();
+
+        pendingCallback = callback;
+        computing = true;
+
+        Pathfinder pathfinder = new Pathfinder(ctx, start, goal);
+        inProgress = pathfinder;
+
+        Thread thread = new Thread(() -> {
+            try {
+                DevLog.info("ASYNC_PATH_START", "from={}, to={}", start.toShortString(), goal.toShortString());
+                PathResult result = pathfinder.findPath();
+                pendingResult.set(result);
+                DevLog.info("ASYNC_PATH_DONE", "found={}, length={}", result.isFound(), result.getLength());
+            } catch (Exception e) {
+                DevLog.error("ASYNC_PATH_ERROR", "pathfinding failed", e);
+                pendingResult.set(new PathResult(java.util.Collections.emptyList(), false, 0));
+            } finally {
+                inProgress = null;
+                computing = false;
+            }
+        }, "AIMod-Pathfinder");
+        thread.setDaemon(true);
+        thread.setPriority(Thread.MIN_PRIORITY);
+        thread.start();
+    }
+
+    /**
+     * Legacy: request path using raw ServerLevel (server-thread only, not thread-safe for async).
+     * Kept for backward compatibility with synchronous callers.
      */
     public void requestPath(ServerLevel level, BlockPos start, BlockPos goal, Consumer<PathResult> callback) {
         cancel();
@@ -65,14 +93,10 @@ public class AsyncPathfinder {
             }
         }, "AIMod-Pathfinder");
         thread.setDaemon(true);
-        thread.setPriority(Thread.MIN_PRIORITY); // Don't starve the server
+        thread.setPriority(Thread.MIN_PRIORITY);
         thread.start();
     }
 
-    /**
-     * Tick the async pathfinder. Call from the server tick thread.
-     * Delivers any completed result to the callback.
-     */
     public void tick() {
         PathResult result = pendingResult.getAndSet(null);
         if (result != null && pendingCallback != null) {
@@ -82,9 +106,6 @@ public class AsyncPathfinder {
         }
     }
 
-    /**
-     * Cancel any in-progress pathfinding.
-     */
     public void cancel() {
         Pathfinder pf = inProgress;
         if (pf != null) {
@@ -96,6 +117,5 @@ public class AsyncPathfinder {
         computing = false;
     }
 
-    /** Whether a pathfinding computation is in progress. */
     public boolean isComputing() { return computing; }
 }
