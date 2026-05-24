@@ -18,16 +18,21 @@ public class ChainManager {
 
     private final List<BehaviorChain> chains = new ArrayList<>();
     private BehaviorChain activeChain;
+    private BehaviorChain lastActiveChain;
+    private boolean sorted;
 
-    /** Threshold above which chains preempt user tasks. */
     public static final int PREEMPT_THRESHOLD = 50;
 
     public ChainManager() {}
 
-    /** Register a chain. Chains are evaluated in priority order each tick. */
+    /** Register a chain. Call before ticking starts (not thread-safe during ticks). */
     public void addChain(BehaviorChain chain) {
         chains.add(chain);
-        Collections.sort(chains);
+        sorted = false;
+    }
+
+    private void ensureSorted() {
+        if (!sorted) { Collections.sort(chains); sorted = true; }
     }
 
     /**
@@ -36,6 +41,8 @@ public class ChainManager {
      * @return true if the AI user task should be preempted this tick
      */
     public boolean tick(FakePlayer bot) {
+        ensureSorted();
+
         // If current chain is still active, keep running it
         if (activeChain != null && activeChain.isActive()) {
             activeChain.tick(bot);
@@ -46,6 +53,7 @@ public class ChainManager {
         if (activeChain != null) {
             String prev = activeChain.name();
             activeChain.stop();
+            lastActiveChain = activeChain;
             activeChain = null;
             DevLog.info("CHAIN_STOP", "chain={}", prev);
         }
@@ -53,11 +61,13 @@ public class ChainManager {
         // Find highest-priority chain that should activate
         BehaviorChain best = null;
         for (BehaviorChain chain : chains) {
+            if (chain == lastActiveChain) continue; // don't reactivate same tick
             if (chain.shouldActivate(bot)) {
                 best = chain;
-                break; // chains are pre-sorted by priority desc
+                break;
             }
         }
+        lastActiveChain = null;
 
         if (best != null) {
             activeChain = best;

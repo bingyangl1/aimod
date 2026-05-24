@@ -32,6 +32,7 @@ public class DefenseChain extends BehaviorChain {
     private int hostileCount;
     private boolean retreating;
     private boolean shielding;
+    private FakePlayer lastBot;
 
     @Override public int priority() { return 70; }
 
@@ -60,6 +61,7 @@ public class DefenseChain extends BehaviorChain {
 
     @Override
     public void tick(FakePlayer bot) {
+        lastBot = bot;
         if (target == null || !target.isAlive()) {
             active = false;
             return;
@@ -151,9 +153,12 @@ public class DefenseChain extends BehaviorChain {
         }
     }
 
+    private int originalCombatSlot = -1;
+
     private int findBow(FakePlayer bot) {
-        for (int i = 0; i < 9; i++) {
-            if (bot.getInventory().getItem(i).getItem() == Items.BOW) return i;
+        var inv = bot.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).getItem() == Items.BOW) return i;
         }
         return -1;
     }
@@ -161,34 +166,50 @@ public class DefenseChain extends BehaviorChain {
     private void equipBestWeapon(FakePlayer bot) {
         int bestSlot = -1;
         float bestDamage = 0;
-        for (int i = 0; i < 9; i++) {
-            ItemStack stack = bot.getInventory().getItem(i);
+        var inv = bot.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack stack = inv.getItem(i);
             if (!stack.isEmpty() && stack.getItem() instanceof SwordItem) {
-                float dmg = 4.0f;
-                if (stack.getItem() == Items.NETHERITE_SWORD) dmg = 5.0f;
-                else if (stack.getItem() == Items.DIAMOND_SWORD) dmg = 4.0f;
-                else if (stack.getItem() == Items.IRON_SWORD) dmg = 3.0f;
-                else if (stack.getItem() == Items.STONE_SWORD) dmg = 2.0f;
+                float dmg = 6.0f;
+                if (stack.getItem() == Items.NETHERITE_SWORD) dmg = 8.0f;
+                else if (stack.getItem() == Items.DIAMOND_SWORD) dmg = 7.0f;
+                else if (stack.getItem() == Items.IRON_SWORD) dmg = 6.0f;
+                else if (stack.getItem() == Items.STONE_SWORD) dmg = 5.0f;
+                else if (stack.getItem() == Items.WOODEN_SWORD) dmg = 4.0f;
                 if (dmg > bestDamage) { bestDamage = dmg; bestSlot = i; }
             } else if (!stack.isEmpty() && stack.getItem() instanceof AxeItem) {
-                float dmg = 3.0f;
+                float dmg = 5.0f;
+                if (stack.getItem() == Items.NETHERITE_AXE) dmg = 7.0f;
+                else if (stack.getItem() == Items.DIAMOND_AXE) dmg = 6.0f;
                 if (dmg > bestDamage) { bestDamage = dmg; bestSlot = i; }
             }
         }
-        if (bestSlot >= 0 && bestSlot < 9) {
-            bot.getInventory().selected = bestSlot;
-        } else if (bestSlot >= 9) {
-            var inv = bot.getInventory();
-            ItemStack tmp = inv.getItem(0);
-            inv.setItem(0, inv.getItem(bestSlot));
+        if (bestSlot < 0) return;
+
+        // Save original selection before swapping
+        if (originalCombatSlot < 0) originalCombatSlot = inv.selected;
+
+        if (bestSlot < 9) {
+            inv.selected = bestSlot;
+        } else {
+            ItemStack tmp = inv.getItem(originalCombatSlot);
+            inv.setItem(originalCombatSlot, inv.getItem(bestSlot));
             inv.setItem(bestSlot, tmp);
-            inv.selected = 0;
+            inv.selected = originalCombatSlot;
+        }
+    }
+
+    private void restoreInventory(FakePlayer bot) {
+        if (originalCombatSlot >= 0) {
+            bot.getInventory().selected = originalCombatSlot;
+            originalCombatSlot = -1;
         }
     }
 
     @Override public boolean isActive() { return active; }
     @Override public void stop() {
         active = false; target = null; retreating = false; shielding = false;
+        if (lastBot != null) restoreInventory(lastBot);
     }
     @Override public String name() { return "Defense"; }
 }

@@ -4,79 +4,85 @@ import com.aimod.fakeplayer.FakePlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Items;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
- * Auto-fishing: reels in when a fish bites.
- * Detects vanilla FishingHook bobber state.
+ * Auto-fishing: cycle-based cast → wait → reel.
+ * Uses a simple timed cycle since FishingHook bite state
+ * is not directly accessible without access transformers.
  *
- * <p>Inspired by SiliconeDolls' FakePlayerAutoFish.
+ * <p>Cycle: cast → wait 15-30s (random) → reel → repeat.
+ * Simple but effective for most fishing scenarios.</p>
  */
 public final class AutoFish {
     private AutoFish() {}
 
     private static final int CAST_COOLDOWN = 20;
-    private static final int REEL_IN_DELAY = 15; // ticks after bite
-    private int castCooldown;
-    private int biteTimer = -1;
-    private boolean casting;
+    private static final int MIN_WAIT_TICKS = 300;  // 15 seconds
+    private static final int MAX_WAIT_TICKS = 600;  // 30 seconds
+    private static final int REEL_DELAY = 5;
 
-    private static final java.util.Map<java.util.UUID, AutoFish> instances = new java.util.HashMap<>();
+    private int castCooldown;
+    private int waitTicks;
+    private int reelTimer = -1;
+    private boolean hasBobber;
+
+    private static final Map<UUID, AutoFish> instances = new ConcurrentHashMap<>();
 
     public static AutoFish of(FakePlayer bot) {
         return instances.computeIfAbsent(bot.getUUID(), k -> new AutoFish());
     }
 
-    /**
-     * Tick auto-fishing logic. Call from FakePlayer.tick().
-     */
     public void tick(FakePlayer bot) {
-        if (castCooldown > 0) {
-            castCooldown--;
-            return;
-        }
+        if (castCooldown > 0) { castCooldown--; return; }
+        if (reelTimer > 0) { reelTimer--; return; }
 
         var held = bot.getMainHandItem();
         if (held.getItem() != Items.FISHING_ROD) {
-            casting = false;
-            biteTimer = -1;
-            return;
+            hasBobber = false; waitTicks = 0; reelTimer = -1; return;
         }
 
-        // Check if we have a bobber in the water
-        var fishingHook = bot.fishing;
-        if (fishingHook == null || fishingHook.isRemoved()) {
-            if (!casting) {
-                // Cast
-                bot.swing(InteractionHand.MAIN_HAND);
-                bot.startUsingItem(InteractionHand.MAIN_HAND);
-                bot.stopUsingItem(); // release to cast
-                casting = true;
-                castCooldown = CAST_COOLDOWN;
-            }
-            return;
-        }
+        var hook = bot.fishing;
+        boolean bobberActive = hook != null && !hook.isRemoved();
 
-        // We have a bobber — check if fish is biting
-        if (fishingHook.getHookedIn() != null && biteTimer < 0) {
-            biteTimer = REEL_IN_DELAY;
-        }
-
-        if (biteTimer > 0) {
-            biteTimer--;
-            return;
-        }
-
-        if (biteTimer == 0) {
-            // Reel in!
-            bot.swing(InteractionHand.MAIN_HAND);
-            bot.startUsingItem(InteractionHand.MAIN_HAND);
-            bot.stopUsingItem();
-            biteTimer = -1;
-            casting = false;
+        // Bobber disappeared — fish caught, start cooldown
+        if (!bobberActive && hasBobber) {
+            hasBobber = false;
             castCooldown = CAST_COOLDOWN;
+            waitTicks = 0;
+            return;
+        }
+        hasBobber = bobberActive;
+
+        // No bobber — cast
+        if (!bobberActive) {
+            bot.startUsingItem(InteractionHand.MAIN_HAND);
+            reelTimer = 2; // release after 2 ticks (charge the cast)
+            waitTicks = CAST_COOLDOWN + (int)(Math.random() * (MAX_WAIT_TICKS - MIN_WAIT_TICKS) + MIN_WAIT_TICKS);
+            return;
+        }
+
+        // Reel timer triggered — reel in
+        if (reelTimer == 0) {
+            bot.startUsingItem(InteractionHand.MAIN_HAND);
+            reelTimer = -1;
+            castCooldown = CAST_COOLDOWN;
+            return;
+        }
+
+        // Waiting for bite — count down
+        if (waitTicks > 0) {
+            waitTicks--;
+            if (waitTicks <= 0) {
+                // Time to reel
+                reelTimer = REEL_DELAY;
+            }
         }
     }
 
-    /** Clean up when bot is removed. */
     public static void remove(FakePlayer bot) {
         instances.remove(bot.getUUID());
     }

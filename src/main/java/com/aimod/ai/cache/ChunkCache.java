@@ -26,7 +26,7 @@ public class ChunkCache {
     private static final int PRUNE_TARGET = MAX_CHUNKS * 3 / 4; // 1536
 
     private final Long2ObjectMap<CachedChunkData> chunks = new Long2ObjectOpenHashMap<>();
-    private final LinkedBlockingQueue<LevelChunk> packQueue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<LevelChunk> packQueue = new LinkedBlockingQueue<>(256);
     private final Thread packerThread;
     private final ServerLevel level;
     private volatile boolean running = true;
@@ -182,7 +182,5 @@ public class ChunkCache {
         synchronized (chunks) {
             chunks.put(key, data);
         }
-        // Invalidate spatial-locality cache
-        lastChunkKey = Long.MIN_VALUE;
     }
 }
