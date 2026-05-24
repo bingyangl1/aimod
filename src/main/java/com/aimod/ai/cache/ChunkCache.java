@@ -80,6 +80,33 @@ public class ChunkCache {
     }
 
     /**
+     * Fast pathing-type lookup (2-bit classification) without
+     * resolving the full BlockState. Returns one of:
+     * {@link CachedChunkData#TYPE_AIR TYPE_AIR} (0),
+     * {@link CachedChunkData#TYPE_WATER TYPE_WATER} (1),
+     * {@link CachedChunkData#TYPE_AVOID TYPE_AVOID} (2),
+     * {@link CachedChunkData#TYPE_SOLID TYPE_SOLID} (3).
+     *
+     * <p>Falls back to real-time classification if chunk is not cached.</p>
+     */
+    public byte getPathingType(int x, int y, int z) {
+        int cx = x >> 4, cz = z >> 4;
+        long key = CachedChunkData.key(cx, cz);
+        CachedChunkData cached;
+        synchronized (chunks) {
+            cached = chunks.get(key);
+        }
+        if (cached != null) {
+            return cached.getPathingType(x & 15, y, z & 15);
+        }
+        // Fallback: real-time classification
+        if (level.isLoaded(new BlockPos(x, y, z))) {
+            return CachedChunkData.classifyBlock(level.getBlockState(new BlockPos(x, y, z)));
+        }
+        return CachedChunkData.TYPE_AIR;
+    }
+
+    /**
      * Check if a position is in the cache.
      */
     public boolean isCached(BlockPos pos) {
