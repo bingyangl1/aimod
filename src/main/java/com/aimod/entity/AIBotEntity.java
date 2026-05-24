@@ -73,10 +73,11 @@ public class AIBotEntity extends Mob {
             if (fp != null) {
                 BotStatusScreen.open(sp, fp);
                 DevLog.info("BOT_INTERACT", "player={}, hand={}", player.getName().getString(), hand);
-                return InteractionResult.SUCCESS;
+                return InteractionResult.CONSUME;
             }
+            DevLog.warn("BOT_INTERACT_NO_FP", "bot has no FakePlayer");
         }
-        return InteractionResult.SUCCESS;
+        return InteractionResult.CONSUME;
     }
 
     // ── FakePlayer lifecycle ────────────────────────────────────────────

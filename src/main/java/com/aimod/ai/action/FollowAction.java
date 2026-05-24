@@ -36,13 +36,13 @@ public class FollowAction extends Action {
     @Override
     public boolean isComplete(FakePlayer bot) {
         if (status == ActionStatus.IN_PROGRESS) {
-            if (targetPlayer != null) {
-                net.minecraft.core.BlockPos targetPos = targetPlayer.blockPosition();
-                double distSqr = navigateTo(bot, targetPos, 1.0);
-                if (distSqr < 4.0) {
-                    stopNavigation(bot);
-                    status = ActionStatus.COMPLETED;
-                }
+            if (targetPlayer == null || !targetPlayer.isAlive()) {
+                // Player gone — stop following
+                stopNavigation(bot);
+                status = ActionStatus.COMPLETED;
+            } else {
+                // Continuously follow the player
+                navigateTo(bot, targetPlayer.blockPosition(), 1.0);
             }
         }
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
