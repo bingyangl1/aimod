@@ -125,7 +125,14 @@ public class MineBlockAction extends Action {
 
             stopNavigation(bot);
 
+            // Select best tool for this block type
             if (breakProgress == 0) {
+                var toolSet = new com.aimod.ai.pathing.ToolSet(bot);
+                int bestSlot = toolSet.getBestSlot(blockState.getBlock());
+                if (bestSlot >= 0) {
+                    if (bestSlot < 9) bot.getInventory().selected = bestSlot;
+                    else { var tmp = bot.getInventory().getItem(0); bot.getInventory().setItem(0, bot.getInventory().getItem(bestSlot)); bot.getInventory().setItem(bestSlot, tmp); bot.getInventory().selected = 0; }
+                }
                 float hardness = blockState.getDestroySpeed(bot.level(), currentTarget);
                 breakTime = Math.max(20, (int) (hardness * 20));
                 DevLog.info("MINE_BREAKING", "block={}, pos={}, breakTime={}",

@@ -89,6 +89,16 @@ public class DirectCommandHandler {
         return task;
     }
 
+    public static Task createVeinTask(String blockId, int count) {
+        String fullId = blockId.contains(":") ? blockId : "minecraft:" + blockId;
+        Task task = new Task("Vein mine " + count + " " + fullId);
+        List<Action> actions = new ArrayList<>();
+        actions.add(new VeinMineAction(fullId, count));
+        task.setActions(actions);
+        task.setStatus(Task.TaskStatus.IN_PROGRESS);
+        return task;
+    }
+
     public static Task createEquipTask(String itemId) {
         String fullId = itemId.contains(":") ? itemId : "minecraft:" + itemId;
         Task task = new Task("Equip " + fullId);

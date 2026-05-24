@@ -127,6 +127,12 @@ public class BotCommand {
                                 .executes(ctx -> mineBlocks(ctx, 1))
                                 .then(Commands.argument("count", IntegerArgumentType.integer(1))
                                         .executes(ctx -> mineBlocks(ctx, IntegerArgumentType.getInteger(ctx, "count"))))))
+                // --- Vein mining ---
+                .then(Commands.literal("vein")
+                        .then(Commands.argument("block", StringArgumentType.word())
+                                .executes(ctx -> veinMine(ctx, 1))
+                                .then(Commands.argument("count", IntegerArgumentType.integer(1))
+                                        .executes(ctx -> veinMine(ctx, IntegerArgumentType.getInteger(ctx, "count"))))))
                 // --- Follow command ---
                 .then(Commands.literal("follow")
                         .then(Commands.argument("player", StringArgumentType.word())
@@ -188,6 +194,14 @@ public class BotCommand {
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(suggestBots())
                                 .executes(BotCommand::showPathNamed)))
+                // --- Undo command ---
+                .then(Commands.literal("undo")
+                        .executes(ctx -> undoCommand(ctx, 1))
+                        .then(Commands.argument("steps", IntegerArgumentType.integer(1, 10))
+                                .executes(ctx -> undoCommand(ctx, IntegerArgumentType.getInteger(ctx, "steps")))))
+                // --- Test command ---
+                .then(Commands.literal("test")
+                        .executes(BotCommand::runTests))
                 // --- Help command ---
                 .then(Commands.literal("help")
                         .executes(BotCommand::showHelp)
@@ -538,6 +552,21 @@ public class BotCommand {
         return 1;
     }
 
+    private static int veinMine(CommandContext<CommandSourceStack> context, int count) {
+        CommandSourceStack source = context.getSource();
+        String block = StringArgumentType.getString(context, "block");
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = findOrSpawnBot(source, player);
+            if (bot != null) {
+                Task task = DirectCommandHandler.createVeinTask(block, count);
+                bot.assignDirectTask(task, player);
+                String fullBlock = block.contains(":") ? block : "minecraft:" + block;
+                source.sendSuccess(() -> Component.literal("Vein mining " + count + "x " + fullBlock + " (connected blocks)"), true);
+            }
+        }
+        return 1;
+    }
+
     // ========== Follow command ==========
 
     private static int followPlayer(CommandContext<CommandSourceStack> context) {
@@ -792,6 +821,120 @@ public class BotCommand {
         } else {
             source.sendSuccess(() -> Component.literal("Target: " + target.toShortString() + " (no computed path)"), true);
         }
+        return 1;
+    }
+
+    // ========== Undo command ==========
+
+    private static int undoCommand(CommandContext<CommandSourceStack> ctx, int steps) {
+        CommandSourceStack source = ctx.getSource();
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
+        FakePlayer bot = source.getEntity() instanceof Player player
+                ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null;
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot")); return 0; }
+        var level = (ServerLevel) bot.level();
+        int restored = bot.getUndoManager().undo(level, steps);
+        source.sendSuccess(() -> Component.literal("Undone " + restored + " blocks in " + steps + " operation(s)"), true);
+        return 1;
+    }
+
+    // ========== Test command ==========
+
+    private static int runTests(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        int passed = 0, failed = 0;
+        var sb = new StringBuilder();
+        sb.append("===== AI Bot Self Test =====\n");
+
+        // Test 1: CommandParser
+        try {
+            var r = com.aimod.ai.planner.CommandParser.parse("制作一把钻石镐给我");
+            if (r.verb() == com.aimod.ai.planner.CommandParser.Verb.CRAFT && r.isGive()) { passed++; sb.append("[PASS] CommandParser: craft+give\n"); }
+            else { failed++; sb.append("[FAIL] CommandParser: craft+give (verb=").append(r.verb()).append(")\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] CommandParser: ").append(e.getMessage()).append("\n"); }
+
+        try {
+            var r = com.aimod.ai.planner.CommandParser.parse("挖5个铁矿石");
+            if (r.verb() == com.aimod.ai.planner.CommandParser.Verb.MINE && r.count() == 5) { passed++; sb.append("[PASS] CommandParser: mine+count\n"); }
+            else { failed++; sb.append("[FAIL] CommandParser: mine+count\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] CommandParser: ").append(e.getMessage()).append("\n"); }
+
+        // Test 2: Item Lookup
+        try {
+            var item = com.aimod.ai.planner.CommandParser.findItem("diamond_pickaxe");
+            if (item != null) { passed++; sb.append("[PASS] ItemLookup: diamond_pickaxe found\n"); }
+            else { failed++; sb.append("[FAIL] ItemLookup: diamond_pickaxe not found\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] ItemLookup: ").append(e.getMessage()).append("\n"); }
+
+        try {
+            var item = com.aimod.ai.planner.CommandParser.findItem("nonexistent_item_xyz");
+            if (item == null) { passed++; sb.append("[PASS] ItemLookup: nonexistent returns null\n"); }
+            else { failed++; sb.append("[FAIL] ItemLookup: should return null\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] ItemLookup: ").append(e.getMessage()).append("\n"); }
+
+        // Test 3: RecipeIndex
+        try {
+            var idx = com.aimod.ai.RecipeIndex.getInstance();
+            if (!idx.isBuilt()) idx.build(source.getLevel());
+            var recipes = idx.getRecipesForOutput(net.minecraft.world.item.Items.STICK);
+            if (!recipes.isEmpty()) { passed++; sb.append("[PASS] RecipeIndex: stick recipes found (").append(recipes.size()).append(")\n"); }
+            else { failed++; sb.append("[FAIL] RecipeIndex: no stick recipes\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] RecipeIndex: ").append(e.getMessage()).append("\n"); }
+
+        // Test 4: Movement types
+        try {
+            int count = com.aimod.ai.movement.BotMovement.class.getDeclaredClasses().length;
+            passed++; sb.append("[PASS] Movement: BotMovement loaded\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] Movement: ").append(e.getMessage()).append("\n"); }
+
+        // Test 5: ChunkCache
+        try {
+            var cache = new com.aimod.ai.cache.ChunkCache(source.getLevel());
+            passed++; sb.append("[PASS] ChunkCache: created\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] ChunkCache: ").append(e.getMessage()).append("\n"); }
+
+        // Test 6: BotAIStateMachine
+        try {
+            var sm = new com.aimod.ai.llm.BotAIStateMachine();
+            sm.startPlanning("test", 3);
+            sm.startExecuting();
+            sm.complete();
+            if (sm.getCurrent() == com.aimod.ai.llm.BotAIStateMachine.State.COMPLETED) { passed++; sb.append("[PASS] StateMachine: IDLE->PLANNING->EXECUTING->COMPLETED\n"); }
+            else { failed++; sb.append("[FAIL] StateMachine: wrong state\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] StateMachine: ").append(e.getMessage()).append("\n"); }
+
+        // Test 7: Chain creation
+        try {
+            var cm = new com.aimod.ai.chain.ChainManager();
+            cm.addChain(new com.aimod.ai.chain.DangerChain());
+            cm.stopAll();
+            passed++; sb.append("[PASS] ChainManager: chain registered and stopped\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] ChainManager: ").append(e.getMessage()).append("\n"); }
+
+        // Test 8: Environment scan
+        try {
+            var scanner = new com.aimod.ai.WorldScanner(source.getPlayer());
+            var scan = scanner.scanEnvironment(16);
+            passed++; sb.append("[PASS] WorldScanner: environment scanned\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] WorldScanner: ").append(e.getMessage()).append("\n"); }
+
+        // Test 9: FindItemResult
+        try {
+            var r = new com.aimod.ai.InventoryUtils.FindItemResult(3, 64);
+            if (r.found() && r.isHotbar()) { passed++; sb.append("[PASS] FindItemResult: basic properties\n"); }
+            else { failed++; sb.append("[FAIL] FindItemResult: wrong properties\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] FindItemResult: ").append(e.getMessage()).append("\n"); }
+
+        // Test 10: Bot persistence
+        try {
+            var info = new com.aimod.fakeplayer.BotInfo();
+            info.name = "test";
+            if (info.name.equals("test")) { passed++; sb.append("[PASS] BotInfo: created\n"); }
+            else { failed++; sb.append("[FAIL] BotInfo: wrong name\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] BotInfo: ").append(e.getMessage()).append("\n"); }
+
+        sb.append("===== ").append(passed).append(" passed, ").append(failed).append(" failed =====");
+        source.sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
     }
 

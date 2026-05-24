@@ -3,6 +3,7 @@ package com.aimod.fakeplayer;
 import com.aimod.ai.BotAIManager;
 import com.aimod.ai.InventoryUtils;
 import com.aimod.ai.Task;
+import com.aimod.ai.UndoManager;
 import com.aimod.ai.chain.ChainManager;
 import com.aimod.ai.chain.DangerChain;
 import com.aimod.ai.chain.DefenseChain;
@@ -74,6 +75,9 @@ public class FakePlayer extends ServerPlayer {
 
     // ── Behavior Chains ──────────────────────────────────────────────────
     private final ChainManager chainManager;
+
+    // ── Undo ─────────────────────────────────────────────────────────────
+    private final UndoManager undoManager = new UndoManager(10);
 
     // ── Construction ────────────────────────────────────────────────────
 
@@ -518,4 +522,7 @@ public class FakePlayer extends ServerPlayer {
 
     /** Get the behavior chain manager. */
     public ChainManager getChainManager() { return chainManager; }
+
+    /** Get the undo manager. */
+    public UndoManager getUndoManager() { return undoManager; }
 }
