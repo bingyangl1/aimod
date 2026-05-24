@@ -61,6 +61,27 @@ public abstract class BotMovement {
     public void setStatus(Status status) { this.status = status; }
     public BlockPos getDirection() { return dest.subtract(src); }
 
+    /**
+     * Factory: create the appropriate movement type for src→dest.
+     */
+    public static BotMovement create(BlockPos src, BlockPos dest) {
+        int dx = dest.getX() - src.getX();
+        int dy = dest.getY() - src.getY();
+        int dz = dest.getZ() - src.getZ();
+        int adx = Math.abs(dx), adz = Math.abs(dz);
+
+        if (dy == 1 && adx + adz == 0) return new MovementPillar(src, dest);
+        if (dy == 1 && adx + adz == 2) return new MovementAscend(src, dest);
+        if (dy == -1 && adx + adz == 1 && adx + adz <= 1) return new MovementDescend(src, dest);
+        if (dy < -1) return new MovementFall(src, dest);
+        if (dy == -1 && adx + adz == 0) return new MovementDownward(src, dest);
+        if (dy == 0 && adx + adz == 2) return new MovementDiagonal(src, dest);
+        if (dy == 0 && adx + adz == 0) return null; // same block
+        if (dy == 0 && adx <= 1 && adz <= 1 && adx + adz == 1) return new MovementTraverse(src, dest);
+        // Default: traverse for simple moves
+        return new MovementTraverse(src, dest);
+    }
+
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{" + src.toShortString() + " -> " + dest.toShortString() + " " + status + "}";

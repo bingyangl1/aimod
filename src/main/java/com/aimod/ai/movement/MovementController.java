@@ -13,23 +13,13 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Centralized movement controller for FakePlayer.
-<<<<<<< Updated upstream
- * Replaces the duplicated navigateTo() logic that was scattered across Action subclasses.
  *
  * Features:
  * - A* pathfinding with async computation (non-blocking)
  * - Thread-safe pathfinding via CalculationContext (block state pre-snapshot)
  * - Automatic fallback to direct movement when no path found
  * - Stuck detection and recovery via UnstuckDetector
- *
- * Usage from actions:
- *   controller.navigateTo(targetPos);
- *   // In isComplete():
- *   if (controller.hasArrived()) { ... }
-=======
- * Uses A* pathfinding with async computation, and BotMovement subclasses
- * for typed movement execution (traverse, pillar, fall, diagonal, etc.).
->>>>>>> Stashed changes
+ * - BotMovement subclasses for typed movement execution (traverse, pillar, etc.)
  */
 public class MovementController {
 
@@ -39,15 +29,8 @@ public class MovementController {
 
     private BlockPos navTarget;
     private boolean navigating;
-<<<<<<< Updated upstream
-
     private PathExecutor pathExecutor;
     private BlockPos pathGoal;
-
-=======
-    private PathExecutor pathExecutor;
-    private BlockPos pathGoal;
->>>>>>> Stashed changes
     private boolean directMovement;
     private BotMovement activeMovement;
 
@@ -59,53 +42,30 @@ public class MovementController {
         this.unstuckDetector = new UnstuckDetector();
     }
 
-<<<<<<< Updated upstream
     /**
      * Navigate to a target position using A* pathfinding.
      * Creates a CalculationContext snapshot on the server thread, then dispatches
      * async pathfinding on a background thread.
      */
     public void navigateTo(BlockPos target) {
-        if (target.equals(navTarget) && navigating) {
-            return;
-        }
-
-=======
-    public void navigateTo(BlockPos target) {
         if (target.equals(navTarget) && navigating) return;
->>>>>>> Stashed changes
+
         navTarget = target.immutable();
         navigating = true;
         directMovement = false;
         activeMovement = null;
         unstuckDetector.reset();
-<<<<<<< Updated upstream
 
         if (bot.level() instanceof ServerLevel serverLevel) {
             BlockPos botPos = bot.blockPosition();
-
-            // Create CalculationContext on server thread (thread-safe snapshot)
             CalculationContext ctx = new CalculationContext(serverLevel, bot);
-            // Preload block data around start position before going async
             ctx.preloadRegion(botPos, 20);
-
             asyncPathfinder.requestPath(ctx, botPos, navTarget, this::onPathComputed);
-=======
-        if (bot.level() instanceof ServerLevel serverLevel) {
-            asyncPathfinder.requestPath(serverLevel, bot.blockPosition(), navTarget, this::onPathComputed);
->>>>>>> Stashed changes
         } else {
             directMovement = true;
         }
     }
 
-<<<<<<< Updated upstream
-    /**
-     * Move directly toward a position without pathfinding.
-     * Use for short-distance movement or when pathfinding is not needed.
-     */
-=======
->>>>>>> Stashed changes
     public double moveToward(BlockPos target, double speedBlocksPerSec) {
         double dx = target.getX() + 0.5 - bot.getX();
         double dy = target.getY() - bot.getY();
@@ -151,16 +111,8 @@ public class MovementController {
         asyncPathfinder.tick();
         if (!navigating || navTarget == null) return;
 
-<<<<<<< Updated upstream
-        if (!navigating || navTarget == null) {
-            return;
-        }
-
         double distSqr = bot.distanceToSqr(
                 navTarget.getX() + 0.5, navTarget.getY(), navTarget.getZ() + 0.5);
-=======
-        double distSqr = bot.distanceToSqr(navTarget.getX() + 0.5, navTarget.getY(), navTarget.getZ() + 0.5);
->>>>>>> Stashed changes
         if (distSqr < ARRIVE_DIST_SQR) {
             stop();
             DevLog.info("NAV_ARRIVED", "target={}", navTarget.toShortString());
@@ -178,10 +130,7 @@ public class MovementController {
             return;
         }
 
-<<<<<<< Updated upstream
-=======
         // Follow computed path using BotMovement types
->>>>>>> Stashed changes
         if (pathExecutor != null && !pathExecutor.isCompleted() && !pathExecutor.isFailed()) {
             BlockPos next = pathExecutor.tick(bot);
             if (next != null) {
@@ -220,18 +169,8 @@ public class MovementController {
         return bot.distanceToSqr(navTarget.getX() + 0.5, navTarget.getY(), navTarget.getZ() + 0.5);
     }
 
-<<<<<<< Updated upstream
-    public PathExecutor getPathExecutor() { return pathExecutor; }
-
-    private void onPathComputed(PathResult result) {
-        if (!navigating || navTarget == null) {
-            return;
-        }
-
-=======
     private void onPathComputed(PathResult result) {
         if (!navigating || navTarget == null) return;
->>>>>>> Stashed changes
         if (result.isFound() && result.getLength() >= 2) {
             pathExecutor = new PathExecutor(result.getPath());
             pathGoal = navTarget;

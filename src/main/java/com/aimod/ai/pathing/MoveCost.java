@@ -75,33 +75,9 @@ public final class MoveCost {
             if (isDestructible(fs) && !avoidBreaking(ctx, new BlockPos(nx, ny, nz), fs)) return JUMP_ONE_BLOCK + bct(ctx, fs);
             return VOID_COST;
         }
-<<<<<<< Updated upstream
         BlockPos as = new BlockPos(x, y + 1, z);
         if (!canWalkThrough(ctx, as, ctx.getBlockState(as))) return VOID_COST;
         return JUMP_ONE_BLOCK;
-=======
-
-        // The feet position (ny) must be passable
-        if (!feetPassable) {
-            if (isDestructible(feetState) && !avoidBreaking(level, new BlockPos(nx, ny, nz), feetState)) {
-                return JUMP_ONE_BLOCK + breakCost(feetState);
-            }
-            return VOID_COST;
-        }
-
-        // Head at ny+1 must be passable (already checked by caller)
-        // Also need to check the block at (x, y+1, z) — the block above us before jumping
-        BlockPos aboveSrc = new BlockPos(x, y + 1, z);
-        if (!canWalkThrough(level, aboveSrc, level.getBlockState(aboveSrc))) {
-            return VOID_COST;
-        }
-
-        double cost = JUMP_ONE_BLOCK;
-        if (Math.abs(dx) == 1 && Math.abs(dz) == 1) {
-            cost = JUMP_ONE_BLOCK + WALK_ONE_BLOCK * (DIAGONAL_MULTIPLIER - 1.0);
-        }
-        return cost;
->>>>>>> Stashed changes
     }
     private static double costD(CalculationContext ctx, int x, int y, int z, int nx, int ny, int nz, int dx, int dz, boolean fp, BlockState fs) {
         if (!fp) {
