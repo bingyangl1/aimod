@@ -92,14 +92,28 @@ public class BotCommand {
                                 .suggests(suggestBots())
                                 .executes(BotCommand::stopTaskNamed)))
                 .then(Commands.literal("cancel")
-                        .executes(BotCommand::stopTask))
+                        .executes(BotCommand::stopTask)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .executes(BotCommand::stopTaskNamed)))
                 .then(Commands.literal("remove")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(BotCommand::removeBot)))
                 .then(Commands.literal("pause")
-                        .executes(BotCommand::pauseBot))
+                        .executes(BotCommand::pauseBot)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .executes(BotCommand::pauseBotNamed)))
                 .then(Commands.literal("resume")
-                        .executes(BotCommand::resumeBot))
+                        .executes(BotCommand::resumeBot)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .executes(BotCommand::resumeBotNamed)))
+                .then(Commands.literal("toggle")
+                        .then(Commands.argument("feature", StringArgumentType.word())
+                                .suggests((ctx, b) -> SharedSuggestionProvider.suggest(
+                                        new String[]{"autoFish", "autoReplenish", "autoReplace"}, b))
+                                .executes(BotCommand::toggleFeature)))
                 // --- Navigation commands ---
                 .then(Commands.literal("goto")
                         .then(Commands.argument("pos", Vec3Argument.vec3())
@@ -378,6 +392,14 @@ public class BotCommand {
             sb.append(" | ").append(Component.translatable("commands.ai_bot.status.no_task").getString());
         }
         sb.append(" | ").append(bot.isPaused() ? "PAUSED" : "running");
+        // Show active chain if any
+        var chain = bot.getChainManager().getActiveChain();
+        if (chain != null && chain.isActive()) {
+            sb.append(" | chain:").append(chain.name());
+        }
+        // Show AI state
+        var sm = bot.getAiManager().getStateMachine();
+        sb.append(" | state:").append(sm.getCurrent());
         return sb.toString();
     }
 
@@ -425,32 +447,48 @@ public class BotCommand {
     }
 
     private static int pauseBot(CommandContext<CommandSourceStack> context) {
+        return pauseBotInternal(context, null);
+    }
+    private static int pauseBotNamed(CommandContext<CommandSourceStack> ctx) {
+        return pauseBotInternal(ctx, StringArgumentType.getString(ctx, "name"));
+    }
+    private static int pauseBotInternal(CommandContext<CommandSourceStack> context, @Nullable String name) {
         CommandSourceStack source = context.getSource();
-        if (source.getEntity() instanceof Player player) {
-            if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 1; }
-            FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
-            if (bot != null) {
-                bot.pauseExecution();
-                source.sendSuccess(() -> Component.translatable("commands.ai_bot.pause.success"), true);
-            } else {
-                source.sendFailure(Component.translatable("commands.ai_bot.no_bot"));
-            }
-        }
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 1; }
+        FakePlayer bot = name != null ? manager.getByName(name)
+                : (source.getEntity() instanceof Player player ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null);
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot")); return 0; }
+        bot.pauseExecution();
+        source.sendSuccess(() -> Component.literal("Paused: " + bot.getName().getString()), true);
         return 1;
     }
 
     private static int resumeBot(CommandContext<CommandSourceStack> context) {
+        return resumeBotInternal(context, null);
+    }
+    private static int resumeBotNamed(CommandContext<CommandSourceStack> ctx) {
+        return resumeBotInternal(ctx, StringArgumentType.getString(ctx, "name"));
+    }
+    private static int resumeBotInternal(CommandContext<CommandSourceStack> context, @Nullable String name) {
         CommandSourceStack source = context.getSource();
-        if (source.getEntity() instanceof Player player) {
-            if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 1; }
-            FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
-            if (bot != null) {
-                bot.resumeExecution();
-                source.sendSuccess(() -> Component.translatable("commands.ai_bot.resume.success"), true);
-            } else {
-                source.sendFailure(Component.translatable("commands.ai_bot.no_bot"));
-            }
-        }
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 1; }
+        FakePlayer bot = name != null ? manager.getByName(name)
+                : (source.getEntity() instanceof Player player ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null);
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot")); return 0; }
+        bot.resumeExecution();
+        source.sendSuccess(() -> Component.literal("Resumed: " + bot.getName().getString()), true);
+        return 1;
+    }
+
+    private static int toggleFeature(CommandContext<CommandSourceStack> ctx) {
+        String feature = StringArgumentType.getString(ctx, "feature");
+        boolean newVal = switch (feature) {
+            case "autoFish" -> !com.aimod.config.ModConfig.getAutoFish();
+            case "autoReplenish" -> !com.aimod.config.ModConfig.getAutoReplenish();
+            case "autoReplace" -> !com.aimod.config.ModConfig.getAutoReplaceTool();
+            default -> { ctx.getSource().sendFailure(Component.literal("Unknown: " + feature)); yield false; }
+        };
+        ctx.getSource().sendSuccess(() -> Component.literal(feature + " = " + newVal), true);
         return 1;
     }
 
