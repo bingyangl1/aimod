@@ -3,6 +3,8 @@ package com.aimod.ai.movement;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.LinkedList;
@@ -133,16 +135,17 @@ public class UnstuckDetector {
             }
             case PILLAR -> {
                 // Place block at feet and jump up
-                var pos = bot.blockPosition();
+                BlockPos pos = bot.blockPosition();
                 var level = bot.level();
                 if (level.getBlockState(pos).isAir() || level.getBlockState(pos).canBeReplaced()) {
                     var inv = bot.getInventory();
                     for (int i = 0; i < inv.getContainerSize(); i++) {
                         var stack = inv.getItem(i);
                         if (!stack.isEmpty() && stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
-                            String key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(bi).getPath();
-                            if (key.contains("sand") || key.contains("gravel")) continue; // skip gravity blocks
-                            level.setBlock(pos, bi.getBlock().defaultBlockState(), 3);
+                            BlockState state = bi.getBlock().defaultBlockState();
+                            // Skip blocks in the #minecraft:falling tag (sand, gravel, concrete powder, etc.)
+                            if (bi.getBlock() instanceof FallingBlock) continue;
+                            level.setBlock(pos, state, 3);
                             stack.shrink(1);
                             bot.setDeltaMovement(bot.getDeltaMovement().x, 0.42, bot.getDeltaMovement().z);
                             break;
