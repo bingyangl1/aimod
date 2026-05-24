@@ -1,15 +1,21 @@
 settingsEvaluated { settings ->
+    settings.pluginManagement.repositories.clear()
     settings.pluginManagement.repositories {
         maven {
             url = uri("F:/MC/local-repo")
         }
+        mavenLocal()
+        gradlePluginPortal()
     }
 }
 
 allprojects { project ->
+    project.repositories.clear()
     project.repositories {
         maven {
             url = uri("F:/MC/local-repo")
         }
+        mavenLocal()
+        mavenCentral()
     }
 }

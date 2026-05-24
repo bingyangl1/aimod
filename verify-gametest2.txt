@@ -1,0 +1,38 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :createMinecraftArtifacts UP-TO-DATE
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :downloadAssets UP-TO-DATE
+> Task :writeGameTestServerLegacyClasspath UP-TO-DATE
+> Task :prepareGameTestServerRun
+> Task :runGameTestServer FAILED
+
+[Incubating] Problems report is available at: file:///F:/MC/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':runGameTestServer'.
+> Could not resolve all files for configuration ':runtimeClasspath'.
+   > Could not download DevLaunch-1.0.1.jar (net.neoforged:DevLaunch:1.0.1)
+      > Could not get resource 'https://maven.neoforged.net/releases/net/neoforged/DevLaunch/1.0.1/DevLaunch-1.0.1.jar'.
+         > Could not GET 'https://maven.neoforged.net/releases/net/neoforged/DevLaunch/1.0.1/DevLaunch-1.0.1.jar'.
+            > Got socket exception during request. It might be caused by SSL misconfiguration
+               > Connection reset
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 38s
+7 actionable tasks: 2 executed, 5 up-to-date

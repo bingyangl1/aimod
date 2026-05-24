@@ -365,5 +365,9 @@ public final class RecipeIndex {
     public interface InventoryState {
         int countItem(Item item);
         boolean hasItem(Item item, int count);
+
+        static InventoryState of(com.aimod.fakeplayer.FakePlayer bot) {
+            return com.aimod.ai.InventoryUtils.asInventoryState(bot);
+        }
     }
 }

@@ -502,61 +502,62 @@ public class BotAIManager {
     }
 
     private List<Action> createFallbackActions(String command, String ownerName) {
-        List<Action> actions = new ArrayList<>();
-        String normalized = command.toLowerCase(Locale.ROOT);
+        // Use the deterministic planner pipeline: NLP → Item lookup → MaterialTree → Actions
+        var parsed = com.aimod.ai.planner.CommandParser.parse(command);
+        if (parsed == null || parsed.verb() == com.aimod.ai.planner.CommandParser.Verb.UNKNOWN) {
+            DevLog.warn("FALLBACK_PARSE_FAIL", "command={}", DevLog.compact(command));
+            return List.of();
+        }
 
-        if (normalized.contains("钻石套") || normalized.contains("diamond armor") || normalized.contains("diamond set")) {
-            DevLog.info("FALLBACK_PLAN", "matched=diamond_armor_set, owner={}, command={}",
-                    ownerName, DevLog.compact(command));
-            // 先采集钻石
-            actions.add(new SayAction("Starting: Craft a full diamond armor set."));
-            actions.add(new MineBlockAction("minecraft:diamond_ore", 24));
-            actions.add(new InteractBlockAction(InteractBlockAction.InteractType.CRAFTING_TABLE));
-            addCraftAndGive(actions, "minecraft:diamond_helmet", ownerName);
-            addCraftAndGive(actions, "minecraft:diamond_chestplate", ownerName);
-            addCraftAndGive(actions, "minecraft:diamond_leggings", ownerName);
-            addCraftAndGive(actions, "minecraft:diamond_boots", ownerName);
-            actions.add(new SayAction("Task complete: diamond armor delivered."));
-        } else if (normalized.contains("钻石工具") || normalized.contains("diamond tool")) {
-            DevLog.info("FALLBACK_PLAN", "matched=diamond_tools, owner={}, command={}",
-                    ownerName, DevLog.compact(command));
-            actions.add(new SayAction("Starting: Craft diamond tools."));
-            actions.add(new MineBlockAction("minecraft:diamond_ore", 11));
-            actions.add(new GatherResourceAction(GatherResourceAction.ResourceType.WOOD, 3));
-            actions.add(new InteractBlockAction(InteractBlockAction.InteractType.CRAFTING_TABLE));
-            addCraftAndGive(actions, "minecraft:diamond_pickaxe", ownerName);
-            addCraftAndGive(actions, "minecraft:diamond_axe", ownerName);
-            addCraftAndGive(actions, "minecraft:diamond_shovel", ownerName);
-            addCraftAndGive(actions, "minecraft:diamond_sword", ownerName);
-            actions.add(new SayAction("Task complete: diamond tools delivered."));
-        } else if (normalized.contains("挖矿") || normalized.contains("mine")) {
-            // 通用挖矿
-            String blockType = "minecraft:diamond_ore";
-            if (normalized.contains("铁") || normalized.contains("iron")) {
-                blockType = "minecraft:iron_ore";
-            } else if (normalized.contains("金") || normalized.contains("gold")) {
-                blockType = "minecraft:gold_ore";
-            } else if (normalized.contains("煤") || normalized.contains("coal")) {
-                blockType = "minecraft:coal_ore";
+        com.aimod.ai.planner.CommandParser.Verb verb = parsed.verb();
+        String query = parsed.itemQuery();
+        int count = parsed.count();
+        String target = parsed.playerName();
+        DevLog.info("FALLBACK_PARSE", "verb={}, item={}, count={}, target={}",
+                verb, query, count, target);
+
+        // Fuzzy-find the item
+        net.minecraft.world.item.Item item = com.aimod.ai.planner.CommandParser.findItem(query);
+        if (item == null) {
+            DevLog.warn("FALLBACK_ITEM_NOT_FOUND", "query={}", query);
+            return List.of();
+        }
+        DevLog.info("FALLBACK_ITEM_FOUND", "query={}, item={}", query,
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item));
+
+        List<Action> actions = new ArrayList<>();
+
+        switch (verb) {
+            case CRAFT -> {
+                actions.add(new SayAction("Starting: Craft " + count + "x " + query));
+                actions.addAll(com.aimod.ai.planner.SequencePlanner.planCraftAndGive(bot, item, count, target));
+                actions.add(new SayAction("Task complete: " + query + " crafted."));
             }
-            DevLog.info("FALLBACK_PLAN", "matched=mine, block={}, owner={}, command={}",
-                    blockType, ownerName, DevLog.compact(command));
-            actions.add(new SayAction("Starting: Mining " + blockType + "."));
-            actions.add(new MineBlockAction(blockType, 16));
-            actions.add(new SayAction("Task complete: Mining finished."));
-        } else if (normalized.contains("砍树") || normalized.contains("chop") || normalized.contains("wood")) {
-            DevLog.info("FALLBACK_PLAN", "matched=gather_wood, owner={}, command={}",
-                    ownerName, DevLog.compact(command));
-            actions.add(new SayAction("Starting: Gathering wood."));
-            actions.add(new GatherResourceAction(GatherResourceAction.ResourceType.WOOD, 16));
-            actions.add(new SayAction("Task complete: Wood gathered."));
+            case MINE -> {
+                actions.add(new SayAction("Starting: Mine " + count + "x " + query));
+                actions.addAll(com.aimod.ai.planner.SequencePlanner.planMine(item, count));
+                actions.add(new SayAction("Task complete: Mining finished."));
+            }
+            case GATHER -> {
+                actions.add(new SayAction("Starting: Gather " + count + "x " + query));
+                actions.addAll(com.aimod.ai.planner.SequencePlanner.planGather(item, count));
+                actions.add(new SayAction("Task complete: Gathering finished."));
+            }
+            case EQUIP -> {
+                String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString();
+                actions.add(new SayAction("Equipping: " + itemId));
+                actions.add(new EquipItemAction(itemId, null));
+            }
+            case GIVE -> {
+                actions.add(new SayAction("Giving " + count + "x " + query + " to " + target));
+                String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString();
+                actions.add(new GiveItemAction(itemId, count, target));
+            }
+            default -> {
+                return List.of();
+            }
         }
         return actions;
-    }
-
-    private void addCraftAndGive(List<Action> actions, String itemId, String ownerName) {
-        actions.add(new CraftAction(itemId, 1));
-        actions.add(new GiveItemAction(itemId, 1, ownerName));
     }
 
     private String getString(JsonObject object, String key, String fallback) {
