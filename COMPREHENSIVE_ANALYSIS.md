@@ -1273,6 +1273,14 @@ Week 5-6: 可选高级功能
 
 | 版本 | 日期 | 关键变更 |
 |------|------|---------|
+| r29 | 2026-05-24 | i18n /ai_bot help 命令列表 + /ai_bot help <cmd> 详细示例 (中英文) |
+| r28 | 2026-05-24 | 27 条命令完整帮助文本 + 示例 |
+| r27 | 2026-05-24 | pause/resume/cancel [name], toggle 命令, status 显示 chain+state |
+| r26 | 2026-05-24 | LLM 增量规划: 动作失败时向 LLM 请求下一步而非中止任务 |
+| r25 | 2026-05-24 | BotAIStateMachine 显式状态机 + 熔炼链 + 物品→矿石映射扩展 |
+| r24 | 2026-05-24 | SequencePlanner 工具配给 (检查镐子) + 熔炉/燃料/中间产物复用 |
+| r23 | 2026-05-24 | 本地规划器检测附近箱子库存 (8格内) |
+| r22 | 2026-05-24 | 工作台在脚下放置+用完回收, InteractBlock 找不到时自动放置 |
 | r21 | 2026-05-24 | 确定性本地规划器 (CommandParser + SequencePlanner + MaterialTree) 替代硬编码 fallback |
 | r20 | 2026-05-24 | 智能补全 + goto 浮点坐标 + /ai_bot select + follow/inventory 支持指定 bot |
 | r19 | 2026-05-24 | spawn [name], status 全部/指定, stop [name], remove <name>, Unstuck 自动取消 |
