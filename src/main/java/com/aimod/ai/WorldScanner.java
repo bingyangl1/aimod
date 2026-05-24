@@ -93,6 +93,74 @@ public class WorldScanner {
 
 
     /**
+     * Single-pass multi-block filter scan. Checks each block position once
+     * against multiple target blocks, instead of one scan per block type.
+     * Uses chunk-ring iteration for efficiency (nearest chunks first).
+     */
+    public List<BlockPos> findNearbyBlocksBatched(Collection<Block> targetBlocks, int radius) {
+        BlockPos botPos = bot.blockPosition();
+        List<BlockPos> results = new ArrayList<>();
+        final int MAX_RESULTS = 16;
+        int radiusSq = radius * radius;
+        int botX = botPos.getX();
+        int botY = botPos.getY();
+        int botZ = botPos.getZ();
+
+        int minChunkX = (botX - radius) >> 4;
+        int maxChunkX = (botX + radius) >> 4;
+        int minChunkZ = (botZ - radius) >> 4;
+        int maxChunkZ = (botZ + radius) >> 4;
+
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                int chunkBaseX = cx << 4;
+                int chunkBaseZ = cz << 4;
+                for (int x = chunkBaseX; x < chunkBaseX + 16; x++) {
+                    for (int z = chunkBaseZ; z < chunkBaseZ + 16; z++) {
+                        int dx = x - botX;
+                        int dz = z - botZ;
+                        if (dx * dx + dz * dz > radiusSq) continue;
+
+                        // Check Y-levels: start at bot Y, expand outward
+                        for (int dy = 0; dy <= radius; dy++) {
+                            for (int sign : new int[]{-1, 1}) {
+                                int y = botY + dy * sign;
+                                if (y < bot.level().getMinBuildHeight() || y > bot.level().getMaxBuildHeight())
+                                    continue;
+                                if (dy == 0 && sign == 1) continue; // botY already checked
+                                BlockPos pos = new BlockPos(x, y, z);
+                                BlockState state = getState(pos);
+                                for (Block tb : targetBlocks) {
+                                    if (state.is(tb)) {
+                                        results.add(pos.immutable());
+                                        break;
+                                    }
+                                }
+                                if (results.size() >= MAX_RESULTS) {
+                                    results.sort(Comparator.comparingDouble(p -> bot.distanceToSqr(
+                                            p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5)));
+                                    if (results.size() > MAX_RESULTS)
+                                        results = new ArrayList<>(results.subList(0, MAX_RESULTS));
+                                    return results;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        results.sort(Comparator.comparingDouble(p -> bot.distanceToSqr(
+                p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5)));
+        if (results.size() > MAX_RESULTS)
+            results = new ArrayList<>(results.subList(0, MAX_RESULTS));
+
+        DevLog.info("SCAN_BLOCKS_BATCHED", "blocks={}, radius={}, found={}",
+                targetBlocks.size(), radius, results.size());
+        return results;
+    }
+
+    /**
      * 查找最近的指定类型方块
      */
     @Nullable

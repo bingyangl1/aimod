@@ -536,22 +536,12 @@ public class GatherResourceAction extends Action {
         obstacleBreaker.reset();
     }
 
-    private static final int SHORT_CIRCUIT_THRESHOLD = 10; // Stop scanning after finding enough candidates
-
     private BlockPos findResource(FakePlayer bot) {
         WorldScanner scanner = new WorldScanner(bot);
-        List<BlockPos> candidates = new ArrayList<>();
+        List<Block> blockTypes = getBlocksForType();
 
-        for (Block block : getBlocksForType()) {
-            List<BlockPos> found = scanner.findNearbyBlocks(block, searchRadius);
-            candidates.addAll(found);
-            // Short-circuit: if we have enough candidates, stop scanning other block types
-            if (candidates.size() >= SHORT_CIRCUIT_THRESHOLD) {
-                DevLog.info("GATHER_SCAN_SHORTCIRCUIT", "type={}, found={}, skipping remaining block types",
-                        resourceType, candidates.size());
-                break;
-            }
-        }
+        // Single-pass batch scan — all block types in one pass
+        List<BlockPos> candidates = scanner.findNearbyBlocksBatched(blockTypes, searchRadius);
 
         // Filter out previously failed targets
         candidates.removeAll(failedTargets);
@@ -568,6 +558,8 @@ public class GatherResourceAction extends Action {
             return dist + (dy > 1 ? dy * 100.0 : 0);
         }));
 
+        DevLog.info("GATHER_SCAN_BATCHED", "type={}, blocks={}, radius={}, candidates={}",
+                resourceType, blockTypes.size(), searchRadius, candidates.size());
         return candidates.get(0);
     }
 
