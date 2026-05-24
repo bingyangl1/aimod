@@ -5,7 +5,6 @@ import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -57,11 +56,6 @@ public class InteractBlockAction extends Action {
         if (status == ActionStatus.PENDING) {
             if (targetPos == null) {
                 targetPos = findTargetBlock(bot);
-            }
-
-            if (targetPos == null) {
-                // No existing block found — try to place one from inventory at feet
-                targetPos = tryPlaceAtFeet(bot);
             }
 
             if (targetPos == null) {
@@ -163,43 +157,5 @@ public class InteractBlockAction extends Action {
 
     public BlockPos getTargetPos() {
         return targetPos;
-    }
-
-    /** If no block found in world, place one from inventory at bot's feet. */
-    private BlockPos tryPlaceAtFeet(FakePlayer bot) {
-        var blockItem = getBlockItemForType();
-        if (blockItem == null) return null;
-        // Find the block in inventory
-        var inv = bot.getInventory();
-        int slot = -1;
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            var stack = inv.getItem(i);
-            if (!stack.isEmpty() && stack.getItem() == blockItem) { slot = i; break; }
-        }
-        if (slot < 0) return null;
-
-        BlockPos placePos = bot.blockPosition().offset(1, 0, 0); // 1 block to the side
-        var level = bot.level();
-        if (!level.getBlockState(placePos).isAir() && !level.getBlockState(placePos).canBeReplaced()) {
-            placePos = bot.blockPosition(); // try at feet
-            if (!level.getBlockState(placePos).isAir()) return null;
-        }
-
-        level.setBlock(placePos, blockItem.getBlock().defaultBlockState(), 3);
-        var stack = inv.getItem(slot);
-        stack.shrink(1);
-        if (stack.isEmpty()) inv.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY);
-        DevLog.info("INTERACT_PLACED", "type={}, pos={}", interactType, placePos.toShortString());
-        return placePos;
-    }
-
-    private net.minecraft.world.item.BlockItem getBlockItemForType() {
-        return switch (interactType) {
-            case CRAFTING_TABLE -> (net.minecraft.world.item.BlockItem) net.minecraft.world.item.Items.CRAFTING_TABLE;
-            case FURNACE -> (net.minecraft.world.item.BlockItem) net.minecraft.world.item.Items.FURNACE;
-            case CHEST -> (net.minecraft.world.item.BlockItem) net.minecraft.world.item.Items.CHEST;
-            case ANVIL -> (net.minecraft.world.item.BlockItem) net.minecraft.world.item.Items.ANVIL;
-            default -> null;
-        };
     }
 }
