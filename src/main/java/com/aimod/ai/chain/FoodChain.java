@@ -23,7 +23,8 @@ public class FoodChain extends BehaviorChain {
 
     @Override
     public boolean shouldActivate(FakePlayer bot) {
-        if (bot.getFoodData().getFoodLevel() > HUNGER_THRESHOLD) return false;
+        int threshold = com.aimod.config.ModConfig.getHungerThreshold();
+        if (bot.getFoodData().getFoodLevel() > threshold) return false;
         if (bot.getFoodData().needsFood()) {
             active = true;
             eatTicks = 0;

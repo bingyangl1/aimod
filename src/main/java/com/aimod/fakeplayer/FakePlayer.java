@@ -9,6 +9,9 @@ import com.aimod.ai.chain.DefenseChain;
 import com.aimod.ai.chain.FoodChain;
 import com.aimod.ai.chain.UnstuckChain;
 import com.aimod.ai.movement.MovementController;
+import com.aimod.ai.tool.AutoFish;
+import com.aimod.ai.tool.AutoReplenish;
+import com.aimod.ai.tool.AutoReplaceTool;
 import com.aimod.util.DevLog;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.UUIDUtil;
@@ -231,6 +234,11 @@ public class FakePlayer extends ServerPlayer {
 
         // Auto-pickup nearby items
         pickupNearbyItems();
+
+        // Auto-tool maintenance
+        if (com.aimod.config.ModConfig.getAutoReplenish()) AutoReplenish.tick(this);
+        if (com.aimod.config.ModConfig.getAutoReplaceTool()) AutoReplaceTool.tick(this);
+        if (com.aimod.config.ModConfig.getAutoFish()) AutoFish.of(this).tick(this);
     }
 
     /**

@@ -111,6 +111,41 @@ public class ModConfig {
             )
             .define("allowDevCreativeItemProvisioning", false);
 
+    public static final ModConfigSpec.ConfigValue<Integer> MAX_BOTS = BUILDER
+            .comment("Maximum number of AI bots allowed simultaneously")
+            .defineInRange("maxBots", 10, 1, 50);
+
+    public static final ModConfigSpec.ConfigValue<Integer> DEFAULT_SCAN_RADIUS = BUILDER
+            .comment("Default block scanning radius for WorldScanner")
+            .defineInRange("defaultScanRadius", 32, 8, 128);
+
+    public static final ModConfigSpec.ConfigValue<String> BOT_SKIN_URL = BUILDER
+            .comment(
+                "Custom skin URL for AI bots. Leave empty for default Steve skin.",
+                "Supports direct PNG URLs. The skin is downloaded asynchronously."
+            )
+            .define("botSkinUrl", "");
+
+    public static final ModConfigSpec.ConfigValue<Boolean> AUTO_REPLENISH = BUILDER
+            .comment("Automatically refill held item stacks from inventory")
+            .define("autoReplenish", true);
+
+    public static final ModConfigSpec.ConfigValue<Boolean> AUTO_REPLACE_TOOL = BUILDER
+            .comment("Automatically replace nearly-broken tools")
+            .define("autoReplaceTool", true);
+
+    public static final ModConfigSpec.ConfigValue<Boolean> AUTO_FISH = BUILDER
+            .comment("Automatically fish when holding a fishing rod")
+            .define("autoFish", false);
+
+    public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
+            .comment("Food level below which the bot auto-eats")
+            .defineInRange("hungerThreshold", 14, 0, 20);
+
+    public static final ModConfigSpec.ConfigValue<Double> MOVEMENT_SPEED = BUILDER
+            .comment("Bot movement speed multiplier (0.3 = default player walk speed)")
+            .defineInRange("movementSpeed", 0.3, 0.1, 1.0);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     public static String getApiUrl() {
@@ -172,4 +207,13 @@ public class ModConfig {
     public static boolean getAllowDevCreativeItemProvisioning() {
         return ALLOW_DEV_CREATIVE_ITEM_PROVISIONING.get();
     }
+
+    public static int getMaxBots() { return MAX_BOTS.get(); }
+    public static int getDefaultScanRadius() { return DEFAULT_SCAN_RADIUS.get(); }
+    public static String getBotSkinUrl() { return BOT_SKIN_URL.get(); }
+    public static boolean getAutoReplenish() { return AUTO_REPLENISH.get(); }
+    public static boolean getAutoReplaceTool() { return AUTO_REPLACE_TOOL.get(); }
+    public static boolean getAutoFish() { return AUTO_FISH.get(); }
+    public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
+    public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
 }

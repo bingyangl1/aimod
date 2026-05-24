@@ -3,9 +3,11 @@ package com.aimod.entity;
 import com.aimod.ai.BotAIManager;
 import com.aimod.ai.InventoryUtils;
 import com.aimod.ai.Task;
+import com.aimod.client.BotStatusScreen;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleContainer;
@@ -66,8 +68,13 @@ public class AIBotEntity extends Mob {
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
-        if (!this.level().isClientSide) {
-            DevLog.info("BOT_INTERACT", "player={}, hand={}", player.getName().getString(), hand);
+        if (!this.level().isClientSide && player instanceof ServerPlayer sp) {
+            FakePlayer fp = getFakePlayer();
+            if (fp != null) {
+                BotStatusScreen.open(sp, fp);
+                DevLog.info("BOT_INTERACT", "player={}, hand={}", player.getName().getString(), hand);
+                return InteractionResult.SUCCESS;
+            }
         }
         return InteractionResult.SUCCESS;
     }
