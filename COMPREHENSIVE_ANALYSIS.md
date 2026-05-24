@@ -1273,6 +1273,13 @@ Week 5-6: 可选高级功能
 
 | 版本 | 日期 | 关键变更 |
 |------|------|---------|
+| r46 | 2026-05-24 | 默认采集灵活化 + 增量规划跳过重复动作 |
+| r45 | 2026-05-24 | parseActionsFromContent 支持单独动作对象 (增量规划修复) |
+| r44 | 2026-05-24 | /ai_bot test 扩展到 18 项 (VeinScanner, UndoManager, Config, ToolSet, MaterialTree) |
+| r43 | 2026-05-24 | GatherResourceAction 砍树连锁 (isLogBlock + VeinScanner.findTree) |
+| r42 | 2026-05-24 | Mine 默认使用 VeinMineAction（veinMine 配置开关） |
+| r41 | 2026-05-24 | /ai_bot veinmine on/off/status/history/undo 子命令树 |
+| r40 | 2026-05-24 | veinMine 和 undoHistory 配置项 + toggle 支持 |
 | r39 | 2026-05-24 | VeinScanner BFS 连锁采集 + UndoManager 撤销 + /ai_bot vein/undo/test |
 | r38 | 2026-05-24 | 移除 GRAVEL 从垫脚方块列表 |
 | r37 | 2026-05-24 | 垫脚方块优先级: 泥土>圆石>砂土>石头>木板>原木, spawn 采集泥土+圆石 |
