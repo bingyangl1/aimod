@@ -155,6 +155,11 @@ public class GatherResourceAction extends Action {
         double dxzSqr = dx * dx + dz * dz;
         boolean canReach = (dxzSqr <= 9.0 && dy >= -1.5 && dy <= 4.0);
         if (canReach) {
+            // If target is overhead (XZ close but Y > 2 blocks up), pillar up
+            if (dxzSqr <= 1.5 && dy > 1.8) {
+                boolean pillared = tryPillarUp(bot);
+                if (pillared) return;
+            }
             stopNavigation(bot);
             breakTarget(bot, blockState);
             return;
