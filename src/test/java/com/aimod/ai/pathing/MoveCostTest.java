@@ -48,11 +48,11 @@ class MoveCostTest {
         assertTrue(MoveCost.VOID_COST > 100000);
     }
 
-    @Test @DisplayName("OFFSETS has 10 entries") void offsetsCount() {
-        assertEquals(16, MoveCost.OFFSETS.length);
+    @Test @DisplayName("OFFSETS has 20 entries") void offsetsCount() {
+        assertEquals(20, MoveCost.OFFSETS.length);
     }
 
-    @Test @DisplayName("Each offset is 3D") void offsetsAre3D() {
+    @Test @DisplayName("Each offset has 4 values (x,y,z,type)") void offsetsAre3D() {
         for (int[] offset : MoveCost.OFFSETS) {
             assertEquals(4, offset.length);
         }

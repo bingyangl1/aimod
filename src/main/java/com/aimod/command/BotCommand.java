@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import javax.annotation.Nullable;
 import java.util.Collection;
 
 /**
@@ -45,7 +46,9 @@ public class BotCommand {
         dispatcher.register(Commands.literal("ai_bot")
                 // --- Core commands ---
                 .then(Commands.literal("spawn")
-                        .executes(BotCommand::spawnBot))
+                        .executes(BotCommand::spawnBot)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(BotCommand::spawnBotNamed)))
                 .then(Commands.literal("task")
                         .then(Commands.argument("command", StringArgumentType.greedyString())
                                 .executes(BotCommand::assignTask)))
@@ -53,12 +56,19 @@ public class BotCommand {
                         .then(Commands.argument("command", StringArgumentType.greedyString())
                                 .executes(BotCommand::assignTaskAll)))
                 .then(Commands.literal("status")
-                        .executes(BotCommand::showStatus))
-                // --- Control commands (Baritone-style) ---
+                        .executes(BotCommand::showStatus)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(BotCommand::showStatusNamed)))
+                // --- Control commands ---
                 .then(Commands.literal("stop")
-                        .executes(BotCommand::stopTask))
+                        .executes(BotCommand::stopTask)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(BotCommand::stopTaskNamed)))
                 .then(Commands.literal("cancel")
                         .executes(BotCommand::stopTask))
+                .then(Commands.literal("remove")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .executes(BotCommand::removeBot)))
                 .then(Commands.literal("pause")
                         .executes(BotCommand::pauseBot))
                 .then(Commands.literal("resume")
@@ -166,7 +176,7 @@ public class BotCommand {
         return assigned;
     }
 
-    // ========== Helper: find or spawn nearest bot ==========
+    // ========== Helpers ==========
 
     private static FakePlayer findOrSpawnBot(CommandSourceStack source, Player player) {
         if (manager == null) {
@@ -175,7 +185,7 @@ public class BotCommand {
         }
         FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
         if (bot == null) {
-            bot = spawnBotNearPlayer(source, player);
+            bot = spawnBotNearPlayer(source, player, null);
             if (bot != null) {
                 source.sendSuccess(() -> Component.translatable("commands.ai_bot.auto_spawn"), true);
             }
@@ -183,12 +193,35 @@ public class BotCommand {
         return bot;
     }
 
-    private static FakePlayer spawnBotNearPlayer(CommandSourceStack source, Player player) {
+    /** Find bot by name, or nearest if name is null. Returns null with failure message if not found. */
+    @Nullable
+    private static FakePlayer findBot(CommandSourceStack source, @Nullable String name) {
+        if (manager == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
+            return null;
+        }
+        if (name != null) {
+            FakePlayer bot = manager.getByName(name);
+            if (bot == null) {
+                source.sendFailure(Component.translatable("commands.ai_bot.no_bot_named", name));
+            }
+            return bot;
+        }
+        Player player = source.getPlayer();
+        if (player == null) return null;
+        FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
+        if (bot == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.no_bot_nearby"));
+        }
+        return bot;
+    }
+
+    private static FakePlayer spawnBotNearPlayer(CommandSourceStack source, Player player, @Nullable String customName) {
         if (manager == null) return null;
         ServerLevel level = source.getLevel();
         BlockPos pos = player.blockPosition().relative(player.getDirection(), 2);
         Vec3 spawnPos = new Vec3(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        String name = "AI_Bot_" + (manager.getActiveCount() + 1);
+        String name = customName != null ? customName : "AI_Bot_" + (manager.getActiveCount() + 1);
         FakePlayer bot = manager.createFakePlayer(name, level, spawnPos);
         if (bot != null) {
             DevLog.info("BOT_SPAWN", "player={}, bot={}, pos={}", player.getName().getString(), bot.getStringUUID(), pos.toShortString());
@@ -205,12 +238,28 @@ public class BotCommand {
                 source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
                 return 1;
             }
-            FakePlayer bot = spawnBotNearPlayer(source, player);
+            FakePlayer bot = spawnBotNearPlayer(source, player, null);
             if (bot != null) {
                 source.sendSuccess(() -> Component.translatable("commands.ai_bot.spawn.success", bot.getName().getString()), true);
             } else {
                 source.sendFailure(Component.translatable("commands.ai_bot.spawn.failure"));
             }
+        }
+        return 1;
+    }
+
+    private static int spawnBotNamed(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        String name = StringArgumentType.getString(ctx, "name");
+        if (source.getEntity() instanceof Player player) {
+            if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 1; }
+            if (manager.getByName(name) != null) {
+                source.sendFailure(Component.literal("Bot '" + name + "' already exists"));
+                return 1;
+            }
+            FakePlayer bot = spawnBotNearPlayer(source, player, name);
+            if (bot != null) source.sendSuccess(() -> Component.translatable("commands.ai_bot.spawn.success", bot.getName().getString()), true);
+            else source.sendFailure(Component.translatable("commands.ai_bot.spawn.failure"));
         }
         return 1;
     }
@@ -232,53 +281,101 @@ public class BotCommand {
     }
 
     private static int showStatus(CommandContext<CommandSourceStack> context) {
+        return showStatusInternal(context, null);
+    }
+
+    private static int showStatusNamed(CommandContext<CommandSourceStack> ctx) {
+        return showStatusInternal(ctx, StringArgumentType.getString(ctx, "name"));
+    }
+
+    private static int showStatusInternal(CommandContext<CommandSourceStack> context, @Nullable String targetName) {
         CommandSourceStack source = context.getSource();
-        if (source.getEntity() instanceof Player player) {
-            if (manager == null) {
-                source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
-                return 1;
-            }
-            FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
-            if (bot != null) {
-                StringBuilder sb = new StringBuilder();
-                sb.append(Component.translatable("commands.ai_bot.status.bot_name", bot.getName().getString()).getString()).append("\n");
-                String taskText;
-                if (bot.getCurrentTask() != null) {
-                    Task t = bot.getCurrentTask();
-                    taskText = t.getDescription() + " (" + t.getStatus()
-                            + ", action " + t.getCurrentActionIndex()
-                            + "/" + t.getActionCount() + ")";
-                } else {
-                    taskText = Component.translatable("commands.ai_bot.status.no_task").getString();
-                }
-                sb.append(Component.translatable("commands.ai_bot.status.task", taskText).getString());
-                String pausedText = bot.isPaused() ? Component.translatable("commands.ai_bot.status.yes").getString() : Component.translatable("commands.ai_bot.status.no").getString();
-                sb.append("\n").append(Component.translatable("commands.ai_bot.status.paused", pausedText).getString());
-                sb.append("\n").append(Component.translatable("commands.ai_bot.status.active_bots", manager.getActiveCount()).getString());
-                final String status = sb.toString();
-                DevLog.info("CMD_STATUS", "player={}, bot={}, status={}", player.getName().getString(), bot.getStringUUID(), status);
-                source.sendSuccess(() -> Component.literal("Bot status:\n" + status), true);
-            } else {
-                source.sendFailure(Component.translatable("commands.ai_bot.no_bot"));
-            }
+        if (manager == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
+            return 1;
         }
+
+        if (targetName != null) {
+            FakePlayer bot = manager.getByName(targetName);
+            if (bot == null) {
+                source.sendFailure(Component.translatable("commands.ai_bot.no_bot_named", targetName));
+                return 0;
+            }
+            source.sendSuccess(() -> Component.literal(formatBotStatus(bot)), false);
+            return 1;
+        }
+
+        // No name → show all
+        Collection<FakePlayer> all = manager.getActivePlayers();
+        if (all.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.ai_bot.list_empty"), false);
+            return 1;
+        }
+        source.sendSuccess(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("=== Active Bots (").append(all.size()).append(") ===\n");
+            for (FakePlayer bot : all) {
+                sb.append(formatBotStatus(bot)).append("\n");
+            }
+            return Component.literal(sb.toString().trim());
+        }, false);
         return 1;
+    }
+
+    private static String formatBotStatus(FakePlayer bot) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(Component.translatable("commands.ai_bot.status.bot_name", bot.getName().getString()).getString());
+        if (bot.getCurrentTask() != null) {
+            Task t = bot.getCurrentTask();
+            sb.append(" | ").append(t.getDescription()).append(" (").append(t.getStatus())
+              .append(", ").append(t.getCurrentActionIndex()).append("/").append(t.getActionCount()).append(")");
+        } else {
+            sb.append(" | ").append(Component.translatable("commands.ai_bot.status.no_task").getString());
+        }
+        sb.append(" | ").append(bot.isPaused() ? "PAUSED" : "running");
+        return sb.toString();
     }
 
     // ========== Control commands ==========
 
     private static int stopTask(CommandContext<CommandSourceStack> context) {
+        return stopTaskInternal(context, null);
+    }
+
+    private static int stopTaskNamed(CommandContext<CommandSourceStack> ctx) {
+        return stopTaskInternal(ctx, StringArgumentType.getString(ctx, "name"));
+    }
+
+    private static int stopTaskInternal(CommandContext<CommandSourceStack> context, @Nullable String targetName) {
         CommandSourceStack source = context.getSource();
-        if (source.getEntity() instanceof Player player) {
-            if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 1; }
-            FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
-            if (bot != null) {
-                bot.cancelTask();
-                source.sendSuccess(() -> Component.translatable("commands.ai_bot.stop.success"), true);
-            } else {
-                source.sendFailure(Component.translatable("commands.ai_bot.no_bot"));
-            }
+        FakePlayer bot = targetName != null ? (manager != null ? manager.getByName(targetName) : null)
+                : (source.getEntity() instanceof Player player && manager != null
+                        ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null);
+        if (bot == null) {
+            source.sendFailure(targetName != null
+                    ? Component.translatable("commands.ai_bot.no_bot_named", targetName)
+                    : Component.translatable("commands.ai_bot.no_bot_nearby"));
+            return 0;
         }
+        bot.cancelTask();
+        source.sendSuccess(() -> Component.translatable("commands.ai_bot.stop.success", bot.getName().getString()), true);
+        return 1;
+    }
+
+    private static int removeBot(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        String name = StringArgumentType.getString(context, "name");
+        if (manager == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
+            return 0;
+        }
+        FakePlayer bot = manager.getByName(name);
+        if (bot == null) {
+            source.sendFailure(Component.translatable("commands.ai_bot.no_bot_named", name));
+            return 0;
+        }
+        manager.removeFakePlayer(bot);
+        source.sendSuccess(() -> Component.literal("Removed bot: " + name), true);
         return 1;
     }
 

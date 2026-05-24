@@ -270,6 +270,71 @@ TaskFeedback 向分配任务的玩家报告任务状态：
 - 单元测试：12 个文件 / 90 个测试全部通过；无集成测试
 - WorldScanner 暴力扫描方块区域（O(n^3)）
 
+## 验证流程
+
+### 自动化验证脚本
+
+```powershell
+# 完整验证（构建 + 测试 + GameTest + 集成测试 + 日志分析）
+.\verify-mod.ps1
+
+# 跳过构建，使用现有 JAR
+.\verify-mod.ps1 -SkipBuild
+
+# 只运行 GameTest
+.\verify-mod.ps1 -SkipBuild -SkipIntegration
+
+# 只运行集成测试
+.\verify-mod.ps1 -SkipBuild -SkipGameTest
+```
+
+### 日志分析脚本
+
+```powershell
+# 分析最新日志
+.\analyze-logs.ps1
+
+# 实时监控日志
+.\analyze-logs.ps1 -Follow
+
+# 导出报告
+.\analyze-logs.ps1 -ExportReport
+```
+
+### 手动验证步骤
+
+1. **构建**: `.\gradlew.bat build --init-script init-local.gradle -x test`
+2. **单元测试**: `.\gradlew.bat test --init-script init-local.gradle`
+3. **GameTest**: `.\gradlew.bat runGameTestServer --init-script init-local.gradle`
+4. **部署**: 复制 `build/libs/aimod-*.jar` 到 Minecraft `mods/` 目录
+5. **集成测试**: 启动游戏，执行 `/ai_bot spawn`、`/ai_bot task`、`/ai_bot status` 等命令
+6. **日志分析**: 检查 `logs/latest.log` 中的 `AIMOD-DEV` 标签和错误信息
+
+### GameTest 用例
+
+GameTest 在无头服务器环境中运行，无需启动游戏客户端：
+
+| 测试 | 验证内容 |
+|------|----------|
+| `testModLoads` | 模组加载不崩溃 |
+| `testEntityRegistration` | AI Bot 实体类型已注册 |
+| `testTaskCreation` | 任务创建正常 |
+| `testLLMResponseParsing` | LLM 响应解析正常 |
+| `testInventoryUtils` | 背包工具方法正常 |
+| `testPathfinderBasic` | 基础寻路正常 |
+| `testChunkCacheCreation` | ChunkCache 创建正常 |
+
+### 日志标签说明
+
+| 标签 | 含义 |
+|------|------|
+| `AIMOD-DEV` | AI Mod 开发日志 |
+| `CHAIN_ACTIVATE` / `CHAIN_STOP` | 行为链激活/停止 |
+| `UNSTUCK_ESCALATE` | 卡住检测升级 |
+| `TASK_*` | 任务相关事件 |
+| `LLM_*` | LLM API 相关事件 |
+| `BOT_*` | 机器人相关事件 |
+
 ## 可忽略文件
 
 - build_*.txt、download_output.txt — 构建调试日志

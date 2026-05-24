@@ -37,8 +37,15 @@ public class UnstuckChain extends BehaviorChain {
     @Override
     public void tick(FakePlayer bot) {
         currentStrategy = detector.tick(bot);
-        if (currentStrategy == UnstuckDetector.RecoveryStrategy.NONE) {
+        if (currentStrategy == UnstuckDetector.RecoveryStrategy.NONE
+                || currentStrategy == UnstuckDetector.RecoveryStrategy.SKIP) {
+            // All strategies exhausted or unstuck — give up
+            if (currentStrategy == UnstuckDetector.RecoveryStrategy.SKIP) {
+                bot.getMovementController().stop();
+                bot.cancelTask();
+            }
             active = false;
+            detector.reset();
             return;
         }
         detector.executeRecovery(bot);
