@@ -1266,3 +1266,19 @@ Week 5-6: 可选高级功能
 | MaterialTree 自动合成 | EMI/bom/MaterialTree.java | 全文 |
 | UID 子类型系统 | JEI/Library/.../IngredientToRecipesMap.java | 全文 |
 | 两阶段索引构建 | EMI/registry/EmiRecipes.java | bake() + Worker |
+
+---
+
+## 附录 C：开发变更日志
+
+| 版本 | 日期 | 关键变更 |
+|------|------|---------|
+| r19 | 2026-05-24 | spawn [name], status 全部/指定, stop [name], remove <name>, Unstuck 自动取消 |
+| r18 | 2026-05-24 | DangerChain A* 寻路逃离 + 搭桥 + 水桶 MLG + 任务自动重试 |
+| r16 | 2026-05-24 | FollowAction A* 寻路绕过岩浆, DangerChain 分级(urgent/passive) |
+| r15 | 2026-05-24 | DangerChain 取消任务 + 更强逃脱, Follow 保持距离 |
+| r14 | 2026-05-24 | FollowAction 持续跟随 + /ai_bot inventory 命令 |
+| r13 | 2026-05-24 | Follow 不停止 + BotStatusScreen CONSUME |
+| r12 | 2026-05-24 | DangerChain cooldown + UnstuckChain idle guard + OpenCode 5 修复 |
+| r11 | 2026-05-24 | 5 Mixin + moddev + 持久化 + RecipeIndex + ChunkCache + 行为链 + 8 Movement |
+| - | 2026-05-24 | 9 参考项目综合分析文档创建 |
