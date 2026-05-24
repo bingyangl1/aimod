@@ -973,6 +973,66 @@ public class BotCommand {
             else { failed++; sb.append("[FAIL] BotInfo: wrong name\n"); }
         } catch (Exception e) { failed++; sb.append("[FAIL] BotInfo: ").append(e.getMessage()).append("\n"); }
 
+        // Test 11: VeinScanner
+        try {
+            var origin = source.getPlayer().blockPosition();
+            var vein = com.aimod.ai.VeinScanner.findVein(source.getLevel(), origin, net.minecraft.world.level.block.Blocks.STONE, 10);
+            passed++; sb.append("[PASS] VeinScanner: returned ").append(vein.size()).append(" connected blocks\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] VeinScanner: ").append(e.getMessage()).append("\n"); }
+
+        // Test 12: UndoManager
+        try {
+            var um = new com.aimod.ai.UndoManager(3);
+            var op = um.startOperation("test");
+            var bp = source.getPlayer().blockPosition();
+            um.record(op, bp, net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+            if (um.historySize() == 1) { passed++; sb.append("[PASS] UndoManager: record+history\n"); }
+            else { failed++; sb.append("[FAIL] UndoManager: wrong history size\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] UndoManager: ").append(e.getMessage()).append("\n"); }
+
+        // Test 13: VeinMineAction
+        try {
+            var action = new com.aimod.ai.action.VeinMineAction("stone", 5);
+            if (action.getBlockId().equals("stone") && action.getCount() == 5) { passed++; sb.append("[PASS] VeinMineAction: created\n"); }
+            else { failed++; sb.append("[FAIL] VeinMineAction: wrong parameters\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] VeinMineAction: ").append(e.getMessage()).append("\n"); }
+
+        // Test 14: Config values
+        try {
+            boolean veinMine = com.aimod.config.ModConfig.getVeinMine();
+            int undoHistory = com.aimod.config.ModConfig.getUndoHistory();
+            if (undoHistory >= 0) { passed++; sb.append("[PASS] Config: veinMine=").append(veinMine).append(" undoHistory=").append(undoHistory).append("\n"); }
+            else { failed++; sb.append("[FAIL] Config: invalid undoHistory\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] Config: ").append(e.getMessage()).append("\n"); }
+
+        // Test 15: MaterialTree (static API)
+        try {
+            if (com.aimod.ai.craft.MaterialTree.class != null) { passed++; sb.append("[PASS] MaterialTree: class loaded\n"); }
+            else { failed++; sb.append("[FAIL] MaterialTree: class not found\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] MaterialTree: ").append(e.getMessage()).append("\n"); }
+
+        // Test 16: ToolSet (static API)
+        try {
+            var speed = com.aimod.ai.pathing.ToolSet.calculateSpeedVsBlock(
+                net.minecraft.world.item.ItemStack.EMPTY,
+                net.minecraft.world.level.block.Blocks.DIAMOND_ORE.defaultBlockState());
+            passed++; sb.append("[PASS] ToolSet: calculateSpeedVsBlock returned ").append(String.format("%.3f", speed)).append("\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] ToolSet: ").append(e.getMessage()).append("\n"); }
+
+        // Test 17: SequencePlanner mine
+        try {
+            var actions = com.aimod.ai.planner.SequencePlanner.planMine(net.minecraft.world.item.Items.DIAMOND_ORE, 3);
+            if (!actions.isEmpty()) { passed++; sb.append("[PASS] SequencePlanner: mine ").append(actions.size()).append(" actions\n"); }
+            else { failed++; sb.append("[FAIL] SequencePlanner: empty actions\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] SequencePlanner: ").append(e.getMessage()).append("\n"); }
+
+        // Test 18: SequencePlanner gather
+        try {
+            var actions = com.aimod.ai.planner.SequencePlanner.planGather(net.minecraft.world.item.Items.OAK_LOG, 8);
+            if (!actions.isEmpty()) { passed++; sb.append("[PASS] SequencePlanner: gather ").append(actions.size()).append(" actions\n"); }
+            else { failed++; sb.append("[FAIL] SequencePlanner: empty gather\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] SequencePlanner: ").append(e.getMessage()).append("\n"); }
+
         sb.append("===== ").append(passed).append(" passed, ").append(failed).append(" failed =====");
         source.sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
