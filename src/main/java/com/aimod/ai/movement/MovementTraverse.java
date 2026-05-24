@@ -127,8 +127,7 @@ public class MovementTraverse extends BotMovement {
                 net.minecraft.world.item.Items.DIRT,
                 net.minecraft.world.item.Items.COBBLESTONE,
                 net.minecraft.world.item.Items.COARSE_DIRT,
-                net.minecraft.world.item.Items.STONE,
-                net.minecraft.world.item.Items.GRAVEL}) {
+                net.minecraft.world.item.Items.STONE}) {
             for (int i = 0; i < inventory.getContainerSize(); i++) {
                 var stack = inventory.getItem(i);
                 if (!stack.isEmpty() && stack.getItem() == pref) return stack;
