@@ -38,7 +38,8 @@ public class PlanCache {
 
     public PlanCache(Path serverDir) {
         this.cacheFile = serverDir.resolve("config/aimod/plan_cache.json");
-        this.plans = new ArrayList<>(load());
+        List<CachedPlan> loaded = load();
+        this.plans = loaded != null ? loaded : new ArrayList<CachedPlan>();
     }
 
     /** Try to find a matching cached plan for the given command. */
@@ -97,15 +98,16 @@ public class PlanCache {
 
     public int size() { return plans.size(); }
 
-    private void load() {
+    private List<CachedPlan> load() {
         try {
             Files.createDirectories(cacheFile.getParent());
             if (Files.exists(cacheFile)) {
                 String json = Files.readString(cacheFile);
                 List<CachedPlan> loaded = GSON.fromJson(json, LIST_TYPE);
-                if (loaded != null) { plans.clear(); plans.addAll(loaded); }
+                if (loaded != null) return loaded;
             }
         } catch (Exception e) { DevLog.warn("PLAN_CACHE_LOAD_FAIL", e.getMessage()); }
+        return new ArrayList<CachedPlan>();
     }
 
     private void save() {
