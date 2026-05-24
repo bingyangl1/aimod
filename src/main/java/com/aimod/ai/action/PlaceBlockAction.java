@@ -47,9 +47,12 @@ public class PlaceBlockAction extends Action {
         ItemStack stack = findBlockItem(bot);
         if (stack.isEmpty()) { status = ActionStatus.FAILED; return; }
 
-        // Try placing: target pos first, then search nearby alternatives
-        BlockPos placeAt = failCount == 0 ? targetPos : findNearbyAir(bot);
-        if (placeAt == null) { status = ActionStatus.FAILED; return; }
+        // Try placing: target pos → nearby alternatives → air place
+        BlockPos placeAt;
+        if (failCount == 0) placeAt = targetPos;
+        else if (failCount == 1) placeAt = targetPos.below(); // try block below
+        else if (failCount == 2) placeAt = findNearbyAir(bot); // search nearby
+        else placeAt = bot.blockPosition(); // place at feet (pillar up)
 
         BlockState state = blockItem.getBlock().defaultBlockState();
         bot.level().setBlock(placeAt, state, 3);
@@ -58,6 +61,10 @@ public class PlaceBlockAction extends Action {
         if (!bot.level().getBlockState(placeAt).isAir()) {
             status = ActionStatus.COMPLETED;
             DevLog.info("PLACE_COMPLETE", "pos={}", placeAt.toShortString());
+            // If placed at feet, jump up
+            if (placeAt.equals(bot.blockPosition()) && bot.onGround()) {
+                bot.setDeltaMovement(bot.getDeltaMovement().x, 0.42, bot.getDeltaMovement().z);
+            }
         } else {
             failCount++;
             if (failCount > 5) { status = ActionStatus.FAILED; DevLog.warn("PLACE_FAIL_ALL", "tried 6 positions"); }
