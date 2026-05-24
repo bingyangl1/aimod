@@ -18,8 +18,9 @@ public class DangerChain extends BehaviorChain {
     private int escapeTicks;
     private int cooldownTicks;
     private BlockPos lastDangerPos;
-    private static final int COOLDOWN = 60; // 3 seconds after danger clears
-    private static final int MAX_ESCAPE = 40;
+    private boolean cancelledTask;
+    private static final int COOLDOWN = 60;
+    private static final int MAX_ESCAPE = 80; // 4 seconds — need more time to actually escape
 
     @Override public int priority() { return 90; }
 
@@ -32,38 +33,26 @@ public class DangerChain extends BehaviorChain {
         BlockState feet = level.getBlockState(pos);
         BlockState below = level.getBlockState(pos.below());
 
-        // Lava at feet or below — always activate
-        if (feet.getBlock() == Blocks.LAVA || feet.getFluidState().isSource()) {
-            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
-        }
-        if (below.getBlock() == Blocks.LAVA) {
-            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
-        }
-        if (DangerZone.isLavaNearby(bot, 3)) {
-            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
-        }
-
-        // On fire
-        if (bot.isOnFire() && !bot.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) {
-            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
+        boolean danger = false;
+        if (feet.getBlock() == Blocks.LAVA || feet.getFluidState().isSource()) danger = true;
+        else if (below.getBlock() == Blocks.LAVA) danger = true;
+        else if (DangerZone.isLavaNearby(bot, 3)) danger = true;
+        else if (bot.isOnFire() && !bot.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) danger = true;
+        else if (bot.isInWater() && bot.getAirSupply() < 60) danger = true;
+        else if (DangerZone.isDeepWater(bot) && bot.getAirSupply() < 150) danger = true;
+        else if (bot.onGround() && DangerZone.isCliffAhead(bot)) {
+            if (pos.equals(lastDangerPos)) return false;
+            danger = true;
         }
 
-        // Drowning
-        if (bot.isInWater() && bot.getAirSupply() < 60) {
-            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
-        }
-        if (DangerZone.isDeepWater(bot) && bot.getAirSupply() < 150) {
-            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
-        }
-
-        // Cliff ahead — only if position changed (not same cliff as before)
-        if (bot.onGround() && DangerZone.isCliffAhead(bot)) {
-            if (pos.equals(lastDangerPos)) return false; // already tried, don't loop
+        if (danger) {
             lastDangerPos = pos;
-            active = true; escapeTicks = 0;
+            active = true;
+            escapeTicks = 0;
+            // Cancel current AI task so bot doesn't walk back into danger
+            bot.cancelTask();
             return true;
         }
-
         return false;
     }
 
@@ -88,14 +77,22 @@ public class DangerChain extends BehaviorChain {
         }
 
         if (bestDir != null) {
-            double speed = 0.3;
+            double speed = 0.4; // faster escape
             Vec3 move = new Vec3(bestDir.getStepX() * speed, 0, bestDir.getStepZ() * speed);
-            if (bot.onGround() && (bot.isOnFire() || DangerZone.isLavaNearby(bot, 1))) {
-                move = new Vec3(move.x, 0.42, move.z); // jump while escaping
+            // Always jump when escaping (gets over 1-block obstacles)
+            if (bot.onGround()) {
+                move = new Vec3(move.x, 0.42, move.z);
             }
             if (bot.isInWater()) {
-                move = new Vec3(move.x, 0.3, move.z); // swim up
+                move = new Vec3(move.x, 0.3, move.z);
             }
+            bot.setDeltaMovement(move);
+            bot.move(MoverType.SELF, move);
+        } else {
+            // No safe direction — move back the way we came
+            Vec3 look = bot.getLookAngle().scale(-1);
+            Vec3 move = new Vec3(look.x * 0.3, bot.onGround() ? 0.42 : 0, look.z * 0.3);
+            if (bot.isInWater()) move = new Vec3(move.x, 0.3, move.z);
             bot.setDeltaMovement(move);
             bot.move(MoverType.SELF, move);
         }
