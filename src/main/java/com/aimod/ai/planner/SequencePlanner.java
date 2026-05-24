@@ -27,7 +27,8 @@ public final class SequencePlanner {
             FakePlayer bot, Item targetItem, int count, String playerName) {
 
         List<Action> actions = new ArrayList<>();
-        RecipeIndex.InventoryState inv = RecipeIndex.InventoryState.of(bot);
+        // Check bot inventory + nearby chests before planning
+        RecipeIndex.InventoryState inv = com.aimod.ai.InventoryUtils.asInventoryStateWithChests(bot, 8);
         MaterialTree tree = new MaterialTree(targetItem, count);
         tree.build(inv, 6);
 

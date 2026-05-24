@@ -369,3 +369,4 @@ GameTest 在无头服务器环境中运行，无需启动游戏客户端：
 | SiliconeDolls-releases-1.21/ | SiliconeDolls | FakePlayer 创建/注册模式参考 |
 | JustEnoughItems-26.1/ | JustEnoughItems | 配方解析参考 |
 | emi-1.21/ | EMI | 配方树参考 |
+| minecolonies-release-1.21/ | MineColonies | TickRateStateMachine 状态机、TickingTransition 均匀 Tick 分配、Worker 系统参考 |

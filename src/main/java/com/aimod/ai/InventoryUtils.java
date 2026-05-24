@@ -178,4 +178,37 @@ public final class InventoryUtils {
     public static FindItemResult find(FakePlayer bot, Item item) {
         return find(bot, stack -> stack.getItem() == item);
     }
+
+    /**
+     * Create an InventoryState that includes nearby containers (chests, barrels, etc.)
+     * within searchRadius. Useful for the planner to check if materials are
+     * already stored in nearby chests before deciding to mine/gather.
+     */
+    public static RecipeIndex.InventoryState asInventoryStateWithChests(FakePlayer bot, int searchRadius) {
+        java.util.Map<Item, Integer> chestItems = new java.util.LinkedHashMap<>();
+        var pos = bot.blockPosition();
+        var level = bot.level();
+        for (int dx = -searchRadius; dx <= searchRadius; dx++) {
+            for (int dz = -searchRadius; dz <= searchRadius; dz++) {
+                if (dx * dx + dz * dz > searchRadius * searchRadius) continue;
+                for (int dy = -2; dy <= 2; dy++) {
+                    var be = level.getBlockEntity(pos.offset(dx, dy, dz));
+                    if (be instanceof net.minecraft.world.Container c) {
+                        for (int i = 0; i < c.getContainerSize(); i++) {
+                            var stack = c.getItem(i);
+                            if (!stack.isEmpty()) chestItems.merge(stack.getItem(), stack.getCount(), Integer::sum);
+                        }
+                    }
+                }
+            }
+        }
+        return new RecipeIndex.InventoryState() {
+            @Override public int countItem(Item item) {
+                return InventoryUtils.countItem(bot, item) + chestItems.getOrDefault(item, 0);
+            }
+            @Override public boolean hasItem(Item item, int count) {
+                return countItem(item) >= count;
+            }
+        };
+    }
 }
