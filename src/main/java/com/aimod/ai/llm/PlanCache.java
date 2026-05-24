@@ -23,6 +23,8 @@ public class PlanCache {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Type LIST_TYPE = new TypeToken<List<CachedPlan>>() {}.getType();
     private static final int MAX_ENTRIES = 50;
+    private static final int MAX_AGE_DAYS = 7;
+    private static final long MAX_AGE_MS = MAX_AGE_DAYS * 24L * 60 * 60 * 1000;
     private static final double SIMILARITY_THRESHOLD = 0.6;
 
     public static class CachedPlan {
@@ -40,6 +42,10 @@ public class PlanCache {
         this.cacheFile = serverDir.resolve("config/aimod/plan_cache.json");
         List<CachedPlan> loaded = load();
         this.plans = loaded != null ? loaded : new ArrayList<CachedPlan>();
+        // Remove expired entries on load
+        long now = System.currentTimeMillis();
+        boolean changed = plans.removeIf(p -> (now - p.timestamp) > MAX_AGE_MS);
+        if (changed) save();
     }
 
     /** Try to find a matching cached plan for the given command. */
