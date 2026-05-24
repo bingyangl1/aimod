@@ -4,13 +4,20 @@ import com.aimod.ai.Task;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.fakeplayer.FakePlayerManager;
 import com.aimod.util.DevLog;
+import com.aimod.ai.Task;
+import com.aimod.fakeplayer.FakePlayer;
+import com.aimod.fakeplayer.FakePlayerManager;
+import com.aimod.util.DevLog;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -38,8 +45,22 @@ public class BotCommand {
         DevLog.info("BOT_COMMAND_INIT", "FakePlayerManager initialized");
     }
 
-    public static FakePlayerManager getManager() {
-        return manager;
+    public static FakePlayerManager getManager() { return manager; }
+
+    // Last selected bot for command targeting
+    @Nullable
+    private static String selectedBotName;
+
+    /** Suggest active bot names for tab completion. */
+    private static SuggestionProvider<CommandSourceStack> suggestBots() {
+        return (ctx, builder) -> {
+            if (manager != null) {
+                var names = manager.getActivePlayers().stream()
+                        .map(p -> p.getName().getString()).toList();
+                return SharedSuggestionProvider.suggest(names, builder);
+            }
+            return builder.buildFuture();
+        };
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -49,6 +70,10 @@ public class BotCommand {
                         .executes(BotCommand::spawnBot)
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(BotCommand::spawnBotNamed)))
+                .then(Commands.literal("select")
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .executes(BotCommand::selectBot)))
                 .then(Commands.literal("task")
                         .then(Commands.argument("command", StringArgumentType.greedyString())
                                 .executes(BotCommand::assignTask)))
@@ -58,11 +83,13 @@ public class BotCommand {
                 .then(Commands.literal("status")
                         .executes(BotCommand::showStatus)
                         .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
                                 .executes(BotCommand::showStatusNamed)))
                 // --- Control commands ---
                 .then(Commands.literal("stop")
                         .executes(BotCommand::stopTask)
                         .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
                                 .executes(BotCommand::stopTaskNamed)))
                 .then(Commands.literal("cancel")
                         .executes(BotCommand::stopTask))
@@ -75,12 +102,8 @@ public class BotCommand {
                         .executes(BotCommand::resumeBot))
                 // --- Navigation commands ---
                 .then(Commands.literal("goto")
-                        .then(Commands.argument("x", IntegerArgumentType.integer())
-                                .then(Commands.argument("y", IntegerArgumentType.integer())
-                                        .then(Commands.argument("z", IntegerArgumentType.integer())
-                                                .executes(BotCommand::gotoXYZ)))
-                                .then(Commands.argument("z", IntegerArgumentType.integer())
-                                        .executes(BotCommand::gotoXZ))))
+                        .then(Commands.argument("pos", Vec3Argument.vec3())
+                                .executes(BotCommand::gotoVec3)))
                 // --- Mining commands ---
                 .then(Commands.literal("mine")
                         .then(Commands.argument("block", StringArgumentType.word())
@@ -91,6 +114,11 @@ public class BotCommand {
                 .then(Commands.literal("follow")
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .executes(BotCommand::followPlayer)))
+                .then(Commands.literal("follow_bot")
+                        .then(Commands.argument("bot", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .executes(BotCommand::followPlayerWithBot))))
                 // --- Gather command ---
                 .then(Commands.literal("gather")
                         .then(Commands.argument("resource", StringArgumentType.word())
@@ -133,7 +161,10 @@ public class BotCommand {
                                 .executes(BotCommand::deleteBot)))
                 // --- Inventory command ---
                 .then(Commands.literal("inventory")
-                        .executes(BotCommand::openInventory))
+                        .executes(BotCommand::openInventory)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .executes(BotCommand::openInventoryNamed)))
                 // --- Help command ---
                 .then(Commands.literal("help")
                         .executes(BotCommand::showHelp))
@@ -183,7 +214,10 @@ public class BotCommand {
             source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized"));
             return null;
         }
-        FakePlayer bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
+        // Prefer selected bot, then nearest
+        FakePlayer bot = null;
+        if (selectedBotName != null) bot = manager.getByName(selectedBotName);
+        if (bot == null) bot = manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0);
         if (bot == null) {
             bot = spawnBotNearPlayer(source, player, null);
             if (bot != null) {
@@ -260,6 +294,17 @@ public class BotCommand {
             FakePlayer bot = spawnBotNearPlayer(source, player, name);
             if (bot != null) source.sendSuccess(() -> Component.translatable("commands.ai_bot.spawn.success", bot.getName().getString()), true);
             else source.sendFailure(Component.translatable("commands.ai_bot.spawn.failure"));
+        }
+        return 1;
+    }
+
+    private static int selectBot(CommandContext<CommandSourceStack> ctx) {
+        String name = StringArgumentType.getString(ctx, "name");
+        if (manager != null && manager.getByName(name) != null) {
+            selectedBotName = name;
+            ctx.getSource().sendSuccess(() -> Component.literal("Selected bot: " + name), true);
+        } else {
+            ctx.getSource().sendFailure(Component.translatable("commands.ai_bot.no_bot_named", name));
         }
         return 1;
     }
@@ -411,30 +456,13 @@ public class BotCommand {
 
     // ========== Navigation commands ==========
 
-    private static int gotoXYZ(CommandContext<CommandSourceStack> context) {
-        CommandSourceStack source = context.getSource();
-        int x = IntegerArgumentType.getInteger(context, "x");
-        int y = IntegerArgumentType.getInteger(context, "y");
-        int z = IntegerArgumentType.getInteger(context, "z");
+    private static int gotoVec3(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        Vec3 pos = Vec3Argument.getVec3(ctx, "pos");
+        int x = (int)Math.round(pos.x), y = (int)Math.round(pos.y), z = (int)Math.round(pos.z);
         if (source.getEntity() instanceof Player player) {
             FakePlayer bot = findOrSpawnBot(source, player);
             if (bot != null) {
-                Task task = DirectCommandHandler.createGotoTask(x, y, z);
-                bot.assignDirectTask(task, player);
-                source.sendSuccess(() -> Component.translatable("commands.ai_bot.goto.success", x, y, z), true);
-            }
-        }
-        return 1;
-    }
-
-    private static int gotoXZ(CommandContext<CommandSourceStack> context) {
-        CommandSourceStack source = context.getSource();
-        int x = IntegerArgumentType.getInteger(context, "x");
-        int z = IntegerArgumentType.getInteger(context, "z");
-        if (source.getEntity() instanceof Player player) {
-            FakePlayer bot = findOrSpawnBot(source, player);
-            if (bot != null) {
-                int y = (int) bot.getY();
                 Task task = DirectCommandHandler.createGotoTask(x, y, z);
                 bot.assignDirectTask(task, player);
                 source.sendSuccess(() -> Component.translatable("commands.ai_bot.goto.success", x, y, z), true);
@@ -473,6 +501,19 @@ public class BotCommand {
                 source.sendSuccess(() -> Component.translatable("commands.ai_bot.follow.success", target), true);
             }
         }
+        return 1;
+    }
+
+    private static int followPlayerWithBot(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        String botName = StringArgumentType.getString(ctx, "bot");
+        String target = StringArgumentType.getString(ctx, "player");
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
+        FakePlayer bot = manager.getByName(botName);
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot_named", botName)); return 0; }
+        Task task = DirectCommandHandler.createFollowTask(target);
+        bot.assignDirectTask(task, source.getPlayer());
+        source.sendSuccess(() -> Component.translatable("commands.ai_bot.follow.success", target), true);
         return 1;
     }
 
@@ -649,6 +690,20 @@ public class BotCommand {
                 source.sendSuccess(() -> Component.translatable("commands.ai_bot.inventory.opened", bot.getName().getString()), true);
                 return 1;
             }
+        }
+        return 0;
+    }
+
+    private static int openInventoryNamed(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        String name = StringArgumentType.getString(ctx, "name");
+        if (source.getEntity() instanceof Player player && player instanceof ServerPlayer sp) {
+            if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
+            FakePlayer bot = manager.getByName(name);
+            if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot_named", name)); return 0; }
+            com.aimod.client.BotStatusScreen.open(sp, bot);
+            source.sendSuccess(() -> Component.translatable("commands.ai_bot.inventory.opened", bot.getName().getString()), true);
+            return 1;
         }
         return 0;
     }

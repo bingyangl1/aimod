@@ -1,0 +1,70 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :createMinecraftArtifacts UP-TO-DATE
+
+> Task :compileJava FAILED
+
+[Incubating] Problems report is available at: file:///F:/MC/build/reports/problems/problems-report.html
+F:\MC\src\main\java\com\aimod\command\BotCommand.java:76: 閿欒: 鏂规硶寮曠敤鏃犳晥
+                                .executes(BotCommand::selectBot)))
+                                          ^
+  鎵句笉鍒扮鍙?    绗﹀彿:   鏂规硶 selectBot(CommandContext<S>)
+    浣嶇疆: 绫?BotCommand
+  鍏朵腑, S鏄被鍨嬪彉閲?
+    S鎵╁睍宸插湪绫?ArgumentBuilder涓０鏄庣殑Object
+F:\MC\src\main\java\com\aimod\command\BotCommand.java:106: 閿欒: 鏂规硶寮曠敤鏃犳晥
+                                .executes(BotCommand::gotoVec3)))
+                                          ^
+  鎵句笉鍒扮鍙?    绗﹀彿:   鏂规硶 gotoVec3(CommandContext<S>)
+    浣嶇疆: 绫?BotCommand
+  鍏朵腑, S鏄被鍨嬪彉閲?
+    S鎵╁睍宸插湪绫?ArgumentBuilder涓０鏄庣殑Object
+F:\MC\src\main\java\com\aimod\command\BotCommand.java:121: 閿欒: 鏂规硶寮曠敤鏃犳晥
+                                        .executes(BotCommand::followPlayerWithBot))))
+                                                  ^
+  鎵句笉鍒扮鍙?    绗﹀彿:   鏂规硶 followPlayerWithBot(CommandContext<S>)
+    浣嶇疆: 绫?BotCommand
+  鍏朵腑, S鏄被鍨嬪彉閲?
+    S鎵╁睍宸插湪绫?ArgumentBuilder涓０鏄庣殑Object
+3 涓敊璇?
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  F:\MC\src\main\java\com\aimod\command\BotCommand.java:76: 閿欒: 鏂规硶寮曠敤鏃犳晥
+                                  .executes(BotCommand::selectBot)))
+                                            ^
+    鎵句笉鍒扮鍙?      绗﹀彿:   鏂规硶 selectBot(CommandContext<S>)
+      浣嶇疆: 绫?BotCommand
+    鍏朵腑, S鏄被鍨嬪彉閲?
+      S鎵╁睍宸插湪绫?ArgumentBuilder涓０鏄庣殑Object
+  F:\MC\src\main\java\com\aimod\command\BotCommand.java:106: 閿欒: 鏂规硶寮曠敤鏃犳晥
+                                  .executes(BotCommand::gotoVec3)))
+                                            ^
+    鎵句笉鍒扮鍙?      绗﹀彿:   鏂规硶 gotoVec3(CommandContext<S>)
+      浣嶇疆: 绫?BotCommand
+    鍏朵腑, S鏄被鍨嬪彉閲?
+      S鎵╁睍宸插湪绫?ArgumentBuilder涓０鏄庣殑Object
+  F:\MC\src\main\java\com\aimod\command\BotCommand.java:121: 閿欒: 鏂规硶寮曠敤鏃犳晥
+                                          .executes(BotCommand::followPlayerWithBot))))
+                                                    ^
+    鎵句笉鍒扮鍙?      绗﹀彿:   鏂规硶 followPlayerWithBot(CommandContext<S>)
+      浣嶇疆: 绫?BotCommand
+    鍏朵腑, S鏄被鍨嬪彉閲?
+      S鎵╁睍宸插湪绫?ArgumentBuilder涓０鏄庣殑Object
+  3 涓敊璇?
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.2/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 29s
+2 actionable tasks: 1 executed, 1 up-to-date
