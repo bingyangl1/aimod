@@ -52,8 +52,7 @@ public class GatherResourceAction extends Action {
     private int pathFailCooldown = 0;
     private static final int PATH_FAIL_COOLDOWN_TICKS = 40;
     private static final int STUCK_BREAK_THRESHOLD = 40; // Try breaking after 2s stuck
-    private int obstacleBreakProgress = 0;
-    private BlockPos obstacleTarget = null;
+    private final ObstacleBreaker obstacleBreaker = new ObstacleBreaker();
     private int noResourceRetries = 0;
     private int waitTicks = 0;
 
@@ -221,9 +220,9 @@ public class GatherResourceAction extends Action {
 
             // After STUCK_BREAK_THRESHOLD, try breaking obstacles in the way
             if (stuckTicks > STUCK_BREAK_THRESHOLD && stuckTicks <= STUCK_TIMEOUT) {
-                if (tryBreakObstacle(bot)) {
-                    DevLog.info("GATHER_BREAK_OBSTACLE", "target={}", obstacleTarget != null ? obstacleTarget.toShortString() : "null");
-                    stuckTicks = STUCK_BREAK_THRESHOLD - 10; // Reset slightly so we try again
+                if (obstacleBreaker.tryBreakObstacle(bot, currentTarget)) {
+                    DevLog.info("GATHER_BREAK_OBSTACLE", "target={}", currentTarget.toShortString());
+                    stuckTicks = STUCK_BREAK_THRESHOLD - 10;
                 }
             }
             if (stuckTicks > STUCK_TIMEOUT) {
@@ -267,15 +266,11 @@ public class GatherResourceAction extends Action {
             ServerLevel level = (ServerLevel) bot.level();
             Block targetBlock = blockState.getBlock();
 
-            // Vein-fell trees: if WOOD and veinMine enabled, break all connected logs
             if (resourceType == ResourceType.WOOD && com.aimod.config.ModConfig.getVeinMine()
-                    && (isLogBlock(targetBlock))) {
-                var vein = com.aimod.ai.VeinScanner.findTree(level, currentTarget, targetBlock, 64);
-                for (BlockPos vp : vein) {
-                    level.destroyBlock(vp, true, bot);
-                    gatheredCount++;
-                }
-                DevLog.info("GATHER_VEIN_TREE", "type={}, treeSize={}, total={}", resourceType, vein.size(), gatheredCount);
+                    && VeinMiningHelper.isLogBlock(targetBlock)) {
+                int treeSize = VeinMiningHelper.veinMineTree(level, currentTarget, targetBlock, 64, true);
+                gatheredCount += treeSize;
+                DevLog.info("GATHER_VEIN_TREE", "type={}, treeSize={}, total={}", resourceType, treeSize, gatheredCount);
             } else {
                 level.destroyBlock(currentTarget, true, bot);
                 gatheredCount++;
@@ -326,73 +321,6 @@ public class GatherResourceAction extends Action {
     }
 
 
-    /**
-     * Try to break an obstacle block between the bot and the target.
-     * Finds the most likely blocking block in the direction of travel and breaks it.
-     */
-    private boolean tryBreakObstacle(FakePlayer bot) {
-        if (currentTarget == null) return false;
-
-        BlockPos botPos = bot.blockPosition();
-        BlockPos targetPos = currentTarget;
-        
-        // Direction toward target
-        double dx = targetPos.getX() - botPos.getX();
-        double dz = targetPos.getZ() - botPos.getZ();
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < 0.5) return false;
-        
-        // Normalize direction
-        int dirX = (int) Math.signum(dx);
-        int dirZ = (int) Math.signum(dz);
-        
-        // Check blocks in the movement direction at feet and head level
-        BlockPos[] candidates = {
-            // Block in front at feet level
-            botPos.offset(dirX, 0, dirZ),
-            // Block in front at head level
-            botPos.offset(dirX, 1, dirZ),
-            // Block in front one below (for step-up obstacles)
-            botPos.offset(dirX, -1, dirZ),
-            // Diagonal blocks
-            botPos.offset(dirX, 0, 0),
-            botPos.offset(0, 0, dirZ),
-        };
-        
-        ServerLevel level = (ServerLevel) bot.level();
-        
-        for (BlockPos pos : candidates) {
-            BlockState state = level.getBlockState(pos);
-            float hardness = state.getDestroySpeed(level, pos);
-            
-            if (!state.isAir() && hardness >= 0 && hardness <= 3.0
-                    && state.getFluidState().isEmpty()
-                    && !MoveCost.avoidBreaking(level, pos, state)) {
-                // Break this block!
-                if (obstacleTarget == null || !obstacleTarget.equals(pos)) {
-                    obstacleTarget = pos;
-                    obstacleBreakProgress = 0;
-                }
-                
-                int breakTimeTicks = Math.max(10, (int) (hardness * 15));
-                obstacleBreakProgress++;
-                
-                bot.lookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                
-                if (obstacleBreakProgress >= breakTimeTicks) {
-                    level.destroyBlock(pos, true, bot);
-                    DevLog.info("OBSTACLE_BROKEN", "pos={}, block={}", pos.toShortString(),
-                            net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()));
-                    obstacleTarget = null;
-                    obstacleBreakProgress = 0;
-                    return true;
-                }
-                return true; // Still breaking
-            }
-        }
-        
-        return false; // No breakable obstacle found
-    }
     private BlockPos findAdjacentStandPos(FakePlayer bot) {
         BlockPos botPos = bot.blockPosition();
         BlockPos best = null;
@@ -553,19 +481,6 @@ public class GatherResourceAction extends Action {
         return ItemStack.EMPTY;
     }
 
-    private static boolean isLogBlock(Block block) {
-        return block == Blocks.OAK_LOG || block == Blocks.SPRUCE_LOG
-            || block == Blocks.BIRCH_LOG || block == Blocks.JUNGLE_LOG
-            || block == Blocks.ACACIA_LOG || block == Blocks.DARK_OAK_LOG
-            || block == Blocks.MANGROVE_LOG || block == Blocks.CHERRY_LOG
-            || block == Blocks.CRIMSON_STEM || block == Blocks.WARPED_STEM
-            || block == Blocks.OAK_WOOD || block == Blocks.SPRUCE_WOOD
-            || block == Blocks.BIRCH_WOOD || block == Blocks.JUNGLE_WOOD
-            || block == Blocks.ACACIA_WOOD || block == Blocks.DARK_OAK_WOOD
-            || block == Blocks.MANGROVE_WOOD || block == Blocks.CHERRY_WOOD
-            || block == Blocks.CRIMSON_HYPHAE || block == Blocks.WARPED_HYPHAE;
-    }
-
     private boolean isThrowawayBlock(Block block) {
         return block == Blocks.DIRT || block == Blocks.COBBLESTONE
                 || block == Blocks.GRASS_BLOCK || block == Blocks.COARSE_DIRT
@@ -618,6 +533,7 @@ public class GatherResourceAction extends Action {
         currentTarget = null;
         searching = true;
         breakProgress = 0;
+        obstacleBreaker.reset();
     }
 
     private static final int SHORT_CIRCUIT_THRESHOLD = 10; // Stop scanning after finding enough candidates
