@@ -265,8 +265,21 @@ public class GatherResourceAction extends Action {
 
         if (breakProgress >= breakTime) {
             ServerLevel level = (ServerLevel) bot.level();
-            level.destroyBlock(currentTarget, true, bot);
-            gatheredCount++;
+            Block targetBlock = blockState.getBlock();
+
+            // Vein-fell trees: if WOOD and veinMine enabled, break all connected logs
+            if (resourceType == ResourceType.WOOD && com.aimod.config.ModConfig.getVeinMine()
+                    && (isLogBlock(targetBlock))) {
+                var vein = com.aimod.ai.VeinScanner.findTree(level, currentTarget, targetBlock, 64);
+                for (BlockPos vp : vein) {
+                    level.destroyBlock(vp, true, bot);
+                    gatheredCount++;
+                }
+                DevLog.info("GATHER_VEIN_TREE", "type={}, treeSize={}, total={}", resourceType, vein.size(), gatheredCount);
+            } else {
+                level.destroyBlock(currentTarget, true, bot);
+                gatheredCount++;
+            }
             breakProgress = 0;
             breakTime = 0;
             DevLog.info("GATHER_COLLECTED", "type={}, total={}", resourceType, gatheredCount);
@@ -538,6 +551,19 @@ public class GatherResourceAction extends Action {
             }
         }
         return ItemStack.EMPTY;
+    }
+
+    private static boolean isLogBlock(Block block) {
+        return block == Blocks.OAK_LOG || block == Blocks.SPRUCE_LOG
+            || block == Blocks.BIRCH_LOG || block == Blocks.JUNGLE_LOG
+            || block == Blocks.ACACIA_LOG || block == Blocks.DARK_OAK_LOG
+            || block == Blocks.MANGROVE_LOG || block == Blocks.CHERRY_LOG
+            || block == Blocks.CRIMSON_STEM || block == Blocks.WARPED_STEM
+            || block == Blocks.OAK_WOOD || block == Blocks.SPRUCE_WOOD
+            || block == Blocks.BIRCH_WOOD || block == Blocks.JUNGLE_WOOD
+            || block == Blocks.ACACIA_WOOD || block == Blocks.DARK_OAK_WOOD
+            || block == Blocks.MANGROVE_WOOD || block == Blocks.CHERRY_WOOD
+            || block == Blocks.CRIMSON_HYPHAE || block == Blocks.WARPED_HYPHAE;
     }
 
     private boolean isThrowawayBlock(Block block) {
