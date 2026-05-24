@@ -70,6 +70,21 @@ public final class DangerZone {
         return isLavaNearby(entity, 3);
     }
 
+    /** Check if lava is near a specific position. */
+    public static boolean isLavaNearbyAt(LivingEntity entity, BlockPos center, int radius) {
+        Level level = entity.level();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz > radius * radius) continue;
+                BlockPos pos = center.offset(dx, 0, dz);
+                BlockState state = level.getBlockState(pos);
+                if (state.getBlock() == Blocks.LAVA || state.getFluidState().is(Fluids.LAVA)) return true;
+                if (level.getBlockState(pos.below()).getBlock() == Blocks.LAVA) return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Check if the entity is in deep water (2+ blocks deep).
      */

@@ -125,6 +125,18 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+// Write build time and fix summary into JAR manifest
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': project.mod_name,
+            'Implementation-Version': project.mod_version,
+            'Build-Time': new Date().format('yyyy-MM-dd HH:mm:ss'),
+            'Build-Fix': project.findProperty('build_fix') ?: 'N/A'
+        )
+    }
+}
+
 idea {
     module {
         downloadSources = true
