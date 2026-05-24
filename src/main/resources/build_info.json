@@ -1,0 +1,28 @@
+{
+  "version": "1.0.1",
+  "build": "2026-05-24-r12",
+  "fixes": [
+    "DangerChain cooldown: 60-tick cooldown to prevent cliff thrashing",
+    "UnstuckChain: skip when bot is idle (no task + not navigating)",
+    "Status format fix: task text passed as parameter to translatable",
+    "i18n: +12 translation keys for save/load/list/delete/help",
+    "GatherResource: short-circuit scan when >=10 candidates found",
+    "GatherResource: skip navigation when already at stand position",
+    "LLM health check: fix elapsed time calculation (was showing 56 years)",
+    "InventoryUtils: FindItemResult record + predicate-based find()",
+    "ToolSet: water penalty + not-on-ground 5x penalty",
+    "BlockIterator: shared 3D scanner for multiple consumers",
+    "DangerZone: cliff/lava/water detection + safe direction finder",
+    "AutoReplenish: auto-refill held items from inventory",
+    "AutoReplaceTool: auto-swap nearly-broken tools",
+    "AutoFish: timed-cycle auto fishing",
+    "MaterialTree: recursive recipe decomposition tree",
+    "BotStatusScreen: right-click GUI for bot inventory",
+    "ModConfig: maxBots, scanRadius, skinUrl, auto-tools, hunger, speed",
+    "ChainManager: lazy-sort + same-tick reactivation guard",
+    "DefenseChain: inventory restore + correct sword damage + full-inv bow search",
+    "DefenseChain: retreat when overwhelmed + shield block + ranged counter",
+    "FoodChain: score-based food selection (saturation*2 - waste, rotten=-100)",
+    "ChunkCache: bounded pack queue (256) + remove cross-thread invalidation"
+  ]
+}
