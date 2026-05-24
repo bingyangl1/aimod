@@ -98,9 +98,16 @@ public class AIBotEntity extends Mob {
         return fakePlayer != null;
     }
 
+    /**
+     * Sync position: FakePlayer is authoritative; AIBotEntity follows.
+     * Previously this pushed AIBotEntity position TO FakePlayer, which
+     * silently broke any FakePlayer movement.
+     */
     private void syncPositionToFakePlayer() {
         if (fakePlayer != null) {
-            fakePlayer.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
+            // FakePlayer is the movement authority — follow its position
+            this.moveTo(fakePlayer.getX(), fakePlayer.getY(), fakePlayer.getZ(),
+                    fakePlayer.getYRot(), fakePlayer.getXRot());
         }
     }
 
@@ -140,7 +147,7 @@ public class AIBotEntity extends Mob {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide && fakePlayer != null) {
             syncPositionToFakePlayer();
             pickupNearbyItems();
         }

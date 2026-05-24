@@ -106,5 +106,5 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 
 | # | 问题 | 建议 |
 |---|------|------|
-| 17 | 双实体位置同步脆弱 | 统一位置源 |
+| 17 | ✅ 双实体位置同步脆弱 | FakePlayer 权威 → AIBotEntity 跟随 |
 | 18 | ChainManager 与 BotAIStateMachine 独立 | 预占时通知状态机 → PAUSED |
