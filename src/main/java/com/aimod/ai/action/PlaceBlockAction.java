@@ -4,10 +4,13 @@ import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -16,13 +19,11 @@ import net.minecraft.world.phys.Vec3;
 public class PlaceBlockAction extends Action {
     private final BlockPos targetPos;
     private final BlockItem blockItem;
-    private boolean attempted;
 
     public PlaceBlockAction(BlockPos targetPos, BlockItem blockItem) {
         super("Place " + blockItem.getDescription().getString() + " at " + targetPos.toShortString());
         this.targetPos = targetPos;
         this.blockItem = blockItem;
-        this.attempted = false;
     }
 
     @Override
@@ -49,16 +50,25 @@ public class PlaceBlockAction extends Action {
 
         // Try placing: target pos → nearby alternatives → air place
         BlockPos placeAt;
-        if (failCount == 0) placeAt = targetPos;
-        else if (failCount == 1) placeAt = targetPos.below(); // try block below
-        else if (failCount == 2) placeAt = findNearbyAir(bot); // search nearby
-        else placeAt = bot.blockPosition(); // place at feet (pillar up)
+        Direction placeFace;
+        if (failCount == 0) {
+            placeAt = targetPos;
+            placeFace = findPlaceableFace(bot, targetPos);
+        } else if (failCount == 1) {
+            placeAt = targetPos.below();
+            placeFace = findPlaceableFace(bot, targetPos.below());
+        } else if (failCount == 2) {
+            placeAt = findNearbyAir(bot);
+            placeFace = findPlaceableFace(bot, placeAt);
+        } else {
+            placeAt = bot.blockPosition();
+            placeFace = Direction.UP; // place at feet — use UP as placement face
+        }
 
-        BlockState state = blockItem.getBlock().defaultBlockState();
-        bot.level().setBlock(placeAt, state, 3);
-        stack.shrink(1);
+        // Attempt realistic placement via game mode
+        boolean placed = attemptPlacement(bot, stack, placeAt, placeFace);
 
-        if (!bot.level().getBlockState(placeAt).isAir()) {
+        if (placed) {
             status = ActionStatus.COMPLETED;
             DevLog.info("PLACE_COMPLETE", "pos={}", placeAt.toShortString());
             // If placed at feet, jump up
@@ -67,8 +77,54 @@ public class PlaceBlockAction extends Action {
             }
         } else {
             failCount++;
-            if (failCount > 5) { status = ActionStatus.FAILED; DevLog.warn("PLACE_FAIL_ALL", "tried 6 positions"); }
+            if (failCount > 5) {
+                status = ActionStatus.FAILED;
+                DevLog.warn("PLACE_FAIL_ALL", "tried 6 positions");
+            }
         }
+    }
+
+    /**
+     * Attempt to place a block using the game mode (realistic placement).
+     * Selects the item in the bot's hand, then calls useItemOn.
+     */
+    private boolean attemptPlacement(FakePlayer bot, ItemStack stack, BlockPos pos, Direction face) {
+        if (face == null) return fallbackSetBlock(bot, stack, pos);
+
+        Level level = bot.level();
+        if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return false;
+
+        // Select the item in the bot's main hand
+        int slot = findBlockSlot(bot);
+        if (slot < 0) return false;
+        bot.getInventory().selected = slot;
+
+        // Build a BlockHitResult for the adjacent face
+        BlockPos adjacentPos = pos.relative(face.getOpposite());
+        Vec3 hitLoc = new Vec3(
+                adjacentPos.getX() + 0.5 + face.getStepX() * 0.5,
+                adjacentPos.getY() + 0.5 + face.getStepY() * 0.5,
+                adjacentPos.getZ() + 0.5 + face.getStepZ() * 0.5
+        );
+        BlockHitResult hitResult = new BlockHitResult(hitLoc, face, adjacentPos, false);
+
+        // Use the game mode to place the block
+        InteractionResult result = bot.gameMode.useItemOn(
+                (ServerPlayer) bot, serverLevel,
+                stack, InteractionHand.MAIN_HAND, hitResult
+        );
+        return result.consumesAction();
+    }
+
+    /** Fallback: direct setBlock if game mode placement fails. */
+    private boolean fallbackSetBlock(FakePlayer bot, ItemStack stack, BlockPos pos) {
+        BlockState state = blockItem.getBlock().defaultBlockState();
+        bot.level().setBlock(pos, state, 3);
+        if (!bot.level().getBlockState(pos).isAir()) {
+            stack.shrink(1);
+            return true;
+        }
+        return false;
     }
 
     /** Find nearby air position when original target is blocked. */
@@ -109,6 +165,18 @@ public class PlaceBlockAction extends Action {
         return ItemStack.EMPTY;
     }
 
+    /** Find the inventory slot containing the block item. */
+    private int findBlockSlot(FakePlayer bot) {
+        var inventory = bot.getInventory();
+        for (int i = 0; i < 36; i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!stack.isEmpty() && stack.getItem() == blockItem) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /**
      * 找到可放置方块的相邻面
      */
@@ -120,7 +188,13 @@ public class PlaceBlockAction extends Action {
                 return face;
             }
         }
-        return null;
+        // Fallback: face toward bot
+        BlockPos botPos = bot.blockPosition();
+        return Direction.getNearest(
+                pos.getX() - botPos.getX(),
+                0,
+                pos.getZ() - botPos.getZ()
+        );
     }
 
     public BlockPos getTargetPos() {
