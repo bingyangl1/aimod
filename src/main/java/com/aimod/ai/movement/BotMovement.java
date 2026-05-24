@@ -4,6 +4,9 @@ import com.aimod.fakeplayer.FakePlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
+import java.util.Collections;
+import java.util.Set;
+
 /**
  * Base class for a single movement step from src to dest.
  * Inspired by Baritone's Movement abstraction, adapted for server-side
@@ -54,6 +57,30 @@ public abstract class BotMovement {
      * Check whether the prerequisites for this movement are satisfied.
      */
     public abstract boolean canExecute(FakePlayer bot);
+
+    /**
+     * Returns the set of positions where the bot's feet can be considered
+     * "at" this movement's destination. Used for accurate arrival detection,
+     * path deviation checks, and path splicing.
+     *
+     * <p>Default returns a singleton with {@link #dest}. Override for
+     * movements where multiple positions are valid (e.g., long falls).</p>
+     */
+    public Set<BlockPos> calculateValidPositions() {
+        return Collections.singleton(dest);
+    }
+
+    /**
+     * Check whether the bot has arrived at this movement's destination
+     * based on valid positions.
+     */
+    public boolean isAtDestination(FakePlayer bot) {
+        BlockPos feet = bot.blockPosition();
+        for (BlockPos vp : calculateValidPositions()) {
+            if (feet.equals(vp) || feet.distSqr(vp) <= 1) return true;
+        }
+        return false;
+    }
 
     public BlockPos getSrc() { return src; }
     public BlockPos getDest() { return dest; }

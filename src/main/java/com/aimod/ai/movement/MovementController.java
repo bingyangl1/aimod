@@ -11,6 +11,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.List;
+
 /**
  * Centralized movement controller for FakePlayer.
  *
@@ -30,10 +32,13 @@ public class MovementController {
     private BlockPos navTarget;
     private boolean navigating;
     private PathExecutor pathExecutor;
+    private PathExecutor nextPathExecutor;
     private BlockPos pathGoal;
     private boolean directMovement;
     private BotMovement activeMovement;
 
+    /** Look ahead for next-path precomputation (in ticks). */
+    private static final int PLANNING_LOOKAHEAD_TICKS = 40; // 2 seconds
     private static final double ARRIVE_DIST_SQR = 2.0;
 
     public MovementController(FakePlayer bot) {
@@ -111,12 +116,28 @@ public class MovementController {
         asyncPathfinder.tick();
         if (!navigating || navTarget == null) return;
 
-        double distSqr = bot.distanceToSqr(
-                navTarget.getX() + 0.5, navTarget.getY(), navTarget.getZ() + 0.5);
-        if (distSqr < ARRIVE_DIST_SQR) {
-            stop();
-            DevLog.info("NAV_ARRIVED", "target={}", navTarget.toShortString());
-            return;
+        // Use valid positions for arrival detection
+        boolean arrived = false;
+        BlockPos feet = bot.blockPosition();
+        if (activeMovement != null && activeMovement.isAtDestination(bot)) {
+            arrived = true;
+        } else {
+            double distSqr = bot.distanceToSqr(
+                    navTarget.getX() + 0.5, navTarget.getY(), navTarget.getZ() + 0.5);
+            arrived = distSqr < ARRIVE_DIST_SQR;
+        }
+        if (arrived) {
+            // Check if we have a next path to splice into
+            if (nextPathExecutor != null && !nextPathExecutor.isCompleted()) {
+                pathExecutor = nextPathExecutor;
+                nextPathExecutor = null;
+                DevLog.info("NAV_SPLICE", "switched to next path segment");
+                // Don't stop — continue with next path
+            } else {
+                stop();
+                DevLog.info("NAV_ARRIVED", "target={}", navTarget.toShortString());
+                return;
+            }
         }
 
         UnstuckDetector.RecoveryStrategy recovery = unstuckDetector.tick(bot);
@@ -132,6 +153,16 @@ public class MovementController {
 
         // Follow computed path using BotMovement types
         if (pathExecutor != null && !pathExecutor.isCompleted() && !pathExecutor.isFailed()) {
+            // Try splicing if we have a next path
+            if (nextPathExecutor != null) {
+                PathExecutor spliced = pathExecutor.trySplice(bot);
+                if (spliced != pathExecutor) {
+                    DevLog.info("NAV_SPLICE_EARLY", "splicing to next path");
+                    pathExecutor = spliced;
+                    nextPathExecutor = null;
+                }
+            }
+
             BlockPos next = pathExecutor.tick(bot);
             if (next != null) {
                 if (activeMovement == null
@@ -147,6 +178,15 @@ public class MovementController {
                     }
                 } else {
                     moveToward(next, 1.0);
+                }
+            }
+
+            // Precompute next path when approaching end of current path
+            if (pathExecutor != null) {
+                double progress = pathExecutor.getProgress();
+                if (progress > 0.7 && nextPathExecutor == null
+                        && bot.level() instanceof ServerLevel serverLevel) {
+                    requestNextPath(serverLevel);
                 }
             }
             return;
@@ -167,6 +207,35 @@ public class MovementController {
     public double getDistSqrToTarget() {
         if (navTarget == null) return -1;
         return bot.distanceToSqr(navTarget.getX() + 0.5, navTarget.getY(), navTarget.getZ() + 0.5);
+    }
+
+    /**
+     * Request a next-path segment for incremental pathfinding.
+     * Computes a path from the current destination to the same navTarget.
+     */
+    private void requestNextPath(ServerLevel level) {
+        if (nextPathExecutor != null) return; // Already queued
+        if (pathExecutor == null || pathExecutor.isCompleted()) return;
+
+        // Find start position: ~5 steps ahead of current index
+        List<BlockPos> path = pathExecutor.getPath();
+        int lookaheadIdx = Math.min(pathExecutor.getCurrentIndex() + 5, path.size() - 1);
+        BlockPos start = lookaheadIdx >= 0 ? path.get(lookaheadIdx) : path.get(0);
+        if (start == null || navTarget == null) return;
+
+        CalculationContext ctx = new CalculationContext(level, bot);
+        ctx.preloadRegion(start, 20);
+        asyncPathfinder.requestPath(ctx, start, navTarget, result -> {
+            if (!navigating || navTarget == null) return;
+            if (result.isFound() && result.getLength() >= 2) {
+                PathExecutor next = new PathExecutor(result.getPath());
+                if (pathExecutor != null) {
+                    pathExecutor.setNextPath(next);
+                }
+                nextPathExecutor = next;
+                DevLog.info("NAV_NEXT_PATH_READY", "length={}", result.getLength());
+            }
+        });
     }
 
     private void onPathComputed(PathResult result) {
