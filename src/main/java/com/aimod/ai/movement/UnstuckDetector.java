@@ -42,6 +42,7 @@ public class UnstuckDetector {
         JUMP,
         SHIMMY_LEFT,
         SHIMMY_RIGHT,
+        PILLAR,    // place block below and jump
         SKIP
     }
 
@@ -99,8 +100,9 @@ public class UnstuckDetector {
             case WAIT -> RecoveryStrategy.JUMP;
             case JUMP -> RecoveryStrategy.SHIMMY_LEFT;
             case SHIMMY_LEFT -> RecoveryStrategy.SHIMMY_RIGHT;
-            case SHIMMY_RIGHT -> RecoveryStrategy.SKIP;
-            case SKIP -> RecoveryStrategy.SKIP; // terminal
+            case SHIMMY_RIGHT -> RecoveryStrategy.PILLAR;
+            case PILLAR -> RecoveryStrategy.SKIP;
+            case SKIP -> RecoveryStrategy.SKIP;
         };
     }
 
@@ -129,9 +131,26 @@ public class UnstuckDetector {
                 double rad = Math.toRadians(yaw + 90);
                 bot.setDeltaMovement(Math.cos(rad) * 0.1, bot.getDeltaMovement().y, Math.sin(rad) * 0.1);
             }
-            case SKIP -> {
-                // Caller should handle this by skipping the current action/target
+            case PILLAR -> {
+                // Place block at feet and jump up
+                var pos = bot.blockPosition();
+                var level = bot.level();
+                if (level.getBlockState(pos).isAir() || level.getBlockState(pos).canBeReplaced()) {
+                    var inv = bot.getInventory();
+                    for (int i = 0; i < inv.getContainerSize(); i++) {
+                        var stack = inv.getItem(i);
+                        if (!stack.isEmpty() && stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                            String key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(bi).getPath();
+                            if (key.contains("sand") || key.contains("gravel")) continue; // skip gravity blocks
+                            level.setBlock(pos, bi.getBlock().defaultBlockState(), 3);
+                            stack.shrink(1);
+                            bot.setDeltaMovement(bot.getDeltaMovement().x, 0.42, bot.getDeltaMovement().z);
+                            break;
+                        }
+                    }
+                }
             }
+            case SKIP -> { }
             default -> {}
         }
     }
