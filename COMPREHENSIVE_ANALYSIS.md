@@ -738,8 +738,13 @@ navigateTo(target)
 | 2 | **Config Phase 跳过** | SiliconeDolls | ❌ 缺失 | **P0** | 0.5 天 |
 | 3 | **GameProfile 皮肤获取** | SiliconeDolls | ❌ 缺失 | **P0** | 1 天 |
 | 4 | **NetHandler 正确初始化** | SiliconeDolls | ⚠️ 构造函数手动设置 | **P0** | 1 天 |
+<<<<<<< Updated upstream
 | 5 | **更多 Movement 类型** | Baritone | 2/8 种 | **P1** | 2-3 天 |
 | 6 | **CalculationContext 代价快照** | Baritone | ✅ 已实现 | **P1** | 已完成 |
+=======
+| 5 | **更多 Movement 类型** | Baritone | 8/8 种 ✅ | **P1** | 已完成 |
+| 6 | **CalculationContext 代价快照** | Baritone | ❌ | **P1** | 1 天 |
+>>>>>>> Stashed changes
 | 7 | **CachedWorld 世界缓存** | Baritone | ❌ | **P1** | 3-4 天 |
 | 8 | **行为链/优先级系统** | Player2NPC | ❌ | **P1** | 3-4 天 |
 | 9 | **完整持久化** | SiliconeDolls | 仅 UUID | **P1** | 2 天 |
