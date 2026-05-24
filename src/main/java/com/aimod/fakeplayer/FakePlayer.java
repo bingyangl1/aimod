@@ -152,7 +152,7 @@ public class FakePlayer extends ServerPlayer {
         instance.unsetRemoved();
 
         AttributeInstance stepAttr = instance.getAttribute(Attributes.STEP_HEIGHT);
-        if (stepAttr != null) stepAttr.setBaseValue(0.6F);
+        if (stepAttr != null) stepAttr.setBaseValue(1.0F);
 
         instance.gameMode.changeGameModeForPlayer(gamemode);
 
