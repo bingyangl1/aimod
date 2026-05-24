@@ -226,7 +226,28 @@ public class FakePlayer extends ServerPlayer {
         movementController.tick();
 
         // Behavior chains (survival: danger > defense > food > unstuck)
+        boolean wasPreempted = chainManager.isActive()
+                && (chainManager.getActiveChain() != null
+                    && chainManager.getActiveChain().priority() > ChainManager.PREEMPT_THRESHOLD);
         boolean preempted = chainManager.tick(this);
+
+        // Notify state machine on preemption transitions
+        boolean nowPreempted = chainManager.isActive()
+                && (chainManager.getActiveChain() != null
+                    && chainManager.getActiveChain().priority() > ChainManager.PREEMPT_THRESHOLD);
+        if (nowPreempted && !wasPreempted) {
+            aiManager.getStateMachine().pause();
+            DevLog.info("STATE_PREEMPT_START", "chain={}",
+                    chainManager.getActiveChain() != null ? chainManager.getActiveChain().name() : "?");
+        } else if (!nowPreempted && wasPreempted) {
+            if (this.currentTask != null && !this.currentTask.isCompleted()) {
+                aiManager.getStateMachine().startExecuting();
+                DevLog.info("STATE_PREEMPT_END", "resuming task");
+            } else {
+                aiManager.getStateMachine().reset();
+                DevLog.info("STATE_PREEMPT_END", "no task to resume, resetting");
+            }
+        }
 
         // AI tick — skip if survival chain is preempting
         if (!preempted && !paused && this.currentTask != null && !this.currentTask.isCompleted()) {
@@ -432,6 +453,7 @@ public class FakePlayer extends ServerPlayer {
             DevLog.info("BOT_TASK_CANCELLED", "bot={}, task={}", this.getStringUUID(), desc);
             this.currentTask = null;
         }
+        aiManager.getStateMachine().reset();
         this.paused = false;
         movementController.stop();
     }
