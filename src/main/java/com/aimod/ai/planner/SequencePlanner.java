@@ -5,9 +5,9 @@ import com.aimod.ai.action.*;
 import com.aimod.ai.craft.MaterialTree;
 import com.aimod.ai.craft.MaterialNode;
 import com.aimod.fakeplayer.FakePlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Block;
 
 import java.util.*;
 
@@ -21,6 +21,8 @@ public final class SequencePlanner {
     /**
      * Plan a crafting task: "craft X give to Y".
      */
+    private static final String CRAFTING_TABLE_ID = "minecraft:crafting_table";
+
     public static List<Action> planCraftAndGive(
             FakePlayer bot, Item targetItem, int count, String playerName) {
 
@@ -30,45 +32,55 @@ public final class SequencePlanner {
         tree.build(inv, 6);
 
         Map<Item, Integer> raw = tree.getRequiredRawMaterials();
-        if (raw.isEmpty() && tree.getRoot() == null) {
-            return actions; // can't plan
-        }
+        if (raw.isEmpty() && tree.getRoot() == null) return actions;
 
         // Phase 1: gather raw materials
         for (var entry : raw.entrySet()) {
             Item item = entry.getKey();
             int needed = entry.getValue();
-            if (inv.countItem(item) >= needed) continue; // already have enough
-
+            if (inv.countItem(item) >= needed) continue;
             int shortage = needed - inv.countItem(item);
             var resourceType = classifyResource(item);
             if (resourceType != null) {
                 actions.add(new GatherResourceAction(resourceType, shortage));
             } else {
-                // Try mine action for ores
                 String blockId = findBlockForItem(item);
-                if (blockId != null) {
-                    actions.add(new MineBlockAction(blockId, shortage));
-                }
+                if (blockId != null) actions.add(new MineBlockAction(blockId, shortage));
             }
         }
 
-        // Phase 2: craft intermediate + final items (from MaterialTree steps)
-        if (!raw.isEmpty() || tree.getRoot() != null) {
-            actions.add(new InteractBlockAction(InteractBlockAction.InteractType.CRAFTING_TABLE));
+        // Phase 2: ensure crafting table is available (place at feet if needed)
+        boolean needsCraftingTable = !raw.isEmpty() || tree.getRoot() != null;
+        BlockPos tablePos = null;
+        if (needsCraftingTable) {
+            // Use bot's position as the placement spot
+            tablePos = bot.blockPosition().offset(1, 0, 0); // place 1 block to the side
+            actions.add(new com.aimod.ai.action.PlaceBlockAction(tablePos,
+                    (net.minecraft.world.item.BlockItem) net.minecraft.world.item.Items.CRAFTING_TABLE));
+            actions.add(new InteractBlockAction(InteractBlockAction.InteractType.CRAFTING_TABLE, tablePos));
+        }
+
+        // Phase 3: craft intermediate + final items
+        if (needsCraftingTable && tree.getRoot() != null) {
             for (var recipe : tree.getCraftingSteps()) {
                 var outputItem = recipe.getOutputItem();
                 actions.add(new CraftAction(
-                        net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(outputItem).toString(),
-                        1));
+                        net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(outputItem).toString(), 1));
             }
-            // Final craft
             actions.add(new CraftAction(
-                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(targetItem).toString(),
-                    count));
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(targetItem).toString(), count));
+        } else if (needsCraftingTable) {
+            // Simple craft (no intermediate steps)
+            actions.add(new CraftAction(
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(targetItem).toString(), count));
         }
 
-        // Phase 3: give to player
+        // Phase 4: clean up — break the placed crafting table to pick it up
+        if (tablePos != null) {
+            actions.add(new com.aimod.ai.action.BreakBlockAction(tablePos));
+        }
+
+        // Phase 5: give to player
         if (playerName != null && !playerName.isBlank() && !playerName.equals("me")) {
             actions.add(new GiveItemAction(
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(targetItem).toString(),

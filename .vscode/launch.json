@@ -1,0 +1,93 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Client",
+      "presentation": {
+        "group": "Mod Development - MC",
+        "order": 0
+      },
+      "projectName": "MC",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@F:\\MC\\build\\moddev\\clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@F:\\MC\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003daimod%%F:\\MC\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Data",
+      "presentation": {
+        "group": "Mod Development - MC",
+        "order": 1
+      },
+      "projectName": "MC",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@F:\\MC\\build\\moddev\\dataRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@F:\\MC\\build\\moddev\\dataRunVmArgs.txt",
+        "-Dfml.modFolders\u003daimod%%F:\\MC\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "GameTestServer",
+      "presentation": {
+        "group": "Mod Development - MC",
+        "order": 2
+      },
+      "projectName": "MC",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@F:\\MC\\build\\moddev\\gameTestServerRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@F:\\MC\\build\\moddev\\gameTestServerRunVmArgs.txt",
+        "-Dfml.modFolders\u003daimod%%F:\\MC\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Server",
+      "presentation": {
+        "group": "Mod Development - MC",
+        "order": 3
+      },
+      "projectName": "MC",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@F:\\MC\\build\\moddev\\serverRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@F:\\MC\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003daimod%%F:\\MC\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    }
+  ]
+}
