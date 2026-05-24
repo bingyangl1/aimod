@@ -194,11 +194,16 @@ public class BotCommand {
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(suggestBots())
                                 .executes(BotCommand::showPathNamed)))
-                // --- Undo command ---
-                .then(Commands.literal("undo")
-                        .executes(ctx -> undoCommand(ctx, 1))
-                        .then(Commands.argument("steps", IntegerArgumentType.integer(1, 10))
-                                .executes(ctx -> undoCommand(ctx, IntegerArgumentType.getInteger(ctx, "steps")))))
+                // --- VeinMine management ---
+                .then(Commands.literal("veinmine")
+                        .then(Commands.literal("on").executes(BotCommand::veinMineOn))
+                        .then(Commands.literal("off").executes(BotCommand::veinMineOff))
+                        .then(Commands.literal("status").executes(BotCommand::veinMineStatus))
+                        .then(Commands.literal("history").executes(BotCommand::veinMineHistory))
+                        .then(Commands.literal("undo")
+                                .executes(ctx -> veinMineUndo(ctx, 1))
+                                .then(Commands.argument("steps", IntegerArgumentType.integer(1, 10))
+                                        .executes(ctx -> veinMineUndo(ctx, IntegerArgumentType.getInteger(ctx, "steps"))))))
                 // --- Test command ---
                 .then(Commands.literal("test")
                         .executes(BotCommand::runTests))
@@ -825,9 +830,43 @@ public class BotCommand {
         return 1;
     }
 
-    // ========== Undo command ==========
+    // ========== VeinMine management ==========
 
-    private static int undoCommand(CommandContext<CommandSourceStack> ctx, int steps) {
+    private static int veinMineOn(CommandContext<CommandSourceStack> ctx) {
+        com.aimod.config.ModConfig.VEIN_MINE.set(true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Vein mining: ENABLED"), true);
+        return 1;
+    }
+    private static int veinMineOff(CommandContext<CommandSourceStack> ctx) {
+        com.aimod.config.ModConfig.VEIN_MINE.set(false);
+        ctx.getSource().sendSuccess(() -> Component.literal("Vein mining: DISABLED"), true);
+        return 1;
+    }
+    private static int veinMineStatus(CommandContext<CommandSourceStack> ctx) {
+        boolean enabled = com.aimod.config.ModConfig.getVeinMine();
+        int history = com.aimod.config.ModConfig.getUndoHistory();
+        ctx.getSource().sendSuccess(() -> Component.literal(
+            "Vein mining: " + (enabled ? "ON" : "OFF") +
+            " | Undo history: " + history + " operations"), false);
+        return 1;
+    }
+    private static int veinMineHistory(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
+        FakePlayer bot = source.getEntity() instanceof Player player
+                ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null;
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot")); return 0; }
+        var history = bot.getUndoManager().getHistory();
+        if (history.isEmpty()) { source.sendSuccess(() -> Component.literal("No undo history"), false); return 1; }
+        var sb = new StringBuilder("Undo history (" + history.size() + "):");
+        for (int i = 0; i < history.size(); i++) {
+            var op = history.get(i);
+            sb.append("\n  ").append(i + 1).append(". [").append(op.size()).append(" blocks] ").append(op.desc());
+        }
+        source.sendSuccess(() -> Component.literal(sb.toString()), false);
+        return 1;
+    }
+    private static int veinMineUndo(CommandContext<CommandSourceStack> ctx, int steps) {
         CommandSourceStack source = ctx.getSource();
         if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
         FakePlayer bot = source.getEntity() instanceof Player player
