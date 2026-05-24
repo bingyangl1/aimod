@@ -1273,6 +1273,10 @@ Week 5-6: 可选高级功能
 
 | 版本 | 日期 | 关键变更 |
 |------|------|---------|
+| r50 | 2026-05-24 | 空闲 5s 后自动采集垫脚方块，有任务时清零延后 |
+| r49 | 2026-05-24 | UnstuckDetector 新增 PILLAR 策略 (垫方块+跳脱坑) |
+| r48 | 2026-05-24 | Unstuck 空闲守卫检查 task.isCompleted() |
+| r47 | 2026-05-24 | spawn 用 assignDirectTask 替代 assignTask (0ms 启动) |
 | r46 | 2026-05-24 | 默认采集灵活化 + 增量规划跳过重复动作 |
 | r45 | 2026-05-24 | parseActionsFromContent 支持单独动作对象 (增量规划修复) |
 | r44 | 2026-05-24 | /ai_bot test 扩展到 18 项 (VeinScanner, UndoManager, Config, ToolSet, MaterialTree) |
