@@ -34,78 +34,52 @@ public class PlaceBlockAction extends Action {
         return hasBlockItem(bot);
     }
 
+    private int failCount;
+
     @Override
     public void execute(FakePlayer bot) {
         if (status == ActionStatus.PENDING) {
             status = ActionStatus.IN_PROGRESS;
-            attempted = false;
+            failCount = 0;
         }
+        if (status != ActionStatus.IN_PROGRESS) return;
 
-        if (status == ActionStatus.IN_PROGRESS) {
-            ItemStack stack = findBlockItem(bot);
-            if (stack.isEmpty()) {
-                DevLog.warn("PLACE_FAIL_NO_ITEM", "pos={}, item={}", targetPos.toShortString(), blockItem);
-                status = ActionStatus.FAILED;
-                return;
-            }
+        ItemStack stack = findBlockItem(bot);
+        if (stack.isEmpty()) { status = ActionStatus.FAILED; return; }
 
-            // 使用 FakePlayer 放置方块
-            FakePlayer fakePlayer = bot;
-            if (fakePlayer != null) {
-                // 面向放置位置
-                fakePlayer.lookAt(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
+        // Try placing: target pos first, then search nearby alternatives
+        BlockPos placeAt = failCount == 0 ? targetPos : findNearbyAir(bot);
+        if (placeAt == null) { status = ActionStatus.FAILED; return; }
 
-                // 找到相邻的可放置面
-                Direction placeFace = findPlaceableFace(bot, targetPos);
-                if (placeFace != null) {
-                    BlockPos adjacentPos = targetPos.relative(placeFace.getOpposite());
-                    BlockHitResult hitResult = new BlockHitResult(
-                            new Vec3(adjacentPos.getX() + 0.5, adjacentPos.getY() + 0.5, adjacentPos.getZ() + 0.5),
-                            placeFace,
-                            adjacentPos,
-                            false
-                    );
+        BlockState state = blockItem.getBlock().defaultBlockState();
+        bot.level().setBlock(placeAt, state, 3);
+        stack.shrink(1);
 
-                    // 使用 FakePlayer 放置方块
-                    UseOnContext context = new UseOnContext(fakePlayer, InteractionHand.MAIN_HAND, hitResult);
-                    stack.useOn(context);
+        if (!bot.level().getBlockState(placeAt).isAir()) {
+            status = ActionStatus.COMPLETED;
+            DevLog.info("PLACE_COMPLETE", "pos={}", placeAt.toShortString());
+        } else {
+            failCount++;
+            if (failCount > 5) { status = ActionStatus.FAILED; DevLog.warn("PLACE_FAIL_ALL", "tried 6 positions"); }
+        }
+    }
 
-                    // 检查是否放置成功
-                    if (!bot.level().getBlockState(targetPos).isAir()) {
-                        status = ActionStatus.COMPLETED;
-                        DevLog.info("PLACE_COMPLETE", "pos={}", targetPos.toShortString());
-                    } else if (!attempted) {
-                        // 尝试直接放置
-                        BlockState state = blockItem.getBlock().defaultBlockState();
-                        bot.level().setBlock(targetPos, state, 3);
-                        stack.shrink(1);
-                        attempted = true;
-
-                        if (!bot.level().getBlockState(targetPos).isAir()) {
-                            status = ActionStatus.COMPLETED;
-                            DevLog.info("PLACE_COMPLETE_DIRECT", "pos={}", targetPos.toShortString());
-                        } else {
-                            status = ActionStatus.FAILED;
-                            DevLog.warn("PLACE_FAIL", "pos={}", targetPos.toShortString());
+    /** Find nearby air position when original target is blocked. */
+    private BlockPos findNearbyAir(FakePlayer bot) {
+        for (int r = 1; r <= 3; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        var pos = targetPos.offset(dx, dy, dz);
+                        if (bot.level().getBlockState(pos).isAir()
+                                && !bot.level().getBlockState(pos.below()).isAir()) {
+                            return pos;
                         }
                     }
-                } else {
-                    // 没有可放置的面，直接放置
-                    BlockState state = blockItem.getBlock().defaultBlockState();
-                    bot.level().setBlock(targetPos, state, 3);
-                    stack.shrink(1);
-                    status = ActionStatus.COMPLETED;
-                    DevLog.info("PLACE_COMPLETE_NO_FACE", "pos={}", targetPos.toShortString());
                 }
-            } else {
-                // 没有 FakePlayer，直接放置
-                BlockState state = blockItem.getBlock().defaultBlockState();
-                bot.level().setBlock(targetPos, state, 3);
-                stack.shrink(1);
-                status = ActionStatus.COMPLETED;
-                DevLog.info("PLACE_COMPLETE_NO_FAKE", "pos={}", targetPos.toShortString());
             }
         }
+        return targetPos; // fallback
     }
 
     @Override
