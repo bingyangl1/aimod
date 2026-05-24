@@ -18,6 +18,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -181,6 +182,12 @@ public class BotCommand {
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .suggests(suggestBots())
                                 .executes(BotCommand::openInventoryNamed)))
+                // --- Path visualization ---
+                .then(Commands.literal("showpath")
+                        .executes(BotCommand::showPath)
+                        .then(Commands.argument("name", StringArgumentType.word())
+                                .suggests(suggestBots())
+                                .executes(BotCommand::showPathNamed)))
                 // --- Help command ---
                 .then(Commands.literal("help")
                         .executes(BotCommand::showHelp)
@@ -749,6 +756,43 @@ public class BotCommand {
             return 1;
         }
         return 0;
+    }
+
+    // ========== Path visualization ==========
+
+    private static int showPath(CommandContext<CommandSourceStack> ctx) {
+        return showPathInternal(ctx, null);
+    }
+    private static int showPathNamed(CommandContext<CommandSourceStack> ctx) {
+        return showPathInternal(ctx, StringArgumentType.getString(ctx, "name"));
+    }
+    private static int showPathInternal(CommandContext<CommandSourceStack> context, @Nullable String name) {
+        CommandSourceStack source = context.getSource();
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
+        FakePlayer bot = name != null ? manager.getByName(name)
+                : (source.getEntity() instanceof Player player ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null);
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot")); return 0; }
+        var ctrl = bot.getMovementController();
+        if (!ctrl.isNavigating()) { source.sendFailure(Component.literal("Bot is not currently navigating")); return 0; }
+        var target = ctrl.getNavTarget();
+        var executor = ctrl.getPathExecutor();
+        if (executor != null && !executor.isCompleted()) {
+            var path = executor.getPath();
+            var level = (ServerLevel) bot.level();
+            var player = source.getPlayer();
+            // Spawn redstone dust particles along path
+            for (var pos : path) {
+                level.sendParticles(
+                    new DustParticleOptions(
+                        new org.joml.Vector3f(1.0f, 0.0f, 1.0f), 2.0f),
+                    pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                    1, 0, 0, 0, 0);
+            }
+            source.sendSuccess(() -> Component.literal("Showing path: " + path.size() + " nodes to " + target.toShortString()), true);
+        } else {
+            source.sendSuccess(() -> Component.literal("Target: " + target.toShortString() + " (no computed path)"), true);
+        }
+        return 1;
     }
 
     // ========== Help command ==========

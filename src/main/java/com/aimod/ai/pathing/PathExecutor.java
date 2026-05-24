@@ -101,7 +101,8 @@ public class PathExecutor {
     public boolean isFailed() { return failed; }
     public int getCurrentIndex() { return currentIndex; }
     public int getPathLength() { return path != null ? path.size() : 0; }
-    
+    public List<BlockPos> getPath() { return path; }
+
     /**
      * Get progress as a fraction (0.0 to 1.0).
      */
