@@ -100,7 +100,7 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 | 13 | ✅ UnstuckDetector PILLAR 跳过砂/砾石但漏混凝土粉 | `instanceof FallingBlock` 通用检测 |
 | 14 | ✅ GatherResourceAction 674 行超长 | 拆出 VeinMiningHelper (34行) + ObstacleBreaker (66行) → 主文件 516 行 |
 | 15 | ✅ GatherResourceAction scanEnvironment 13 次遍历 | 单次多过滤 `findNearbyBlocksBatched()` |
-| 16 | `convertCachedToActions` 与 `convertResponseToActions` 重复 | 提取公共 switch |
+| 16 | ✅ `convertCachedToActions` 与 `convertResponseToActions` 重复 | 提取 `parseActionFromJson()` 公共方法 |
 
 ### P3 — 架构耐久性
 

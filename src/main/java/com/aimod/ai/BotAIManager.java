@@ -402,132 +402,117 @@ public class BotAIManager {
         executeTask(task);
     }
 
-    /**
-     * 将 LLM 响应转换为动作列表
-     */
+    /** Convert an LLM response to action objects using the shared parser. */
     private List<Action> convertResponseToActions(LLMResponse response, String ownerName) {
         List<Action> actions = new ArrayList<>();
         for (String actionJson : response.getActions()) {
             try {
                 JsonObject actionObj = JsonParser.parseString(actionJson).getAsJsonObject();
-                String type = getString(actionObj, "type", "");
-                if (type.isEmpty()) type = getString(actionObj, "action", ""); // LLM sometimes uses "action" key
-                // Normalize item key: LLM may use "item" instead of "item_id"
-                if (actionObj.has("item") && !actionObj.has("item_id")) {
-                    actionObj.addProperty("item_id", getString(actionObj, "item", ""));
-                }
-                switch (type) {
-                    case "move_to":
-                        int x = getInt(actionObj, "x", 0);
-                        int y = getInt(actionObj, "y", 0);
-                        int z = getInt(actionObj, "z", 0);
-                        double speed = getDouble(actionObj, "speed", 1.0);
-                        actions.add(new MoveToAction(new BlockPos(x, y, z), speed));
-                        DevLog.info("PLAN_ACTION_ADD", "type=move_to, pos=({},{},{})", x, y, z);
-                        break;
-                    case "break_block":
-                        x = getInt(actionObj, "x", 0);
-                        y = getInt(actionObj, "y", 0);
-                        z = getInt(actionObj, "z", 0);
-                        actions.add(new BreakBlockAction(new BlockPos(x, y, z)));
-                        DevLog.info("PLAN_ACTION_ADD", "type=break_block, pos=({},{},{})", x, y, z);
-                        break;
-                    case "place_block":
-                        x = getInt(actionObj, "x", 0);
-                        y = getInt(actionObj, "y", 0);
-                        z = getInt(actionObj, "z", 0);
-                        String blockId = getString(actionObj, "block_id", "minecraft:stone");
-                        BlockItem blockItem = getBlockItemFromString(blockId);
-                        if (blockItem != null) {
-                            actions.add(new PlaceBlockAction(new BlockPos(x, y, z), blockItem));
-                            DevLog.info("PLAN_ACTION_ADD", "type=place_block, pos=({},{},{}), block={}", x, y, z, blockId);
-                        }
-                        break;
-                    case "attack":
-                        String target = getString(actionObj, "target", "");
-                        actions.add(new AttackAction(target));
-                        DevLog.info("PLAN_ACTION_ADD", "type=attack, target={}", target);
-                        break;
-                    case "craft":
-                        String itemId = getString(actionObj, "item_id", "");
-                        int count = getInt(actionObj, "count", 1);
-                        actions.add(new CraftAction(itemId, count));
-                        DevLog.info("PLAN_ACTION_ADD", "type=craft, item={}, count={}", itemId, count);
-                        break;
-                    case "follow":
-                        String player = getString(actionObj, "player", "");
-                        actions.add(new FollowAction(player));
-                        DevLog.info("PLAN_ACTION_ADD", "type=follow, player={}", player);
-                        break;
-                    case "give_item":
-                        itemId = getString(actionObj, "item_id", "");
-                        count = getInt(actionObj, "count", 1);
-                        player = getString(actionObj, "player", ownerName);
-                        actions.add(new GiveItemAction(itemId, count, player));
-                        DevLog.info("PLAN_ACTION_ADD", "type=give_item, item={}, count={}, player={}", itemId, count, player);
-                        break;
-                    case "require_items":
-                        Map<String, Integer> requiredItems = parseRequiredItems(actionObj);
-                        actions.add(new RequireItemsAction(requiredItems));
-                        DevLog.info("PLAN_ACTION_ADD", "type=require_items, items={}", requiredItems);
-                        break;
-                    case "say":
-                        String message = getString(actionObj, "message", "");
-                        actions.add(new SayAction(message));
-                        DevLog.info("PLAN_ACTION_ADD", "type=say, message={}", DevLog.compact(message));
-                        break;
-                    case "wait":
-                        int ticks = getInt(actionObj, "ticks",
-                                getInt(actionObj, "seconds", 1) * 20);
-                        actions.add(new WaitAction(ticks));
-                        DevLog.info("PLAN_ACTION_ADD", "type=wait, ticks={}", ticks);
-                        break;
-                    case "mine":
-                        String mineBlockId = getString(actionObj, "block_id", "");
-                        count = getInt(actionObj, "count", 1);
-                        int radius = getInt(actionObj, "radius", 32);
-                        actions.add(new MineBlockAction(mineBlockId, count, radius));
-                        DevLog.info("PLAN_ACTION_ADD", "type=mine, block={}, count={}, radius={}", mineBlockId, count, radius);
-                        break;
-                    case "gather":
-                        String resourceType = getString(actionObj, "resource_type", "WOOD");
-                        count = getInt(actionObj, "count", 1);
-                        radius = getInt(actionObj, "radius", 32);
-                        try {
-                            GatherResourceAction.ResourceType type2 = GatherResourceAction.ResourceType.valueOf(resourceType.toUpperCase(Locale.ROOT));
-                            actions.add(new GatherResourceAction(type2, count, radius));
-                            DevLog.info("PLAN_ACTION_ADD", "type=gather, resource={}, count={}, radius={}", resourceType, count, radius);
-                        } catch (IllegalArgumentException e) {
-                            DevLog.warn("PLAN_ACTION_INVALID_RESOURCE", "resource={}", resourceType);
-                        }
-                        break;
-                    case "interact":
-                        String interactType = getString(actionObj, "interact_type", "CRAFTING_TABLE");
-                        try {
-                            InteractBlockAction.InteractType type3 = InteractBlockAction.InteractType.valueOf(interactType.toUpperCase(Locale.ROOT));
-                            actions.add(new InteractBlockAction(type3));
-                            DevLog.info("PLAN_ACTION_ADD", "type=interact, interact_type={}", interactType);
-                        } catch (IllegalArgumentException e) {
-                            DevLog.warn("PLAN_ACTION_INVALID_INTERACT", "type={}", interactType);
-                        }
-                        break;
-                    case "equip":
-                        itemId = getString(actionObj, "item_id", "");
-                        String slotStr = getString(actionObj, "slot", "");
-                        EquipmentSlot slot = parseSlot(slotStr);
-                        actions.add(new EquipItemAction(itemId, slot));
-                        DevLog.info("PLAN_ACTION_ADD", "type=equip, item={}, slot={}", itemId, slot);
-                        break;
-                    default:
-                        DevLog.warn("PLAN_ACTION_UNKNOWN", "type={}, json={}", type, DevLog.compact(actionJson));
-                        break;
+                Action action = parseActionFromJson(actionObj, ownerName);
+                if (action != null) {
+                    actions.add(action);
+                    DevLog.info("PLAN_ACTION_ADD", "type={}, action={}",
+                            actionObj.has("type") ? getString(actionObj, "type", "") : getString(actionObj, "action", ""),
+                            action.getDescription());
                 }
             } catch (Exception e) {
-                DevLog.error("PLAN_ACTION_PARSE_EXCEPTION", "failed action json=" + DevLog.compact(actionJson), e);
+                DevLog.warn("PLAN_ACTION_PARSE_FAIL", "json={}", DevLog.compact(actionJson));
             }
         }
-
         return actions;
+    }
+
+    /**
+     * Parse a single action JSON object into an Action instance.
+     * Shared by both convertResponseToActions and convertCachedToActions.
+     */
+    private Action parseActionFromJson(JsonObject obj, String ownerName) {
+        String type = getString(obj, "type", "");
+        if (type.isEmpty()) type = getString(obj, "action", "");
+        if (type.isEmpty()) return null;
+
+        // Normalize item key
+        if (obj.has("item") && !obj.has("item_id")) {
+            obj.addProperty("item_id", getString(obj, "item", ""));
+        }
+
+        try {
+            return switch (type) {
+                case "move_to" -> {
+                    int x = getInt(obj, "x", 0);
+                    int y = getInt(obj, "y", 0);
+                    int z = getInt(obj, "z", 0);
+                    double speed = getDouble(obj, "speed", 1.0);
+                    yield new MoveToAction(new BlockPos(x, y, z), speed);
+                }
+                case "break_block" -> {
+                    yield new BreakBlockAction(new BlockPos(
+                            getInt(obj, "x", 0),
+                            getInt(obj, "y", 0),
+                            getInt(obj, "z", 0)));
+                }
+                case "place_block" -> {
+                    String blockId = getString(obj, "block_id", getString(obj, "block", "minecraft:stone"));
+                    BlockItem bi = getBlockItemFromString(blockId);
+                    if (bi != null) {
+                        yield new PlaceBlockAction(new BlockPos(
+                                getInt(obj, "x", 0),
+                                getInt(obj, "y", 0),
+                                getInt(obj, "z", 0)), bi);
+                    }
+                    yield null;
+                }
+                case "attack" -> new AttackAction(getString(obj, "target", ""));
+                case "craft" -> new CraftAction(
+                        getString(obj, "item_id", getString(obj, "item", "")),
+                        getInt(obj, "count", 1));
+                case "follow" -> new FollowAction(getString(obj, "player", ""));
+                case "give_item" -> new GiveItemAction(
+                        getString(obj, "item_id", ""),
+                        getInt(obj, "count", 1),
+                        getString(obj, "player", ownerName));
+                case "require_items" -> new RequireItemsAction(parseRequiredItems(obj));
+                case "say" -> new SayAction(getString(obj, "message", ""));
+                case "wait" -> new WaitAction(getInt(obj, "ticks",
+                        getInt(obj, "seconds", 1) * 20));
+                case "mine" -> new MineBlockAction(
+                        getString(obj, "block_id", ""),
+                        getInt(obj, "count", 1),
+                        getInt(obj, "radius", 32));
+                case "gather" -> {
+                    String res = getString(obj, "resource_type", "WOOD");
+                    try {
+                        yield new GatherResourceAction(
+                                GatherResourceAction.ResourceType.valueOf(res.toUpperCase(Locale.ROOT)),
+                                getInt(obj, "count", 1),
+                                getInt(obj, "radius", 32));
+                    } catch (IllegalArgumentException e) {
+                        DevLog.warn("PLAN_INVALID_RESOURCE", "resource={}", res);
+                        yield null;
+                    }
+                }
+                case "interact" -> {
+                    String interactType = getString(obj, "interact_type", "CRAFTING_TABLE");
+                    try {
+                        yield new InteractBlockAction(
+                                InteractBlockAction.InteractType.valueOf(interactType.toUpperCase(Locale.ROOT)));
+                    } catch (IllegalArgumentException e) {
+                        DevLog.warn("PLAN_INVALID_INTERACT", "type={}", interactType);
+                        yield null;
+                    }
+                }
+                case "equip" -> new EquipItemAction(
+                        getString(obj, "item_id", ""),
+                        parseSlot(getString(obj, "slot", "")));
+                default -> {
+                    DevLog.warn("PLAN_ACTION_UNKNOWN", "type={}, json={}", type, DevLog.compact(obj.toString()));
+                    yield null;
+                }
+            };
+        } catch (Exception e) {
+            DevLog.warn("PLAN_ACTION_PARSE_FAIL", "type={}, err={}", type, e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -660,55 +645,11 @@ public class BotAIManager {
         for (String json : actionJsons) {
             try {
                 var obj = JsonParser.parseString(json).getAsJsonObject();
-                String type = getString(obj, "type", getString(obj, "action", ""));
-                switch (type) {
-                    case "say":
-                        actions.add(new SayAction(getString(obj, "message", "")));
-                        break;
-                    case "gather":
-                        String res = getString(obj, "resource_type", "WOOD");
-                        try { actions.add(new GatherResourceAction(GatherResourceAction.ResourceType.valueOf(res.toUpperCase(Locale.ROOT)), getInt(obj, "count", 8))); }
-                        catch (IllegalArgumentException ignored) {}
-                        break;
-                    case "mine":
-                        actions.add(new MineBlockAction(getString(obj, "block_id", "stone"), getInt(obj, "count", 1)));
-                        break;
-                    case "craft":
-                        String itemId = getString(obj, "item_id", getString(obj, "item", ""));
-                        actions.add(new CraftAction(itemId, getInt(obj, "count", 1)));
-                        break;
-                    case "interact":
-                        try { actions.add(new InteractBlockAction(InteractBlockAction.InteractType.valueOf(getString(obj, "interact_type", "CRAFTING_TABLE").toUpperCase(Locale.ROOT)))); }
-                        catch (IllegalArgumentException ignored) {}
-                        break;
-                    case "equip":
-                        actions.add(new EquipItemAction(getString(obj, "item_id", ""), null));
-                        break;
-                    case "give_item":
-                        actions.add(new GiveItemAction(getString(obj, "item_id", ""), getInt(obj, "count", 1), getString(obj, "player", ownerName)));
-                        break;
-                    case "follow":
-                        actions.add(new FollowAction(getString(obj, "player", "")));
-                        break;
-                    case "move_to":
-                        actions.add(new MoveToAction(new net.minecraft.core.BlockPos(getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)), getDouble(obj, "speed", 1.0)));
-                        break;
-                    case "place_block":
-                        String blockId = getString(obj, "block_id", getString(obj, "block", ""));
-                        var bi = getBlockItemFromString(blockId);
-                        if (bi != null) actions.add(new PlaceBlockAction(new net.minecraft.core.BlockPos(getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)), bi));
-                        break;
-                    case "break_block":
-                        actions.add(new BreakBlockAction(new net.minecraft.core.BlockPos(getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0))));
-                        break;
-                    case "attack":
-                        actions.add(new AttackAction(getString(obj, "target", "")));
-                        break;
-                    case "wait":
-                        actions.add(new WaitAction(getInt(obj, "ticks", 20)));
-                        break;
-                }
-            } catch (Exception e) { DevLog.warn("CACHE_ACTION_PARSE_FAIL", "json={}", DevLog.compact(json)); }
+                Action action = parseActionFromJson(obj, ownerName);
+                if (action != null) actions.add(action);
+            } catch (Exception e) {
+                DevLog.warn("CACHE_ACTION_PARSE_FAIL", "json={}", DevLog.compact(json));
+            }
         }
         return actions;
     }
