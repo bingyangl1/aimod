@@ -36,7 +36,7 @@ public class Pathfinder {
     private final int maxRadius;
 
     private final HashMap<Long, PathNode> nodeMap;
-    private final PriorityQueue<PathNode> openSet;
+    private final BinaryHeapOpenSet openSet;
     private boolean cancelled;
 
     /**
@@ -59,7 +59,7 @@ public class Pathfinder {
         this.timeoutMs = timeoutMs;
         this.maxRadius = maxRadius;
         this.nodeMap = new HashMap<>();
-        this.openSet = new PriorityQueue<>(Comparator.comparingDouble(n -> n.combinedCost));
+        this.openSet = new BinaryHeapOpenSet();
     }
 
     /**
@@ -82,7 +82,7 @@ public class Pathfinder {
         this.timeoutMs = timeoutMs;
         this.maxRadius = maxRadius;
         this.nodeMap = new HashMap<>();
-        this.openSet = new PriorityQueue<>(Comparator.comparingDouble(n -> n.combinedCost));
+        this.openSet = new BinaryHeapOpenSet();
     }
 
     public PathResult findPath() {
@@ -92,7 +92,7 @@ public class Pathfinder {
         startNode.cost = 0;
         startNode.heuristic = PathNode.heuristic(startX, startY, startZ, goalX, goalY, goalZ);
         startNode.combinedCost = startNode.heuristic;
-        openSet.add(startNode);
+        openSet.insert(startNode);
         startNode.inOpenSet = true;
 
         PathNode bestNode = startNode;
@@ -108,7 +108,7 @@ public class Pathfinder {
                 break;
             }
 
-            PathNode current = openSet.poll();
+            PathNode current = openSet.removeLowest();
             current.inOpenSet = false;
             nodesExplored++;
 
@@ -160,10 +160,11 @@ public class Pathfinder {
                     neighbor.combinedCost = tentativeCost + neighbor.heuristic;
 
                     if (neighbor.inOpenSet) {
-                        openSet.remove(neighbor);
+                        openSet.update(neighbor);
+                    } else {
+                        openSet.insert(neighbor);
+                        neighbor.inOpenSet = true;
                     }
-                    openSet.add(neighbor);
-                    neighbor.inOpenSet = true;
                 }
             }
 
@@ -232,10 +233,11 @@ public class Pathfinder {
                     neighbor.combinedCost = tentativeCost + neighbor.heuristic;
 
                     if (neighbor.inOpenSet) {
-                        openSet.remove(neighbor);
+                        openSet.update(neighbor);
+                    } else {
+                        openSet.insert(neighbor);
+                        neighbor.inOpenSet = true;
                     }
-                    openSet.add(neighbor);
-                    neighbor.inOpenSet = true;
                 }
 
                 break;
