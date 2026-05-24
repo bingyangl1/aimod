@@ -28,7 +28,11 @@ public class DirectCommandHandler {
         String fullId = blockId.contains(":") ? blockId : "minecraft:" + blockId;
         Task task = new Task("Mine " + count + " " + fullId);
         List<Action> actions = new ArrayList<>();
-        actions.add(new MineBlockAction(fullId, count));
+        if (com.aimod.config.ModConfig.getVeinMine()) {
+            actions.add(new VeinMineAction(fullId, count));
+        } else {
+            actions.add(new MineBlockAction(fullId, count));
+        }
         task.setActions(actions);
         task.setStatus(Task.TaskStatus.IN_PROGRESS);
         return task;
