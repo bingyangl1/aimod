@@ -26,7 +26,7 @@ AIBotEntity(Mob) → FakePlayer(ServerPlayer) → BotAIManager
 |------|---------|
 | ai/action/ | Action基类, GatherResource(700行), VeinMine, PlaceBlock, Follow |
 | ai/movement/ | BotMovement, MovementTraverse/Pillar/Ascend/..., MovementController, UnstuckDetector |
-| ai/pathing/ | Pathfinder(A*), AsyncPathfinder, CalculationContext, ToolSet |
+| ai/pathing/ | Pathfinder(A\*), AsyncPathfinder, CalculationContext, ToolSet |
 | ai/chain/ | ChainManager, DangerChain(P90), DefenseChain(P70), FoodChain(P55), UnstuckChain(P50) |
 | ai/llm/ | LLMService, PlanCache, BotAIStateMachine |
 | ai/planner/ | CommandParser(NLP), SequencePlanner(配方树) |
@@ -36,7 +36,7 @@ AIBotEntity(Mob) → FakePlayer(ServerPlayer) → BotAIManager
 
 ## 移动系统
 
-- 8 Movement类型由A*自动选择
+- 8 Movement类型由AI自动选择
 - `travel()`保留XZ速度(travel覆盖清零→保留修复)
 - STEP_HEIGHT=1.0 自动上一格台阶
 - PlaceBlock降级链: 目标→下方→附近→脚下+跳
