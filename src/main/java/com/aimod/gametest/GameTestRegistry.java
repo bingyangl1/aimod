@@ -15,12 +15,12 @@ public class GameTestRegistry {
         event.register(GameTestRegistry.class);
     }
 
-    @GameTest(template = "empty", timeoutTicks = 200)
+    @GameTest(template = "aimod:empty", timeoutTicks = 200)
     public static void testModLoads(GameTestHelper helper) {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testEntityRegistration(GameTestHelper helper) {
         try {
             var entityType = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
@@ -35,7 +35,7 @@ public class GameTestRegistry {
         }
     }
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testTaskCreation(GameTestHelper helper) {
         try {
             var task = new com.aimod.ai.Task("test task");
@@ -49,7 +49,7 @@ public class GameTestRegistry {
         }
     }
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testLLMResponseParsing(GameTestHelper helper) {
         try {
             String mockResponse = "{\"choices\": [{\"message\": {\"content\": \"{\\\"actions\\\": [{\\\"type\\\": \\\"move_to\\\", \\\"x\\\": 10, \\\"y\\\": 64, \\\"z\\\": 10}]}\"}}]}";
@@ -64,7 +64,7 @@ public class GameTestRegistry {
         }
     }
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testInventoryUtils(GameTestHelper helper) {
         try {
             var inv = new net.minecraft.world.SimpleContainer(36);
@@ -87,7 +87,7 @@ public class GameTestRegistry {
         }
     }
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testPathfinderBasic(GameTestHelper helper) {
         try {
             var level = helper.getLevel();
@@ -105,7 +105,7 @@ public class GameTestRegistry {
         }
     }
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testChunkCacheCreation(GameTestHelper helper) {
         try {
             var level = helper.getLevel();
@@ -122,7 +122,7 @@ public class GameTestRegistry {
 
     // ── CommandParser ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testCommandParserCraft(GameTestHelper helper) {
         var p = com.aimod.ai.planner.CommandParser.parse("制作一把钻石镐给我");
         if (p.verb() == com.aimod.ai.planner.CommandParser.Verb.CRAFT && p.isGive()) {
@@ -130,7 +130,7 @@ public class GameTestRegistry {
         } else helper.fail("Craft parse failed: verb=" + p.verb() + " give=" + p.isGive());
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testCommandParserMine(GameTestHelper helper) {
         var p = com.aimod.ai.planner.CommandParser.parse("挖5个铁矿石");
         if (p.verb() == com.aimod.ai.planner.CommandParser.Verb.MINE && p.count() == 5) {
@@ -138,7 +138,7 @@ public class GameTestRegistry {
         } else helper.fail("Mine parse: verb=" + p.verb() + " count=" + p.count());
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testCommandParserGather(GameTestHelper helper) {
         var p = com.aimod.ai.planner.CommandParser.parse("砍3棵树");
         if (p.verb() == com.aimod.ai.planner.CommandParser.Verb.GATHER && p.count() == 3) {
@@ -148,21 +148,21 @@ public class GameTestRegistry {
 
     // ── Item Lookup ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testItemLookupDiamondPickaxe(GameTestHelper helper) {
         var item = com.aimod.ai.planner.CommandParser.findItem("diamond_pickaxe");
         if (item != null && item == net.minecraft.world.item.Items.DIAMOND_PICKAXE) helper.succeed();
         else helper.fail("diamond_pickaxe not found, got: " + item);
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testItemLookupIronOre(GameTestHelper helper) {
         var item = com.aimod.ai.planner.CommandParser.findItem("iron_ore");
         if (item != null && item == net.minecraft.world.item.Items.IRON_ORE) helper.succeed();
         else helper.fail("iron_ore not found, got: " + item);
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testItemLookupNotFound(GameTestHelper helper) {
         var item = com.aimod.ai.planner.CommandParser.findItem("nonexistent_item_xyz");
         if (item == null) helper.succeed();
@@ -171,7 +171,7 @@ public class GameTestRegistry {
 
     // ── SequencePlanner ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testSequencePlannerMine(GameTestHelper helper) {
         var actions = com.aimod.ai.planner.SequencePlanner.planMine(
                 net.minecraft.world.item.Items.DIAMOND_ORE, 5);
@@ -180,7 +180,7 @@ public class GameTestRegistry {
         else helper.fail("Mine plan wrong: " + actions.size() + " actions");
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testSequencePlannerGather(GameTestHelper helper) {
         var actions = com.aimod.ai.planner.SequencePlanner.planGather(
                 net.minecraft.world.item.Items.OAK_LOG, 16);
@@ -191,7 +191,7 @@ public class GameTestRegistry {
 
     // ── MaterialTree ──
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testMaterialTreeSimple(GameTestHelper helper) {
         var inv = new com.aimod.ai.RecipeIndex.InventoryState() {
             @Override public int countItem(net.minecraft.world.item.Item item) { return 0; }
@@ -204,7 +204,7 @@ public class GameTestRegistry {
         else helper.fail("MaterialTree returned no raw materials for stick");
     }
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testMaterialTreeAlreadyHave(GameTestHelper helper) {
         var inv = new com.aimod.ai.RecipeIndex.InventoryState() {
             @Override public int countItem(net.minecraft.world.item.Item item) {
@@ -223,7 +223,7 @@ public class GameTestRegistry {
 
     // ── ItemUid ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testItemUidSameForSameItem(GameTestHelper helper) {
         var a = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND);
         var b = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND);
@@ -233,7 +233,7 @@ public class GameTestRegistry {
         else helper.fail("Same item should have same UID");
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testItemUidDifferentForDifferentItem(GameTestHelper helper) {
         var a = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND);
         var b = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT);
@@ -245,7 +245,7 @@ public class GameTestRegistry {
 
     // ── BotInfo ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testBotInfoSerializedItemRoundTrip(GameTestHelper helper) {
         var stack = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE, 1);
         var si = com.aimod.fakeplayer.BotInfo.SerializedItem.from(stack, 0);
@@ -257,14 +257,14 @@ public class GameTestRegistry {
 
     // ── FindItemResult ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testFindItemResultBasic(GameTestHelper helper) {
         var r = new com.aimod.ai.InventoryUtils.FindItemResult(3, 64);
         if (r.found() && r.isHotbar() && r.slot() == 3 && r.count() == 64) helper.succeed();
         else helper.fail("FindItemResult basic properties wrong");
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testFindItemResultNotFound(GameTestHelper helper) {
         var r = com.aimod.ai.InventoryUtils.FindItemResult.NOT_FOUND;
         if (!r.found() && r.slot() == -1) helper.succeed();
@@ -273,7 +273,7 @@ public class GameTestRegistry {
 
     // ── BotAIStateMachine ──
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testStateMachineTransitions(GameTestHelper helper) {
         var sm = new com.aimod.ai.llm.BotAIStateMachine();
         if (sm.getCurrent() != com.aimod.ai.llm.BotAIStateMachine.State.IDLE)
@@ -290,7 +290,7 @@ public class GameTestRegistry {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testStateMachinePauseResume(GameTestHelper helper) {
         var sm = new com.aimod.ai.llm.BotAIStateMachine();
         sm.startExecuting();
@@ -303,7 +303,7 @@ public class GameTestRegistry {
         helper.succeed();
     }
 
-    @GameTest(template = "empty", timeoutTicks = 400)
+    @GameTest(template = "aimod:empty", timeoutTicks = 400)
     public static void testStateMachineReplan(GameTestHelper helper) {
         var sm = new com.aimod.ai.llm.BotAIStateMachine();
         sm.startExecuting();
@@ -314,7 +314,7 @@ public class GameTestRegistry {
 
     // ── DangerZone ──
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testDangerZoneClassLoads(GameTestHelper helper) {
         // Verify DangerZone is loadable and basic methods exist
         try {
@@ -329,7 +329,7 @@ public class GameTestRegistry {
 
     // ── RecipeIndex ──
 
-    @GameTest(template = "empty", timeoutTicks = 600)
+    @GameTest(template = "aimod:empty", timeoutTicks = 600)
     public static void testRecipeIndexBuilt(GameTestHelper helper) {
         var index = com.aimod.ai.RecipeIndex.getInstance();
         try {
