@@ -76,6 +76,9 @@ public class FakePlayer extends ServerPlayer {
     // ── Behavior Chains ──────────────────────────────────────────────────
     private final ChainManager chainManager;
 
+    // ── Idle tracking ────────────────────────────────────────────────────
+    private int idleTicks;
+
     // ── Undo ─────────────────────────────────────────────────────────────
     private final UndoManager undoManager = new UndoManager(10);
 
@@ -227,7 +230,16 @@ public class FakePlayer extends ServerPlayer {
 
         // AI tick — skip if survival chain is preempting
         if (!preempted && !paused && this.currentTask != null && !this.currentTask.isCompleted()) {
+            idleTicks = 0; // task active, reset idle counter
             aiManager.updateTask(this.currentTask);
+        } else if (!preempted && !paused && (this.currentTask == null || this.currentTask.isCompleted())) {
+            idleTicks++;
+        }
+
+        // Idle gathering: after 5 seconds idle, collect basic scaffolding materials
+        if (idleTicks == 100 && !paused && (this.currentTask == null || this.currentTask.isCompleted())) {
+            var gatherTask = com.aimod.command.DirectCommandHandler.createGatherTask("DIRT", 16);
+            assignDirectTask(gatherTask, null);
         }
 
         // Periodic position sync (after AI tick so movement isn't overridden)

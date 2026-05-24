@@ -59,9 +59,6 @@ public class FakePlayerManager {
         FakePlayer player = FakePlayer.createAndRegister(server, level, name, pos, gamemode, null, persistentUUID);
         if (player != null) {
             activePlayers.put(player.getUUID(), player);
-            // Auto-gather scaffolding materials using local planner (fast, no LLM)
-            var gatherTask = com.aimod.command.DirectCommandHandler.createGatherTask("DIRT", 32);
-            player.assignDirectTask(gatherTask, null);
             DevLog.info("FAKE_PLAYER_CREATED", "name={}, uuid={}, persistent=true",
                     name, player.getStringUUID());
         }
