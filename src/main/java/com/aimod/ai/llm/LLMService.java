@@ -493,18 +493,22 @@ public class LLMService {
 
     private List<String> parseActionsFromContent(String content) {
         List<String> actions = new ArrayList<>();
-        // 简单解析：尝试提取JSON数组
         try {
             if (content.contains("{") && content.contains("}")) {
                 int start = content.indexOf("{");
                 int end = content.lastIndexOf("}") + 1;
                 String jsonStr = content.substring(start, end);
                 JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
+                // Case 1: {"actions": [...]} — full plan
                 if (json.has("actions")) {
                     JsonArray actionsArray = json.getAsJsonArray("actions");
                     for (int i = 0; i < actionsArray.size(); i++) {
                         actions.add(actionsArray.get(i).toString());
                     }
+                }
+                // Case 2: {"type":"gather",...} — single action (incremental replan)
+                else if (json.has("type") || json.has("action")) {
+                    actions.add(jsonStr);
                 }
             }
         } catch (Exception e) {
