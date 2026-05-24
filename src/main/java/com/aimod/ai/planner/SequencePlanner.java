@@ -93,29 +93,26 @@ public final class SequencePlanner {
         }
 
         // Phase 0b: smelting support (furnace + fuel)
+        List<Item> smeltTargets = new ArrayList<>();
         boolean needsSmelting = false;
         for (var entry : raw.entrySet()) {
-            String key = itemKey(entry.getKey());
-            if (key != null && (key.contains("_ingot") || key.contains("_nugget"))) {
-                needsSmelting = true;
-                break;
-            }
+            if (needsSmelting(entry.getKey())) { needsSmelting = true; smeltTargets.add(entry.getKey()); }
         }
         BlockPos furnacePos = null;
         if (needsSmelting) {
-            // Ensure furnace
-            if (inv.countItem(Items.FURNACE) > 0 || inv.countItem(Items.CRAFTING_TABLE) > 0) {
-                furnacePos = placeBlock(actions, bot, inv, Items.FURNACE, Blocks.FURNACE);
-                // Find best fuel
+            furnacePos = placeFurnace(actions, bot, inv);
+            if (furnacePos != null) {
+                actions.add(new InteractBlockAction(InteractBlockAction.InteractType.FURNACE, furnacePos));
+                // Fuel check: ensure 1+ fuel per 8 items
                 Item bestFuel = findBestFuel(inv);
-                if (bestFuel != null) {
-                    // Add fuel to furnace action would go here if we had one
-                    // For now, assume bot can smelt via InteractBlockAction + CraftAction
+                int fuelNeeded = (smeltTargets.stream().mapToInt(raw::get).sum() + 7) / 8;
+                if (bestFuel != null && inv.countItem(bestFuel) < fuelNeeded) {
+                    actions.add(mineOrGather(bestFuel, fuelNeeded));
                 }
             }
         }
 
-        // Phase 1: gather raw materials
+        // Phase 1: gather raw materials (mine ores, gather wood)
         for (var entry : raw.entrySet()) {
             Item item = entry.getKey();
             int needed = entry.getValue();
@@ -184,7 +181,32 @@ public final class SequencePlanner {
                 net.minecraft.world.level.block.Blocks.CRAFTING_TABLE);
     }
 
-    /** Place a block from inventory, or add PlaceBlockAction. Reuse if already placed nearby. */
+    /** Place a furnace from inventory or craft one. Returns position or null. */
+    private static BlockPos placeFurnace(List<Action> actions, FakePlayer bot, RecipeIndex.InventoryState inv) {
+        if (inv.countItem(Items.FURNACE) > 0) {
+            return placeBlock(actions, bot, inv, Items.FURNACE, Blocks.FURNACE);
+        }
+        // Need to craft furnace: 8 cobblestone
+        if (inv.countItem(Items.COBBLESTONE) >= 8 || inv.countItem(Items.STONE) >= 8) {
+            if (inv.countItem(Items.COBBLESTONE) < 8 && inv.countItem(Items.STONE) >= 8) {
+                // Can't smelt stone to cobblestone without furnace. Just mine cobblestone.
+                actions.add(new GatherResourceAction(GatherResourceAction.ResourceType.STONE, 8));
+            }
+            // Place workbench first, craft furnace, then place furnace
+            BlockPos wbPos = placeWorkbench(actions, bot, inv);
+            actions.add(new CraftAction("minecraft:furnace", 1));
+            if (wbPos != null) actions.add(new BreakBlockAction(wbPos));
+        } else {
+            // Gather cobblestone first
+            actions.add(new GatherResourceAction(GatherResourceAction.ResourceType.STONE, 8));
+            BlockPos wbPos = placeWorkbench(actions, bot, inv);
+            actions.add(new CraftAction("minecraft:furnace", 1));
+            if (wbPos != null) actions.add(new BreakBlockAction(wbPos));
+        }
+        return placeBlock(actions, bot, inv, Items.FURNACE, Blocks.FURNACE);
+    }
+
+    /** Place a block from inventory, or add PlaceBlockAction. */
     private static BlockPos placeBlock(List<Action> actions, FakePlayer bot,
                                         RecipeIndex.InventoryState inv, Item blockItem, net.minecraft.world.level.block.Block block) {
         BlockPos pos = bot.blockPosition().offset(1, 0, 0);
@@ -254,21 +276,45 @@ public final class SequencePlanner {
         return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString();
     }
 
+    /** Map an item to the block that produces it (ore→raw item, wood→log, etc.) */
     private static String findBlockForItem(Item item) {
         String key = itemKey(item);
+        // Gems & crystals (drop directly, no smelting)
         if (key.contains("diamond")) return "minecraft:diamond_ore";
-        if (key.contains("iron") && (key.contains("ingot") || key.contains("nugget"))) return "minecraft:iron_ore";
-        if (key.contains("gold") && (key.contains("ingot") || key.contains("nugget"))) return "minecraft:gold_ore";
-        if (key.contains("coal")) return "minecraft:coal_ore";
-        if (key.contains("copper")) return "minecraft:copper_ore";
-        if (key.contains("lapis")) return "minecraft:lapis_ore";
-        if (key.contains("redstone")) return "minecraft:redstone_ore";
         if (key.contains("emerald")) return "minecraft:emerald_ore";
-        if (key.contains("netherite")) return "minecraft:ancient_debris";
+        if (key.contains("lapis_lazuli") || key.contains("lapis")) return "minecraft:lapis_ore";
+        if (key.contains("redstone")) return "minecraft:redstone_ore";
         if (key.contains("quartz")) return "minecraft:nether_quartz_ore";
-        if (key.contains("planks") || key.contains("stick") || key.contains("wood"))
+        if (key.contains("coal")) return "minecraft:coal_ore";
+        if (key.contains("amethyst_shard")) return "minecraft:amethyst_cluster";
+        // Ores that need smelting → mine the raw ore block
+        if (key.contains("iron_ingot") || key.contains("iron_nugget") || key.contains("raw_iron"))
+            return "minecraft:iron_ore";
+        if (key.contains("gold_ingot") || key.contains("gold_nugget") || key.contains("raw_gold"))
+            return "minecraft:gold_ore";
+        if (key.contains("copper_ingot") || key.contains("raw_copper"))
+            return "minecraft:copper_ore";
+        if (key.contains("netherite_ingot") || key.contains("netherite_scrap"))
+            return "minecraft:ancient_debris";
+        // Wood derivatives → log
+        if (key.contains("_planks") || key.contains("stick") || key.contains("_sign")
+                || key.contains("_slab") || key.contains("_stairs") || key.contains("_fence")
+                || key.contains("_door") || key.contains("_trapdoor") || key.contains("_button")
+                || key.contains("_pressure_plate") || key.contains("bowl") || key.contains("chest_boat")
+                || key.contains("crafting_table"))
             return "minecraft:oak_log";
+        // Stone derivatives → stone
+        if (key.contains("cobblestone") || key.contains("stone_") || key.contains("_stone"))
+            return "minecraft:stone";
         return null;
+    }
+
+    /** Check if this item requires smelting (ore→ingot). */
+    private static boolean needsSmelting(Item item) {
+        String key = itemKey(item);
+        return (key.contains("iron_ingot") && !key.contains("iron_ore"))
+            || (key.contains("gold_ingot") && !key.contains("gold_ore"))
+            || key.contains("copper_ingot");
     }
 
     private static GatherResourceAction.ResourceType classifyResource(Item item) {

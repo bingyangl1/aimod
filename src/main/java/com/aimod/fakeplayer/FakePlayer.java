@@ -358,6 +358,7 @@ public class FakePlayer extends ServerPlayer {
                                     this.getStringUUID(), task.getStatus(), task.getActionCount(),
                                     DevLog.compact(naturalLanguageCommand));
                             this.currentTask = task;
+                            aiManager.getStateMachine().startExecuting();
                             aiManager.executeTask(this.currentTask);
                         });
                     }
@@ -398,6 +399,7 @@ public class FakePlayer extends ServerPlayer {
                 this.getStringUUID(), task.getDescription(), task.getActionCount());
         aiManager.getFeedback().reportTaskStart(task.getDescription());
         this.currentTask = task;
+        aiManager.getStateMachine().startExecuting();
         aiManager.executeTask(this.currentTask);
     }
 

@@ -38,6 +38,7 @@ public class BotAIManager {
     private final LLMService llmService;
     private final TaskFeedback feedback;
     private final WorldScanner worldScanner;
+    private final com.aimod.ai.llm.BotAIStateMachine stateMachine;
     private volatile String lastOwnerName = null;
     private volatile String lastCommand = null;
     private volatile boolean replanning = false;
@@ -47,7 +48,10 @@ public class BotAIManager {
         this.llmService = new LLMService();
         this.feedback = new TaskFeedback(bot);
         this.worldScanner = new WorldScanner(bot);
+        this.stateMachine = new com.aimod.ai.llm.BotAIStateMachine();
     }
+
+    public com.aimod.ai.llm.BotAIStateMachine getStateMachine() { return stateMachine; }
 
     /**
      * 获取任务反馈系统
