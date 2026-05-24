@@ -115,7 +115,7 @@ public class BotCommand {
                 .then(Commands.literal("toggle")
                         .then(Commands.argument("feature", StringArgumentType.word())
                                 .suggests((ctx, b) -> SharedSuggestionProvider.suggest(
-                                        new String[]{"autoFish", "autoReplenish", "autoReplace"}, b))
+                                        new String[]{"autoFish", "autoReplenish", "autoReplace", "veinMine"}, b))
                                 .executes(BotCommand::toggleFeature)))
                 // --- Navigation commands ---
                 .then(Commands.literal("goto")
@@ -512,6 +512,7 @@ public class BotCommand {
             case "autoFish" -> !com.aimod.config.ModConfig.getAutoFish();
             case "autoReplenish" -> !com.aimod.config.ModConfig.getAutoReplenish();
             case "autoReplace" -> !com.aimod.config.ModConfig.getAutoReplaceTool();
+            case "veinMine" -> !com.aimod.config.ModConfig.getVeinMine();
             default -> { ctx.getSource().sendFailure(Component.literal("Unknown: " + feature)); yield false; }
         };
         ctx.getSource().sendSuccess(() -> Component.literal(feature + " = " + newVal), true);

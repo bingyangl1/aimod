@@ -138,6 +138,14 @@ public class ModConfig {
             .comment("Automatically fish when holding a fishing rod")
             .define("autoFish", false);
 
+    public static final ModConfigSpec.ConfigValue<Boolean> VEIN_MINE = BUILDER
+            .comment("Mine connected blocks of same type (vein mining / tree felling)")
+            .define("veinMine", true);
+
+    public static final ModConfigSpec.ConfigValue<Integer> UNDO_HISTORY = BUILDER
+            .comment("Maximum number of undo operations to remember (0 = disable undo)")
+            .defineInRange("undoHistory", 10, 0, 50);
+
     public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
@@ -214,6 +222,8 @@ public class ModConfig {
     public static boolean getAutoReplenish() { return AUTO_REPLENISH.get(); }
     public static boolean getAutoReplaceTool() { return AUTO_REPLACE_TOOL.get(); }
     public static boolean getAutoFish() { return AUTO_FISH.get(); }
+    public static boolean getVeinMine() { return VEIN_MINE.get(); }
+    public static int getUndoHistory() { return UNDO_HISTORY.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
 }
