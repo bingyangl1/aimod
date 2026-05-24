@@ -230,10 +230,9 @@ public class BotAIManager {
                     DevLog.info("GIVE_ITEM_PARTIAL_SKIP", "continuing task after partial give");
                     task.advanceToNextAction();
                 } else {
-                    task.setStatus(Task.TaskStatus.FAILED);
-                    feedback.reportTaskFailed(task.getDescription(), "Action failed");
-                    // Even on failure, check deficits for replanning
-                    checkDeficitsAndReplan(task);
+                    // Incremental replan: ask LLM for next step instead of failing
+                    stateMachine.requestReplan();
+                    incrementalReplan(task, currentAction.getDescription());
                 }
             }
         }
@@ -317,6 +316,36 @@ public class BotAIManager {
     /**
      * 更新任务
      */
+    /**
+     * Incremental replan: ask LLM for next action after a failure.
+     */
+    private void incrementalReplan(Task task, String failedActionDesc) {
+        if (replanning) return;
+        replanning = true;
+        String ctx = "Task: " + task.getDescription() + ". Failed: " + failedActionDesc
+            + ". Done: " + task.getCurrentActionIndex() + "/" + task.getActionCount()
+            + ". Pos: " + bot.blockPosition().toShortString()
+            + ". Give ONE next action JSON.";
+        Thread t = new Thread(() -> {
+            try {
+                LLMResponse resp = llmService.sendPrompt(
+                    "Replan after failure. " + ctx);
+                if (resp.isSuccess()) {
+                    var acts = convertResponseToActions(resp, lastOwnerName);
+                    if (!acts.isEmpty()) {
+                        task.injectAction(acts.get(0));
+                        DevLog.info("REPLAN_INCR", "injected={}", acts.get(0).getDescription());
+                        stateMachine.startExecuting();
+                    }
+                }
+            } catch (Exception e) {
+                task.setStatus(Task.TaskStatus.FAILED);
+                feedback.reportTaskFailed(task.getDescription(), "Replan failed");
+            } finally { replanning = false; }
+        }, "AIMod-Incr-" + bot.getStringUUID().substring(0, 8));
+        t.setDaemon(true); t.start();
+    }
+
     public void updateTask(Task task) {
         if (task == null || task.isCompleted()) {
             return;

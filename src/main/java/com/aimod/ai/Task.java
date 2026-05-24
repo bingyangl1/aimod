@@ -63,6 +63,12 @@ public class Task {
         }
     }
 
+    /** Inject a new action after the current one (for incremental replanning). */
+    public void injectAction(Action action) {
+        actions.add(currentActionIndex + 1, action);
+        // Don't change status — stays IN_PROGRESS
+    }
+
     public enum TaskStatus {
         PENDING,
         IN_PROGRESS,

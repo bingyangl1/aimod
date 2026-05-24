@@ -175,6 +175,18 @@ public class LLMService {
         }
     }
 
+    /** Lightweight prompt for incremental replanning. */
+    public LLMResponse sendPrompt(String prompt) {
+        if (apiKey == null || apiKey.isBlank()) return LLMResponse.failure("No API key");
+        try {
+            if (!isModelAvailable()) return LLMResponse.failure("Model health check failed");
+            String response = callLLMApi(prompt);
+            return parseResponse(response);
+        } catch (Exception e) {
+            return LLMResponse.failure("Prompt failed: " + e.getMessage());
+        }
+    }
+
     private boolean isModelAvailable() {
         if (!modelHealthCheck) {
             DevLog.info("LLM_HEALTH_SKIP", "reason=disabled");
