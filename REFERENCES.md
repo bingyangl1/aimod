@@ -11,7 +11,7 @@
 |---------|---------|---------|---------|---------|
 | PlayerEngine | Goodbird-git/PlayerEngine | PlayerEngine-main/ | 服务端 Baritone（Automatone），实体抽象接口 | 待吸收 |
 | Player2NPC | Goodbird-git/Player2NPC | Player2NPC-master/ | NPC 行为系统、AltoClef 任务链 | 待吸收 |
-| Baritone | cabaletta/baritone (1.21.1) | baritone-ref/ | A* 寻路、Movement 系统、世界缓存 | ai/pathing/*.java |
+| Baritone | cabaletta/baritone (1.21.1) | baritone-ref/ | A* 寻路、Movement 系统、CalculationContext、ToolSet、世界缓存 | ai/pathing/*.java, ai/movement/*.java |
 | SiliconeDolls | Anvil-Dev/SiliconeDolls | 无 | FakePlayer 创建/注册模式 | fakeplayer/FakePlayer.java |
 | AI-Player | shasankp000/AI-Player | 无 | GameProfile 持久化 | fakeplayer/BotProfileStore.java |
 | EMI | EmilyPloszaj/emi | 无 | 合成配方索引策略 | ai/RecipeIndex.java |
@@ -100,7 +100,8 @@
 - src/main/java/baritone/pathing/movement/CalculationContext.java — 代价快照
 - src/main/java/baritone/behavior/PathingBehavior.java — 异步寻路
 - src/main/java/baritone/cache/CachedWorld.java — 世界缓存
-- src/main/java/baritone/utils/ToolSet.java — 工具选择
+- src/main/java/baritone/utils/ToolSet.java — 工具选择（已吸收：ai/pathing/ToolSet.java）
+- src/main/java/baritone/pathing/movement/CalculationContext.java — 代价快照（已吸收：ai/pathing/CalculationContext.java）
 - src/main/java/baritone/utils/InputOverrideHandler.java — 输入覆盖
 - src/main/java/baritone/utils/PlayerMovementInput.java — 移动输入模拟
 
@@ -112,7 +113,18 @@
 - ToolSet 工具选择（附魔、药水）
 - InputOverrideHandler 输入模拟
 
-**我们的现状**：已参考 A* 寻路和 Goal 系统，但缺少 Movement 系统和异步寻路。
+**我们的现状**：
+- ✅ A* 寻路算法 (Pathfinder)
+- ✅ Goal 系统 (GoalBlock, GoalXZ, GoalYLevel)
+- ✅ PathExecutor 逐步移动
+- ✅ MoveCost 代价计算
+- ✅ ToolSet 工具选择（含附魔效率和药水效果）
+- ✅ AsyncPathfinder 异步寻路
+- ✅ CalculationContext 代价快照（线程安全世界状态）
+- ✅ BotMovement 基类 + MovementTraverse + MovementPillar
+- ❌ MovementAscend/Descend/Diagonal/Fall/Parkour/Downward
+- ❌ CachedWorld 世界缓存
+- ❌ InputOverrideHandler（服务端不需要）
 
 ---
 

@@ -1,5 +1,6 @@
 package com.aimod.fakeplayer;
 
+import com.aimod.util.IConnectionInjector;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -11,12 +12,7 @@ import org.jetbrains.annotations.NotNull;
 public class FakeClientConnection extends Connection {
     public FakeClientConnection(PacketFlow receiving) {
         super(receiving);
-        try {
-            var channelField = Connection.class.getDeclaredField("channel");
-            channelField.setAccessible(true);
-            channelField.set(this, new EmbeddedChannel());
-        } catch (Exception ignored) {
-        }
+        ((IConnectionInjector) this).aimod$setChannel(new EmbeddedChannel());
     }
 
     @Override public void send(@NotNull net.minecraft.network.protocol.Packet<?> packet) {}

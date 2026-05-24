@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.aimod.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "aimod.refmap.json",
+  "mixins": [
+    "ConnectionMixin",
+    "PlayerListMixin",
+    "ServerConfigurationPacketListenerImplMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
