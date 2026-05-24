@@ -123,10 +123,22 @@ public class MovementTraverse extends BotMovement {
 
     private static net.minecraft.world.item.ItemStack findThrowawayBlock(FakePlayer bot) {
         var inventory = bot.getInventory();
+        for (var pref : new net.minecraft.world.item.Item[]{
+                net.minecraft.world.item.Items.DIRT,
+                net.minecraft.world.item.Items.COBBLESTONE,
+                net.minecraft.world.item.Items.COARSE_DIRT,
+                net.minecraft.world.item.Items.STONE,
+                net.minecraft.world.item.Items.GRAVEL}) {
+            for (int i = 0; i < inventory.getContainerSize(); i++) {
+                var stack = inventory.getItem(i);
+                if (!stack.isEmpty() && stack.getItem() == pref) return stack;
+            }
+        }
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             var stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() instanceof net.minecraft.world.item.BlockItem) {
-                return stack;
+                String key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+                if (!key.contains("_log") && !key.contains("_stem")) return stack;
             }
         }
         return net.minecraft.world.item.ItemStack.EMPTY;

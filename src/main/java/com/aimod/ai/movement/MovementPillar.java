@@ -111,12 +111,30 @@ public class MovementPillar extends BotMovement {
 
     private static ItemStack findThrowawayBlock(FakePlayer bot) {
         var inventory = bot.getInventory();
+        // Priority: DIRT > COBBLESTONE > any BlockItem > LOGS (last resort)
+        for (var pref : new net.minecraft.world.item.Item[]{
+                net.minecraft.world.item.Items.DIRT,
+                net.minecraft.world.item.Items.COBBLESTONE,
+                net.minecraft.world.item.Items.COARSE_DIRT,
+                net.minecraft.world.item.Items.STONE,
+                net.minecraft.world.item.Items.GRAVEL}) {
+            for (int i = 0; i < inventory.getContainerSize(); i++) {
+                var stack = inventory.getItem(i);
+                if (!stack.isEmpty() && stack.getItem() == pref) return stack;
+            }
+        }
+        // Fallback: any BlockItem EXCEPT logs
         for (int i = 0; i < inventory.getContainerSize(); i++) {
-            ItemStack stack = inventory.getItem(i);
-            if (!stack.isEmpty() && stack.getItem() instanceof BlockItem) {
+            var stack = inventory.getItem(i);
+            if (!stack.isEmpty() && stack.getItem() instanceof BlockItem
+                    && !isLog(stack.getItem())) {
                 return stack;
             }
         }
         return ItemStack.EMPTY;
+    }
+    private static boolean isLog(net.minecraft.world.item.Item item) {
+        String key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath();
+        return key.contains("_log") || key.contains("_stem") || key.contains("_hyphae");
     }
 }
