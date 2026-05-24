@@ -1273,6 +1273,7 @@ Week 5-6: 可选高级功能
 
 | 版本 | 日期 | 关键变更 |
 |------|------|---------|
+| r21 | 2026-05-24 | 确定性本地规划器 (CommandParser + SequencePlanner + MaterialTree) 替代硬编码 fallback |
 | r20 | 2026-05-24 | 智能补全 + goto 浮点坐标 + /ai_bot select + follow/inventory 支持指定 bot |
 | r19 | 2026-05-24 | spawn [name], status 全部/指定, stop [name], remove <name>, Unstuck 自动取消 |
 | r18 | 2026-05-24 | DangerChain A* 寻路逃离 + 搭桥 + 水桶 MLG + 任务自动重试 |
