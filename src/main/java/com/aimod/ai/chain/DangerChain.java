@@ -16,48 +16,52 @@ public class DangerChain extends BehaviorChain {
 
     private boolean active;
     private int escapeTicks;
-    private BlockPos dangerPos;
+    private int cooldownTicks;
+    private BlockPos lastDangerPos;
+    private static final int COOLDOWN = 60; // 3 seconds after danger clears
+    private static final int MAX_ESCAPE = 40;
 
     @Override public int priority() { return 90; }
 
     @Override
     public boolean shouldActivate(FakePlayer bot) {
+        if (cooldownTicks > 0) { cooldownTicks--; return false; }
+
         BlockPos pos = bot.blockPosition();
         var level = bot.level();
         BlockState feet = level.getBlockState(pos);
         BlockState below = level.getBlockState(pos.below());
 
-        // Lava at feet or below
+        // Lava at feet or below — always activate
         if (feet.getBlock() == Blocks.LAVA || feet.getFluidState().isSource()) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
         }
         if (below.getBlock() == Blocks.LAVA) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
         }
-
-        // Lava nearby (3 block radius)
         if (DangerZone.isLavaNearby(bot, 3)) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
         }
 
         // On fire
         if (bot.isOnFire() && !bot.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
         }
 
-        // Drowning (air < 5 bubbles)
+        // Drowning
         if (bot.isInWater() && bot.getAirSupply() < 60) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
         }
-
-        // Deep water (avoid drowning risk before it happens)
         if (DangerZone.isDeepWater(bot) && bot.getAirSupply() < 150) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            lastDangerPos = pos; active = true; escapeTicks = 0; return true;
         }
 
-        // Cliff ahead
+        // Cliff ahead — only if position changed (not same cliff as before)
         if (bot.onGround() && DangerZone.isCliffAhead(bot)) {
-            dangerPos = pos; active = true; escapeTicks = 0; return true;
+            if (pos.equals(lastDangerPos)) return false; // already tried, don't loop
+            lastDangerPos = pos;
+            active = true; escapeTicks = 0;
+            return true;
         }
 
         return false;
@@ -96,20 +100,26 @@ public class DangerChain extends BehaviorChain {
             bot.move(MoverType.SELF, move);
         }
 
-        // Stop after 40 ticks (2 seconds) or when safe
+        // Stop after max escape ticks or when safe (lava/fire/drowning only; cliff stays active for full duration)
         BlockState feet = level.getBlockState(bot.blockPosition());
-        boolean safe = feet.getBlock() != Blocks.LAVA
+        boolean urgentSafe = feet.getBlock() != Blocks.LAVA
                 && !bot.isOnFire()
                 && bot.getAirSupply() >= 60
-                && !DangerZone.isLavaNearby(bot, 1)
-                && !DangerZone.isCliffAhead(bot);
-        if (safe || escapeTicks > 40) {
+                && !DangerZone.isLavaNearby(bot, 1);
+        boolean cliffSafe = !DangerZone.isCliffAhead(bot);
+        boolean forcedStop = escapeTicks > MAX_ESCAPE;
+
+        if ((urgentSafe && cliffSafe) || forcedStop) {
             active = false;
+            cooldownTicks = COOLDOWN;
             bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);
         }
     }
 
     @Override public boolean isActive() { return active; }
-    @Override public void stop() { active = false; escapeTicks = 0; }
+    @Override public void stop() {
+        active = false; escapeTicks = 0;
+        cooldownTicks = COOLDOWN;
+    }
     @Override public String name() { return "Danger"; }
 }

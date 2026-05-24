@@ -21,6 +21,11 @@ public class UnstuckChain extends BehaviorChain {
 
     @Override
     public boolean shouldActivate(FakePlayer bot) {
+        // Don't detect stuck when bot is idle (no task, not navigating)
+        if (bot.getCurrentTask() == null && !bot.getMovementController().isNavigating()) {
+            detector.reset();
+            return false;
+        }
         currentStrategy = detector.tick(bot);
         if (currentStrategy != UnstuckDetector.RecoveryStrategy.NONE) {
             active = true;
