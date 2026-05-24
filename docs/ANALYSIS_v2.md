@@ -94,7 +94,7 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 
 | # | 问题 | 建议 |
 |---|------|------|
-| 10 | PlanCache Jaccard 误匹配 | TF-IDF 或嵌入相似度替代 |
+| 10 | ✅ PlanCache Jaccard 误匹配 | TF-IDF 加权 + 中文字符支持 + N-gram 奖励 |
 | 11 | PlanCache 无 TTL | 加 expireAfterDays |
 | 12 | PlaceBlockAction `level.setBlock()` 直写 | 改用 `gameMode.useItemOn()` 模拟真实放置 |
 | 13 | UnstuckDetector PILLAR 跳过砂/砾石但漏混凝土粉 | 检查 `falling` tag |
