@@ -1,9 +1,11 @@
 package com.aimod.ai.pathing;
 
 import com.aimod.ai.movement.BotMovement;
+import com.aimod.ai.pathing.CalculationContext;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 
 import java.util.*;
 
@@ -13,7 +15,7 @@ import java.util.*;
  * 
  * Tracks progress along the path using each movement's valid positions
  * for accurate arrival detection. Also supports path splicing (joining
- * with a next-path segment).
+ * with a next-path segment) and runtime revalidation.
  */
 public class PathExecutor {
     
@@ -30,6 +32,8 @@ public class PathExecutor {
     private boolean failed;
     /** Next path for splicing (incremental pathfinding). */
     private PathExecutor nextPath;
+    /** Ticks between path revalidation checks (0 = disabled). */
+    private int revalidateTick = 0;
     
     public PathExecutor(List<BlockPos> path) {
         this.path = path;
@@ -197,6 +201,88 @@ public class PathExecutor {
         
         return this; // Cannot splice yet — continue with current path
     }
+
+    // ---- Runtime path revalidation ----
+
+    /**
+     * Periodically verify the upcoming path segments are still traversable.
+     * Call this from MovementController.tick() every ~20 ticks.
+     *
+     * @return true if the path is still valid, false if world changes invalidated it
+     */
+    public boolean revalidateRemainingPath(ServerLevel level, FakePlayer bot) {
+        if (completed || failed) return false;
+        revalidateTick++;
+
+        // Check every 20 ticks (~1 second)
+        if (revalidateTick % 20 != 0) return !failed;
+
+        // Validate upcoming 3 movements
+        int end = Math.min(currentIndex + 3, path.size());
+        for (int i = currentIndex; i < end - 1; i++) {
+            BlockPos src = path.get(i);
+            BlockPos dest = path.get(i + 1);
+
+            // Quick check: dest block is not unexpectedly obstructed
+            if (!isFootPrintable(level, dest)) {
+                DevLog.warn("PATH_INVALID", "dest {} obstructed or missing support",
+                        dest.toShortString());
+                failed = true;
+                return false;
+            }
+
+            // Check no new wall between src and dest
+            if (isBlockedDirectPath(level, src, dest)) {
+                DevLog.warn("PATH_INVALID", "segment {} → {} blocked",
+                        src.toShortString(), dest.toShortString());
+                failed = true;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Quick check: a position is "foot-printable" if its block is replaceable/air
+     * and the block below is solid (standing or head-in-block is bad).
+     */
+    private static boolean isFootPrintable(ServerLevel level, BlockPos pos) {
+        // The foot-level block must be passable
+        if (!level.getBlockState(pos).isAir() && !level.getBlockState(pos).canBeReplaced()) {
+            return false;
+        }
+        // The block below must exist (not void) — support check is best-effort
+        BlockPos below = pos.below();
+        if (below.getY() < level.getMinBuildHeight()) return false;
+        return true;
+    }
+
+    /**
+     * Quick check: is there a solid block between src and dest that blocks movement?
+     */
+    private static boolean isBlockedDirectPath(ServerLevel level, BlockPos src, BlockPos dest) {
+        int dx = dest.getX() - src.getX();
+        int dz = dest.getZ() - src.getZ();
+        if (dx == 0 && dz == 0) return false;
+
+        // Check head-level blocks along the segment
+        int steps = Math.max(Math.abs(dx), Math.abs(dz));
+        for (int s = 1; s <= steps; s++) {
+            double t = (double) s / steps;
+            BlockPos mid = new BlockPos(
+                    (int) Math.round(src.getX() + t * dx),
+                    src.getY() + 1,
+                    (int) Math.round(src.getZ() + t * dz)
+            );
+            if (!level.getBlockState(mid).isAir() && !level.getBlockState(mid).canBeReplaced()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void setInvalidated() { this.failed = true; }
 
     public boolean isCompleted() { return completed; }
     public boolean isFailed() { return failed; }

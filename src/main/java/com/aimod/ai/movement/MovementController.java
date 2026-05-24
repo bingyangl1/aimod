@@ -156,6 +156,22 @@ public class MovementController {
 
         // Follow computed path using BotMovement types
         if (pathExecutor != null && !pathExecutor.isCompleted() && !pathExecutor.isFailed()) {
+            // Runtime revalidation (every 20 ticks)
+            if (bot.level() instanceof ServerLevel serverLevel) {
+                if (!pathExecutor.revalidateRemainingPath(serverLevel, bot)) {
+                    DevLog.warn("NAV_PATH_INVALIDATED", "recalculating...");
+                    pathExecutor = null;
+                    // Request new path
+                    if (navTarget != null) {
+                        BlockPos botPos = bot.blockPosition();
+                        CalculationContext ctx = new CalculationContext(serverLevel, bot);
+                        ctx.preloadRegion(botPos, 20);
+                        asyncPathfinder.requestPath(ctx, botPos, navTarget, this::onPathComputed);
+                    }
+                    return;
+                }
+            }
+
             // Try splicing if we have a next path
             if (nextPathExecutor != null) {
                 PathExecutor spliced = pathExecutor.trySplice(bot);
