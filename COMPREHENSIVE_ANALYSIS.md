@@ -1273,6 +1273,16 @@ Week 5-6: 可选高级功能
 
 | 版本 | 日期 | 关键变更 |
 |------|------|---------|
+| r39 | 2026-05-24 | VeinScanner BFS 连锁采集 + UndoManager 撤销 + /ai_bot vein/undo/test |
+| r38 | 2026-05-24 | 移除 GRAVEL 从垫脚方块列表 |
+| r37 | 2026-05-24 | 垫脚方块优先级: 泥土>圆石>砂土>石头>木板>原木, spawn 采集泥土+圆石 |
+| r36 | 2026-05-24 | /ai_bot showpath [name] 紫色粒子路径可视化 |
+| r35 | 2026-05-24 | spawn 自动采集16个原木作为垫脚材料 |
+| r34 | 2026-05-24 | STEP_HEIGHT=1.0 bot 自动上一格台阶, pillar-up 头顶原木 |
+| r33 | 2026-05-24 | GatherResourceAction 头顶原木自动垫方块 |
+| r32 | 2026-05-24 | 增量规划重试上限, 背包上下文, action/type key 兼容, refmap |
+| r31 | 2026-05-24 | GameTest 结构模板路径修复 |
+| r30 | 2026-05-24 | 18 GameTest 方法 + FindItemResult 单元测试 |
 | r29 | 2026-05-24 | i18n /ai_bot help 命令列表 + /ai_bot help <cmd> 详细示例 (中英文) |
 | r28 | 2026-05-24 | 27 条命令完整帮助文本 + 示例 |
 | r27 | 2026-05-24 | pause/resume/cancel [name], toggle 命令, status 显示 chain+state |
