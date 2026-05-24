@@ -263,19 +263,16 @@ public class FakePlayer extends ServerPlayer {
     }
 
     /**
-     * Override travel to prevent vanilla movement when AI is active.
-     * When AI controls the bot, only gravity is applied here;
-     * actual movement is handled by MovementController.
+     * Override travel to let MovementController handle movement.
+     * Preserves X/Z velocity set by the controller, only applying gravity.
      */
     @Override
     public void travel(net.minecraft.world.phys.Vec3 travelVector) {
         if (currentTask != null && !currentTask.isCompleted() && !paused) {
-            if (!onGround()) {
-                double gravY = getDeltaMovement().y - 0.08;
-                setDeltaMovement(0, gravY * 0.98, 0);
-            } else {
-                setDeltaMovement(0, 0, 0);
-            }
+            // Preserve horizontal movement from the controller, apply gravity
+            double gravY = !onGround() ? (getDeltaMovement().y - 0.08) * 0.98 : getDeltaMovement().y;
+            if (gravY < 0 && onGround()) gravY = 0;
+            setDeltaMovement(getDeltaMovement().x, gravY, getDeltaMovement().z);
             move(MoverType.SELF, getDeltaMovement());
             return;
         }

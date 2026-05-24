@@ -24,6 +24,7 @@ import com.google.gson.JsonParser;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -39,6 +40,7 @@ public class BotAIManager {
     private final TaskFeedback feedback;
     private final WorldScanner worldScanner;
     private final com.aimod.ai.llm.BotAIStateMachine stateMachine;
+    private final com.aimod.ai.llm.PlanCache planCache;
     private volatile String lastOwnerName = null;
     private volatile String lastCommand = null;
     private volatile boolean replanning = false;
@@ -49,6 +51,8 @@ public class BotAIManager {
         this.feedback = new TaskFeedback(bot);
         this.worldScanner = new WorldScanner(bot);
         this.stateMachine = new com.aimod.ai.llm.BotAIStateMachine();
+        this.planCache = new com.aimod.ai.llm.PlanCache(
+                bot.getServer() != null ? bot.getServer().getServerDirectory() : Path.of("."));
     }
 
     public com.aimod.ai.llm.BotAIStateMachine getStateMachine() { return stateMachine; }
@@ -77,7 +81,20 @@ public class BotAIManager {
         DevLog.info("TASK_PARSE_START", "bot={}, owner={}, command={}",
                 bot.getStringUUID(), ownerName, DevLog.compact(naturalLanguageCommand));
         try {
-            // 收集世界上下文
+            // Check plan cache first (skip LLM for similar past commands)
+            var cachedActions = planCache.find(naturalLanguageCommand);
+            if (cachedActions.isPresent()) {
+                Task task = new Task(naturalLanguageCommand);
+                List<Action> actions = convertCachedToActions(cachedActions.get(), ownerName);
+                if (!actions.isEmpty()) {
+                    task.setActions(actions);
+                    task.setStatus(Task.TaskStatus.IN_PROGRESS);
+                    DevLog.info("TASK_PARSE_DONE", "source=cache, actionCount={}", actions.size());
+                    return task;
+                }
+            }
+
+            // Collect world context and call LLM
             String worldContext = collectWorldContext();
             DevLog.info("TASK_CONTEXT", "worldContext={}", DevLog.compact(worldContext));
 
@@ -96,6 +113,8 @@ public class BotAIManager {
                 }
                 task.setActions(actions);
                 task.setStatus(Task.TaskStatus.IN_PROGRESS);
+                // Cache successful LLM plans for future reuse
+                planCache.store(naturalLanguageCommand, response.getActions(), true);
                 DevLog.info("TASK_PARSE_DONE", "source=llm, actionCount={}, actions={}",
                         actions.size(), describeActions(actions));
                 return task;
@@ -633,6 +652,65 @@ public class BotAIManager {
             return object.get(key).getAsString();
         }
         return fallback;
+    }
+
+    /** Convert cached action JSON strings to Action objects. */
+    private List<Action> convertCachedToActions(List<String> actionJsons, String ownerName) {
+        List<Action> actions = new ArrayList<>();
+        for (String json : actionJsons) {
+            try {
+                var obj = JsonParser.parseString(json).getAsJsonObject();
+                String type = getString(obj, "type", getString(obj, "action", ""));
+                switch (type) {
+                    case "say":
+                        actions.add(new SayAction(getString(obj, "message", "")));
+                        break;
+                    case "gather":
+                        String res = getString(obj, "resource_type", "WOOD");
+                        try { actions.add(new GatherResourceAction(GatherResourceAction.ResourceType.valueOf(res.toUpperCase(Locale.ROOT)), getInt(obj, "count", 8))); }
+                        catch (IllegalArgumentException ignored) {}
+                        break;
+                    case "mine":
+                        actions.add(new MineBlockAction(getString(obj, "block_id", "stone"), getInt(obj, "count", 1)));
+                        break;
+                    case "craft":
+                        String itemId = getString(obj, "item_id", getString(obj, "item", ""));
+                        actions.add(new CraftAction(itemId, getInt(obj, "count", 1)));
+                        break;
+                    case "interact":
+                        try { actions.add(new InteractBlockAction(InteractBlockAction.InteractType.valueOf(getString(obj, "interact_type", "CRAFTING_TABLE").toUpperCase(Locale.ROOT)))); }
+                        catch (IllegalArgumentException ignored) {}
+                        break;
+                    case "equip":
+                        actions.add(new EquipItemAction(getString(obj, "item_id", ""), null));
+                        break;
+                    case "give_item":
+                        actions.add(new GiveItemAction(getString(obj, "item_id", ""), getInt(obj, "count", 1), getString(obj, "player", ownerName)));
+                        break;
+                    case "follow":
+                        actions.add(new FollowAction(getString(obj, "player", "")));
+                        break;
+                    case "move_to":
+                        actions.add(new MoveToAction(new net.minecraft.core.BlockPos(getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)), getDouble(obj, "speed", 1.0)));
+                        break;
+                    case "place_block":
+                        String blockId = getString(obj, "block_id", getString(obj, "block", ""));
+                        var bi = getBlockItemFromString(blockId);
+                        if (bi != null) actions.add(new PlaceBlockAction(new net.minecraft.core.BlockPos(getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)), bi));
+                        break;
+                    case "break_block":
+                        actions.add(new BreakBlockAction(new net.minecraft.core.BlockPos(getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0))));
+                        break;
+                    case "attack":
+                        actions.add(new AttackAction(getString(obj, "target", "")));
+                        break;
+                    case "wait":
+                        actions.add(new WaitAction(getInt(obj, "ticks", 20)));
+                        break;
+                }
+            } catch (Exception e) { DevLog.warn("CACHE_ACTION_PARSE_FAIL", "json={}", DevLog.compact(json)); }
+        }
+        return actions;
     }
 
     private String describeActions(List<Action> actions) {
