@@ -24,7 +24,7 @@
 | 有效位置 | ✅ `calculateValidPositions()` 精确落脚点 | `calculateValidPositions()` 精确落脚点 |
 | 增量寻路 | ✅ `nextPath` + `planningTickLookahead` | 当前路径快结束时自动触发下一段 |
 | 路径拼接 | ✅ `trySplice()` + `snipsnapifpossible()` | `trySplice()` + `snipsnapifpossible()` |
-| 疾跑优化 | 始终步行 | 平地/下坡智能疾跑 |
+| 疾跑优化 | ✅ 平地/下坡智能疾跑 | 平地/下坡智能疾跑 |
 | 运行时成本验证 | 无 | 执行中重算，世界变化取消 |
 | MovementHelper | 布尔值 | 三值逻辑 YES/MAYBE/NO |
 
@@ -87,7 +87,7 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 | 5 | ✅ 无有效位置 | `calculateValidPositions()` 精确落脚点 |
 | 6 | ✅ 无增量寻路 | `nextPath` + `planningTickLookahead` |
 | 7 | ✅ 无路径拼接 | `trySplice()` + `snipsnapifpossible()` |
-| 8 | 无疾跑 | 平地/下坡智能疾跑 |
+| 8 | ✅ 无疾跑 | 平地/下坡智能疾跑 |
 | 9 | 无运行时成本验证 | 执行中重算, 世界变化取消 |
 
 ### P2 — 新增功能改进

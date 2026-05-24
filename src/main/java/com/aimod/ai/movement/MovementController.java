@@ -140,6 +140,9 @@ public class MovementController {
             }
         }
 
+        // Smart sprint logic
+        updateSprinting();
+
         UnstuckDetector.RecoveryStrategy recovery = unstuckDetector.tick(bot);
         if (recovery != UnstuckDetector.RecoveryStrategy.NONE) {
             if (recovery == UnstuckDetector.RecoveryStrategy.SKIP) {
@@ -236,6 +239,80 @@ public class MovementController {
                 DevLog.info("NAV_NEXT_PATH_READY", "length={}", result.getLength());
             }
         });
+    }
+
+    /**
+     * Decide whether the bot should sprint this tick.
+     * Conditions: on ground, has forward motion, food > 6, headroom clear,
+     * path ahead is flat or descending, not in water.
+     */
+    private void updateSprinting() {
+        if (!navigating) {
+            bot.setSprinting(false);
+            return;
+        }
+
+        // Must be on ground with forward velocity
+        Vec3 vel = bot.getDeltaMovement();
+        if (!bot.onGround() || (Math.abs(vel.x) < 0.01 && Math.abs(vel.z) < 0.01)) {
+            bot.setSprinting(false);
+            return;
+        }
+
+        // Sufficient food
+        if (bot.getFoodData() != null && bot.getFoodData().getFoodLevel() <= 6) {
+            bot.setSprinting(false);
+            return;
+        }
+
+        // Not in water
+        if (bot.isInWater() || bot.isInLava()) {
+            bot.setSprinting(false);
+            return;
+        }
+
+        // Headroom check: look ahead in movement direction
+        if (bot.level() instanceof ServerLevel level) {
+            BlockPos feet = bot.blockPosition();
+            // Check blocks at head level in movement direction
+            int dx = vel.x > 0.05 ? 1 : vel.x < -0.05 ? -1 : 0;
+            int dz = vel.z > 0.05 ? 1 : vel.z < -0.05 ? -1 : 0;
+            if (dx != 0 || dz != 0) {
+                for (int i = 1; i <= 3; i++) {
+                    BlockPos headLevel = feet.offset(dx * i, 1, dz * i);
+                    if (!level.getBlockState(headLevel).isAir() &&
+                            !level.getBlockState(headLevel).canBeReplaced()) {
+                        bot.setSprinting(false);
+                        return;
+                    }
+                    BlockPos headLevel2 = feet.offset(dx * i, 2, dz * i);
+                    if (!level.getBlockState(headLevel2).isAir() &&
+                            !level.getBlockState(headLevel2).canBeReplaced()) {
+                        bot.setSprinting(false);
+                        return;
+                    }
+                }
+            }
+
+            // Path lookahead: check flat/descending terrain
+            if (pathExecutor != null && !pathExecutor.isCompleted()) {
+                List<BlockPos> path = pathExecutor.getPath();
+                int idx = pathExecutor.getCurrentIndex();
+                boolean allFlatOrDesc = true;
+                for (int i = idx + 1; i < Math.min(idx + 4, path.size()); i++) {
+                    if (i > 0 && path.get(i).getY() > path.get(i - 1).getY() + 1) {
+                        allFlatOrDesc = false;
+                        break;
+                    }
+                }
+                if (!allFlatOrDesc) {
+                    bot.setSprinting(false);
+                    return;
+                }
+            }
+        }
+
+        bot.setSprinting(true);
     }
 
     private void onPathComputed(PathResult result) {
