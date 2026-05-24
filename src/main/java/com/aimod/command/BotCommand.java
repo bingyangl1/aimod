@@ -121,6 +121,9 @@ public class BotCommand {
                 .then(Commands.literal("delete")
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(BotCommand::deleteBot)))
+                // --- Inventory command ---
+                .then(Commands.literal("inventory")
+                        .executes(BotCommand::openInventory))
                 // --- Help command ---
                 .then(Commands.literal("help")
                         .executes(BotCommand::showHelp))
@@ -536,6 +539,21 @@ public class BotCommand {
             source.sendFailure(Component.translatable("commands.ai_bot.delete_failed", name));
         }
         return deleted ? 1 : 0;
+    }
+
+    // ========== Inventory command ==========
+
+    private static int openInventory(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        if (source.getEntity() instanceof Player player && player instanceof ServerPlayer sp) {
+            FakePlayer bot = findOrSpawnBot(source, player);
+            if (bot != null) {
+                com.aimod.client.BotStatusScreen.open(sp, bot);
+                source.sendSuccess(() -> Component.translatable("commands.ai_bot.inventory.opened", bot.getName().getString()), true);
+                return 1;
+            }
+        }
+        return 0;
     }
 
     // ========== Help command ==========
