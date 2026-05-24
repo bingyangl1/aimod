@@ -318,29 +318,51 @@ public class BotAIManager {
      */
     /**
      * Incremental replan: ask LLM for next action after a failure.
+     * Includes inventory context and limits retries to prevent infinite loops.
      */
+    private int incrReplanCount = 0;
+    private static final int MAX_INCR_REPLAN = 5;
+
     private void incrementalReplan(Task task, String failedActionDesc) {
         if (replanning) return;
+        if (incrReplanCount >= MAX_INCR_REPLAN) {
+            task.setStatus(Task.TaskStatus.FAILED);
+            feedback.reportTaskFailed(task.getDescription(), "Exceeded retry limit after " + incrReplanCount + " failures");
+            incrReplanCount = 0;
+            return;
+        }
+        incrReplanCount++;
         replanning = true;
-        String ctx = "Task: " + task.getDescription() + ". Failed: " + failedActionDesc
-            + ". Done: " + task.getCurrentActionIndex() + "/" + task.getActionCount()
-            + ". Pos: " + bot.blockPosition().toShortString()
-            + ". Give ONE next action JSON.";
+
+        // Build rich context with inventory
+        StringBuilder invCtx = new StringBuilder();
+        for (int i = 0; i < bot.getInventory().getContainerSize(); i++) {
+            var stack = bot.getInventory().getItem(i);
+            if (!stack.isEmpty()) invCtx.append(stack.getCount()).append("x ")
+                .append(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem())).append(" ");
+        }
+        String ctx = "Task: " + task.getDescription() + ". Failed action[" + task.getCurrentActionIndex()
+            + "/" + task.getActionCount() + "]: " + failedActionDesc
+            + ". Position: " + bot.blockPosition().toShortString()
+            + ". Inventory: " + (invCtx.isEmpty() ? "empty" : invCtx.toString())
+            + ". Respond ONLY with a valid JSON action like {\"type\":\"gather\",\"resource_type\":\"WOOD\",\"count\":1}.";
+
         Thread t = new Thread(() -> {
             try {
-                LLMResponse resp = llmService.sendPrompt(
-                    "Replan after failure. " + ctx);
+                LLMResponse resp = llmService.sendPrompt(ctx);
                 if (resp.isSuccess()) {
                     var acts = convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
                         task.injectAction(acts.get(0));
+                        incrReplanCount = 0; // reset on success
                         DevLog.info("REPLAN_INCR", "injected={}", acts.get(0).getDescription());
                         stateMachine.startExecuting();
                     }
                 }
+                // If no actions found, will retry next tick (up to MAX_INCR_REPLAN)
             } catch (Exception e) {
                 task.setStatus(Task.TaskStatus.FAILED);
-                feedback.reportTaskFailed(task.getDescription(), "Replan failed");
+                feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
             } finally { replanning = false; }
         }, "AIMod-Incr-" + bot.getStringUUID().substring(0, 8));
         t.setDaemon(true); t.start();
@@ -362,6 +384,11 @@ public class BotAIManager {
             try {
                 JsonObject actionObj = JsonParser.parseString(actionJson).getAsJsonObject();
                 String type = getString(actionObj, "type", "");
+                if (type.isEmpty()) type = getString(actionObj, "action", ""); // LLM sometimes uses "action" key
+                // Normalize item key: LLM may use "item" instead of "item_id"
+                if (actionObj.has("item") && !actionObj.has("item_id")) {
+                    actionObj.addProperty("item_id", getString(actionObj, "item", ""));
+                }
                 switch (type) {
                     case "move_to":
                         int x = getInt(actionObj, "x", 0);
