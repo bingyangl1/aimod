@@ -1,9 +1,16 @@
 package com.aimod.ai.cache;
 
+import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Cached block state data for a single 16x16 chunk.
@@ -137,5 +144,51 @@ public class CachedChunkData {
             }
         }
         return count;
+    }
+
+    // ---- Serialization ----
+
+    private static final int CACHE_VERSION = 1;
+
+    /**
+     * Save this chunk as a GZIP-compressed file.
+     * Format: version(int), minY(int), blocks(int[]), pathingTypes(byte[]).
+     */
+    public void save(Path file) throws IOException {
+        try (var dos = new DataOutputStream(new GZIPOutputStream(new BufferedOutputStream(
+                Files.newOutputStream(file))))) {
+            dos.writeInt(CACHE_VERSION);
+            dos.writeInt(minY);
+            for (int id : blocks) dos.writeInt(id);
+            dos.write(pathingTypes);
+        }
+    }
+
+    /**
+     * Load a chunk from a GZIP-compressed file.
+     * Returns null if the file is invalid or incompatible version.
+     */
+    public static CachedChunkData load(Path file, int chunkX, int chunkZ) {
+        if (!Files.exists(file)) return null;
+        try (var dis = new DataInputStream(new GZIPInputStream(new BufferedInputStream(
+                Files.newInputStream(file))))) {
+            int version = dis.readInt();
+            if (version != CACHE_VERSION) {
+                DevLog.warn("CACHE_LOAD_VERSION", "file={}, version={}, expected={}", file, version, CACHE_VERSION);
+                return null;
+            }
+            int minY = dis.readInt();
+            var data = new CachedChunkData(chunkX, chunkZ, minY);
+            for (int i = 0; i < BLOCKS_PER_CHUNK; i++) data.blocks[i] = dis.readInt();
+            int read = dis.read(data.pathingTypes);
+            if (read != TYPES_SIZE) {
+                DevLog.warn("CACHE_LOAD_TRUNCATED", "file={}, read={}, expected={}", file, read, TYPES_SIZE);
+                return null;
+            }
+            return data;
+        } catch (Exception e) {
+            DevLog.warn("CACHE_LOAD_FAIL", "file={}, err={}", file, e.getMessage());
+            return null;
+        }
     }
 }

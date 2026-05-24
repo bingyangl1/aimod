@@ -4,11 +4,18 @@ import com.aimod.util.DevLog;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.phys.Vec3;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -17,18 +24,26 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Thread-safe chunk cache for fast block state lookups.
  * Packing is asynchronous via a background thread.
  *
- * <p>Simplified from Baritone's CachedWorld — stores full BlockState
- * without 2-bit encoding, omits overview/special-blocks maps.</p>
+ * <p>Uses flat int[] storage for block state IDs (~393KB/chunk)
+ * plus a 2-bit pathing-type overlay (~24KB/chunk) inspired by
+ * Baritone's CachedWorld.</p>
+ *
+ * <p>Supports GZIP-compressed disk persistence for warm-start
+ * across server restarts. Files stored in
+ * {@code config/aimod/cache/&lt;dimension&gt;/chunk_X_Z.bcr}.</p>
  */
 public class ChunkCache {
 
     private static final int MAX_CHUNKS = 2048;
     private static final int PRUNE_TARGET = MAX_CHUNKS * 3 / 4; // 1536
+    /** How many nearest chunks to save at shutdown. */
+    private static final int SAVE_KEEP = 512;
 
     private final Long2ObjectMap<CachedChunkData> chunks = new Long2ObjectOpenHashMap<>();
     private final LinkedBlockingQueue<LevelChunk> packQueue = new LinkedBlockingQueue<>(256);
     private final Thread packerThread;
     private final ServerLevel level;
+    private final Path cacheDir;
     private volatile boolean running = true;
 
     // Spatial-locality cache: last-hit chunk
@@ -37,6 +52,15 @@ public class ChunkCache {
 
     public ChunkCache(ServerLevel level) {
         this.level = level;
+        // Derive cache directory from dimension
+        ResourceLocation dimId = level.dimension().location();
+        this.cacheDir = Path.of("config/aimod/cache", dimId.getNamespace(), dimId.getPath());
+        try {
+            Files.createDirectories(cacheDir);
+        } catch (IOException e) {
+            DevLog.warn("CACHE_DIR_FAIL", "dir={}, err={}", cacheDir, e.getMessage());
+        }
+        loadAll();
         this.packerThread = new Thread(this::packerLoop, "AIMod-ChunkPacker");
         this.packerThread.setDaemon(true);
         this.packerThread.setPriority(Thread.MIN_PRIORITY);
@@ -168,6 +192,71 @@ public class ChunkCache {
     public void shutdown() {
         running = false;
         packerThread.interrupt();
+        saveNearby();
+    }
+
+    // ---- Persistence ----
+
+    /**
+     * Load all cached chunk files from disk at startup.
+     */
+    private void loadAll() {
+        if (!Files.isDirectory(cacheDir)) return;
+        try (var files = Files.list(cacheDir)) {
+            files.filter(f -> f.toString().endsWith(".bcr")).forEach(f -> {
+                String name = f.getFileName().toString();
+                try {
+                    // Parse "chunk_X_Z.bcr"
+                    String stem = name.substring(0, name.length() - 4); // remove .bcr
+                    String[] parts = stem.split("_");
+                    if (parts.length < 3) return;
+                    int cx = Integer.parseInt(parts[1]);
+                    int cz = Integer.parseInt(parts[2]);
+                    CachedChunkData data = CachedChunkData.load(f, cx, cz);
+                    if (data != null) {
+                        synchronized (chunks) {
+                            chunks.put(CachedChunkData.key(cx, cz), data);
+                        }
+                    }
+                } catch (Exception e) {
+                    DevLog.warn("CACHE_LOAD_SKIP", "file={}", name);
+                }
+            });
+        } catch (IOException e) {
+            DevLog.warn("CACHE_LOAD_DIR_FAIL", "dir={}", cacheDir);
+        }
+        DevLog.info("CACHE_LOADED", "chunks={}, dir={}", chunks.size(), cacheDir);
+    }
+
+    /**
+     * Save the nearest SAVE_KEEP chunks to disk at shutdown.
+     */
+    private void saveNearby() {
+        synchronized (chunks) {
+            if (chunks.isEmpty()) return;
+            // Sort by distance from origin (0,0)
+            var entries = new ArrayList<>(chunks.long2ObjectEntrySet());
+            entries.sort(Comparator.comparingDouble(e -> {
+                int cx = CachedChunkData.chunkKeyToX(e.getLongKey());
+                int cz = CachedChunkData.chunkKeyToZ(e.getLongKey());
+                return Math.sqrt((double) cx * cx + (double) cz * cz);
+            }));
+            int saved = 0, failed = 0;
+            int limit = Math.min(SAVE_KEEP, entries.size());
+            for (int i = 0; i < limit; i++) {
+                var entry = entries.get(i);
+                int cx = CachedChunkData.chunkKeyToX(entry.getLongKey());
+                int cz = CachedChunkData.chunkKeyToZ(entry.getLongKey());
+                Path file = cacheDir.resolve(String.format("chunk_%d_%d.bcr", cx, cz));
+                try {
+                    entry.getValue().save(file);
+                    saved++;
+                } catch (Exception e) {
+                    failed++;
+                }
+            }
+            DevLog.info("CACHE_SAVED", "saved={}, failed={}, dir={}", saved, failed, cacheDir);
+        }
     }
 
     // ---- Internal ----
