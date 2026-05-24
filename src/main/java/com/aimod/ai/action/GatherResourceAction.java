@@ -167,9 +167,14 @@ public class GatherResourceAction extends Action {
         if (distSqr <= 25.0) {
             BlockPos standPos = findAdjacentStandPos(bot);
             if (standPos != null) {
-                navigateTo(bot, standPos, 1.0);
+                double distToStand = bot.distanceToSqr(
+                        standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5);
+                // Only navigate if not already at the stand position
+                if (distToStand > 1.0) {
+                    navigateTo(bot, standPos, 1.0);
+                    DevLog.info("GATHER_MOVE_ADJACENT", "stand={}", standPos.toShortString());
+                }
                 moved = true;
-                DevLog.info("GATHER_MOVE_ADJACENT", "stand={}", standPos.toShortString());
             }
         }
 
@@ -584,6 +589,8 @@ public class GatherResourceAction extends Action {
         breakProgress = 0;
     }
 
+    private static final int SHORT_CIRCUIT_THRESHOLD = 10; // Stop scanning after finding enough candidates
+
     private BlockPos findResource(FakePlayer bot) {
         WorldScanner scanner = new WorldScanner(bot);
         List<BlockPos> candidates = new ArrayList<>();
@@ -591,6 +598,12 @@ public class GatherResourceAction extends Action {
         for (Block block : getBlocksForType()) {
             List<BlockPos> found = scanner.findNearbyBlocks(block, searchRadius);
             candidates.addAll(found);
+            // Short-circuit: if we have enough candidates, stop scanning other block types
+            if (candidates.size() >= SHORT_CIRCUIT_THRESHOLD) {
+                DevLog.info("GATHER_SCAN_SHORTCIRCUIT", "type={}, found={}, skipping remaining block types",
+                        resourceType, candidates.size());
+                break;
+            }
         }
 
         // Filter out previously failed targets

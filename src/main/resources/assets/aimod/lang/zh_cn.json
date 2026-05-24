@@ -59,5 +59,16 @@
   "commands.ai_bot.task_all.assigned": "[AI Bot] 任务已分配给 %d 个假人: %s",
   "commands.ai_bot.task.no_bots": "[AI Bot] 没有可用的假人",
   "commands.ai_bot.task.all_busy": "[AI Bot] 所有假人都在忙",
-  "commands.ai_bot.help.task_all": "/ai_bot task_all <命令> - 将任务分配给所有空闲假人"
+  "commands.ai_bot.help.task_all": "/ai_bot task_all <命令> - 将任务分配给所有空闲假人",
+  "commands.ai_bot.saved": "机器人已保存: %s",
+  "commands.ai_bot.loaded": "机器人已加载: %s",
+  "commands.ai_bot.load_failed": "加载机器人失败: %s",
+  "commands.ai_bot.deleted": "机器人已删除: %s",
+  "commands.ai_bot.delete_failed": "删除机器人失败: %s",
+  "commands.ai_bot.list_empty": "没有已保存的机器人。",
+  "commands.ai_bot.no_bot_nearby": "附近没有找到AI机器人。",
+  "commands.ai_bot.help.save": "/ai_bot save <名称> [描述]    - 保存当前机器人",
+  "commands.ai_bot.help.load": "/ai_bot load <名称>           - 加载已保存机器人",
+  "commands.ai_bot.help.list": "/ai_bot list                  - 列出已保存机器人",
+  "commands.ai_bot.help.delete": "/ai_bot delete <名称>         - 删除已保存机器人"
 }

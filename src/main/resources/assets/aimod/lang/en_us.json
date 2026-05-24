@@ -59,5 +59,16 @@
   "commands.ai_bot.task_all.assigned": "[AI Bot] Task assigned to %d bots: %s",
   "commands.ai_bot.task.no_bots": "[AI Bot] No bots available",
   "commands.ai_bot.task.all_busy": "[AI Bot] All bots are busy",
-  "commands.ai_bot.help.task_all": "/ai_bot task_all <command> - Assign task to all idle bots"
+  "commands.ai_bot.help.task_all": "/ai_bot task_all <command> - Assign task to all idle bots",
+  "commands.ai_bot.saved": "Bot saved: %s",
+  "commands.ai_bot.loaded": "Bot loaded: %s",
+  "commands.ai_bot.load_failed": "Failed to load bot: %s",
+  "commands.ai_bot.deleted": "Bot deleted: %s",
+  "commands.ai_bot.delete_failed": "Failed to delete bot: %s",
+  "commands.ai_bot.list_empty": "No saved bots.",
+  "commands.ai_bot.no_bot_nearby": "No AI Bot found nearby.",
+  "commands.ai_bot.help.save": "/ai_bot save <name> [desc]    - Save current bot",
+  "commands.ai_bot.help.load": "/ai_bot load <name>           - Load a saved bot",
+  "commands.ai_bot.help.list": "/ai_bot list                  - List saved bots",
+  "commands.ai_bot.help.delete": "/ai_bot delete <name>         - Delete a saved bot"
 }

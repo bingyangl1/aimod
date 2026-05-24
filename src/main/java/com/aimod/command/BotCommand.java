@@ -239,16 +239,18 @@ public class BotCommand {
             if (bot != null) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(Component.translatable("commands.ai_bot.status.bot_name", bot.getName().getString()).getString()).append("\n");
-                sb.append(Component.translatable("commands.ai_bot.status.task").getString()).append(" ");
+                String taskText;
                 if (bot.getCurrentTask() != null) {
                     Task t = bot.getCurrentTask();
-                    sb.append(t.getDescription()).append(" (").append(t.getStatus())
-                            .append(", action ").append(t.getCurrentActionIndex())
-                            .append("/").append(t.getActionCount()).append(")");
+                    taskText = t.getDescription() + " (" + t.getStatus()
+                            + ", action " + t.getCurrentActionIndex()
+                            + "/" + t.getActionCount() + ")";
                 } else {
-                    sb.append(Component.translatable("commands.ai_bot.status.no_task").getString());
+                    taskText = Component.translatable("commands.ai_bot.status.no_task").getString();
                 }
-                sb.append("\n").append(Component.translatable("commands.ai_bot.status.paused").getString()).append(" ").append(bot.isPaused() ? Component.translatable("commands.ai_bot.status.yes").getString() : Component.translatable("commands.ai_bot.status.no").getString());
+                sb.append(Component.translatable("commands.ai_bot.status.task", taskText).getString());
+                String pausedText = bot.isPaused() ? Component.translatable("commands.ai_bot.status.yes").getString() : Component.translatable("commands.ai_bot.status.no").getString();
+                sb.append("\n").append(Component.translatable("commands.ai_bot.status.paused", pausedText).getString());
                 sb.append("\n").append(Component.translatable("commands.ai_bot.status.active_bots", manager.getActiveCount()).getString());
                 final String status = sb.toString();
                 DevLog.info("CMD_STATUS", "player={}, bot={}, status={}", player.getName().getString(), bot.getStringUUID(), status);

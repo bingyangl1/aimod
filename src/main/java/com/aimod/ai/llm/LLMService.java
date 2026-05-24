@@ -194,9 +194,11 @@ public class LLMService {
         DevLog.info("LLM_HEALTH_START", "url={}, model={}, maxTokens={}, timeoutMs={}",
                 apiUrl, model, HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
         try {
+            long healthStartMs = System.currentTimeMillis();
             callLLMApiDirect("ping", HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
+            long healthElapsedMs = System.currentTimeMillis() - healthStartMs;
             HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, true));
-            DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", now - cached.checkedAtMs);
+            DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", healthElapsedMs);
             return true;
         } catch (Exception e) {
             HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, false));
