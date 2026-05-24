@@ -353,10 +353,18 @@ public class BotAIManager {
                 if (resp.isSuccess()) {
                     var acts = convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
-                        task.injectAction(acts.get(0));
-                        incrReplanCount = 0; // reset on success
-                        DevLog.info("REPLAN_INCR", "injected={}", acts.get(0).getDescription());
-                        stateMachine.startExecuting();
+                        var next = acts.get(0);
+                        // Skip duplicate: if same description as what just failed, advance instead
+                        if (next.getDescription().equals(failedActionDesc)) {
+                            task.advanceToNextAction();
+                            incrReplanCount = 0;
+                            stateMachine.startExecuting();
+                        } else {
+                            task.injectAction(next);
+                            incrReplanCount = 0;
+                            DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
+                            stateMachine.startExecuting();
+                        }
                     }
                 }
                 // If no actions found, will retry next tick (up to MAX_INCR_REPLAN)

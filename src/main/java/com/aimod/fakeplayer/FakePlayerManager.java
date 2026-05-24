@@ -59,8 +59,8 @@ public class FakePlayerManager {
         FakePlayer player = FakePlayer.createAndRegister(server, level, name, pos, gamemode, null, persistentUUID);
         if (player != null) {
             activePlayers.put(player.getUUID(), player);
-            // Auto-gather scaffolding materials (dirt/stone first — most efficient)
-            player.assignTask("采集32个泥土和32个圆石用来垫脚", null);
+            // Auto-gather scaffolding materials — flexible, take whatever is available
+            player.assignTask("采集32个可以用来垫脚的方块，优先采集你附近的泥土或石头", null);
             DevLog.info("FAKE_PLAYER_CREATED", "name={}, uuid={}, persistent=true",
                     name, player.getStringUUID());
         }
