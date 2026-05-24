@@ -236,10 +236,15 @@ public class FakePlayer extends ServerPlayer {
             idleTicks++;
         }
 
-        // Idle gathering: after 5 seconds idle, collect basic scaffolding materials
-        if (idleTicks == 100 && !paused && (this.currentTask == null || this.currentTask.isCompleted())) {
-            var gatherTask = com.aimod.command.DirectCommandHandler.createGatherTask("DIRT", 16);
-            assignDirectTask(gatherTask, null);
+        // Idle gathering: after 5s idle, collect scaffolding materials if inventory is low
+        if (idleTicks >= 100 && idleTicks % 600 == 100 && !paused
+                && (this.currentTask == null || this.currentTask.isCompleted())) {
+            int dirtCount = InventoryUtils.countItem(this, net.minecraft.world.item.Items.DIRT);
+            if (dirtCount < 16) {
+                int shortage = 16 - dirtCount;
+                var gatherTask = com.aimod.command.DirectCommandHandler.createGatherTask("DIRT", shortage);
+                assignDirectTask(gatherTask, null);
+            }
         }
 
         // Periodic position sync (after AI tick so movement isn't overridden)
