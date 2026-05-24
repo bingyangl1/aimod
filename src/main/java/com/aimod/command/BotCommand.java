@@ -27,6 +27,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * /ai_bot command tree registration.
@@ -181,7 +183,10 @@ public class BotCommand {
                                 .executes(BotCommand::openInventoryNamed)))
                 // --- Help command ---
                 .then(Commands.literal("help")
-                        .executes(BotCommand::showHelp))
+                        .executes(BotCommand::showHelp)
+                        .then(Commands.argument("command", StringArgumentType.word())
+                                .suggests((ctx, b) -> SharedSuggestionProvider.suggest(HELP_COMMANDS, b))
+                                .executes(BotCommand::showHelpForCommand)))
         );
     }
 
@@ -748,45 +753,38 @@ public class BotCommand {
 
     // ========== Help command ==========
 
+    private static final String[] HELP_COMMANDS = {
+        "spawn", "select", "status", "task", "task_all", "stop", "cancel",
+        "pause", "resume", "remove", "goto", "mine", "gather", "craft",
+        "follow", "follow_bot", "give", "equip", "say", "inventory",
+        "toggle", "save", "load", "list", "delete"
+    };
+
     private static int showHelp(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
-        String[] keys = {
-                "commands.ai_bot.help.header",
-                "commands.ai_bot.help.spawn",
-                "commands.ai_bot.help.select",
-                "commands.ai_bot.help.status",
-                "commands.ai_bot.help.task",
-                "commands.ai_bot.help.task_all",
-                "commands.ai_bot.help.stop",
-                "commands.ai_bot.help.cancel",
-                "commands.ai_bot.help.pause",
-                "commands.ai_bot.help.resume",
-                "commands.ai_bot.help.remove",
-                "commands.ai_bot.help.goto",
-                "commands.ai_bot.help.mine",
-                "commands.ai_bot.help.gather",
-                "commands.ai_bot.help.craft",
-                "commands.ai_bot.help.follow",
-                "commands.ai_bot.help.follow_bot",
-                "commands.ai_bot.help.give",
-                "commands.ai_bot.help.equip",
-                "commands.ai_bot.help.say",
-                "commands.ai_bot.help.inventory",
-                "commands.ai_bot.help.toggle",
-                "commands.ai_bot.help.save",
-                "commands.ai_bot.help.load",
-                "commands.ai_bot.help.list",
-                "commands.ai_bot.help.delete",
-                "commands.ai_bot.help.help"
-        };
         source.sendSuccess(() -> {
-            net.minecraft.network.chat.MutableComponent msg = Component.empty();
-            for (int i = 0; i < keys.length; i++) {
-                if (i > 0) msg.append("\n");
-                msg.append(Component.translatable(keys[i]));
+            var sb = new StringBuilder();
+            sb.append(Component.translatable("commands.ai_bot.help.header").getString()).append("\n");
+            for (String cmd : HELP_COMMANDS) {
+                String key = "commands.ai_bot.help.short." + cmd;
+                sb.append(Component.translatable(key).getString()).append("\n");
             }
-            return msg;
+            sb.append("\n").append(Component.translatable("commands.ai_bot.help.footer").getString());
+            return Component.literal(sb.toString());
         }, false);
+        return 1;
+    }
+
+    private static int showHelpForCommand(CommandContext<CommandSourceStack> ctx) {
+        String cmd = StringArgumentType.getString(ctx, "command");
+        String key = "commands.ai_bot.help.detail." + cmd;
+        String detail = Component.translatable(key).getString();
+        if (detail.equals(key)) { // key not found, returns itself
+            ctx.getSource().sendFailure(Component.translatable("commands.ai_bot.help.unknown", cmd));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(
+            Component.translatable("commands.ai_bot.help.detail_title", cmd).getString() + "\n" + detail), false);
         return 1;
     }
 }
