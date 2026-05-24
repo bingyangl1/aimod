@@ -75,3 +75,14 @@ emi-1.21/
 meteor-client-master/
 AI-Player-1.21.1/
 minecolonies-release-1.21/
+
+# Build and test logs
+*.log
+logs/
+build*.txt
+test-*.txt
+verify-*.txt
+verify-*.ps1
+analyze-logs.ps1
+*.bak
+crash-reports/

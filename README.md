@@ -249,22 +249,13 @@ com.aimod/
 
 ---
 
-## 参考项目
+## 参考项目与致谢
 
-本模组深度参考了以下优秀开源项目：
+本模组深度参考了 10 个优秀开源项目，详见 [docs/REFERENCES.md](docs/REFERENCES.md)。
 
-| 项目 | 参考内容 |
-|------|---------|
-| Baritone | A* 寻路、8 Movement 类型、世界缓存 |
-| PlayerEngine | 服务端 Baritone (Automatone)、实体抽象 |
-| Player2NPC | 行为链系统 (9 条 Chain)、NPC 管理 |
-| SiliconeDolls | FakePlayer 创建/注册、Mixin 模式 |
-| RollingGate | 注解驱动规则引擎、箱子菜单 UI |
-| AI-Player | Reinforcement Learning、DangerZone |
-| Meteor Client | InventoryUtils、BlockUtils、Rotations |
-| EMI / JEI | RecipeIndex (O(1))、MaterialTree、UID 系统 |
+向以下项目的作者和贡献者致以诚挚感谢：
 
-详见 `COMPREHENSIVE_ANALYSIS.md` 和 `ANALYSIS.md`。
+Baritone (cabaletta) · PlayerEngine (Goodbird) · Player2NPC (Goodbird) · SiliconeDolls (AnvilCraft) · RollingGate (AnvilCraft) · AI-Player (shasankp000) · Meteor Client (MeteorDevelopment) · EMI (EmilyPloszaj) · JEI (mezz) · MineColonies (LDT Team)
 
 ---
 
