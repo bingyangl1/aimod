@@ -34,7 +34,9 @@ public class FollowAction extends Action {
     }
 
     private static final double FOLLOW_DISTANCE = 2.5;
-    private static final double TOO_FAR = 6.0;
+    private static final int PATH_UPDATE_INTERVAL = 20; // ticks between path recalculations
+    private int pathUpdateTimer;
+    private net.minecraft.core.BlockPos lastPlayerPos;
 
     @Override
     public boolean isComplete(FakePlayer bot) {
@@ -44,16 +46,26 @@ public class FollowAction extends Action {
                 status = ActionStatus.COMPLETED;
             } else {
                 double dist = bot.distanceTo(targetPlayer);
-                if (dist > FOLLOW_DISTANCE) {
-                    // Move toward player but stop at FOLLOW_DISTANCE blocks away
-                    var playerPos = targetPlayer.blockPosition();
-                    var towardsPlayer = targetPlayer.position().subtract(bot.position()).normalize();
-                    var targetPos = targetPlayer.position().subtract(towardsPlayer.scale(FOLLOW_DISTANCE));
-                    navigateTo(bot, new net.minecraft.core.BlockPos(
-                            (int)targetPos.x, (int)targetPos.y, (int)targetPos.z), 1.0);
-                } else {
+                if (dist <= FOLLOW_DISTANCE) {
                     stopNavigation(bot);
+                    return false; // stay, keep following
                 }
+
+                // Recalculate path periodically or when player moved significantly
+                var playerBlockPos = targetPlayer.blockPosition();
+                boolean playerMoved = lastPlayerPos == null || !playerBlockPos.equals(lastPlayerPos);
+                boolean needsUpdate = pathUpdateTimer <= 0 || (playerMoved && pathUpdateTimer < PATH_UPDATE_INTERVAL - 5);
+
+                if (needsUpdate) {
+                    // Calculate target 2 blocks away from player in bot's direction
+                    var towardsBot = bot.position().subtract(targetPlayer.position()).normalize();
+                    var targetPos = targetPlayer.position().add(towardsBot.scale(FOLLOW_DISTANCE));
+                    navigateWithPathfinding(bot, new net.minecraft.core.BlockPos(
+                            (int)targetPos.x, (int)targetPos.y, (int)targetPos.z));
+                    lastPlayerPos = playerBlockPos;
+                    pathUpdateTimer = PATH_UPDATE_INTERVAL;
+                }
+                pathUpdateTimer--;
             }
         }
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;

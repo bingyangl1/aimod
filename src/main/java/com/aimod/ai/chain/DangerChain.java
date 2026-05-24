@@ -33,24 +33,25 @@ public class DangerChain extends BehaviorChain {
         BlockState feet = level.getBlockState(pos);
         BlockState below = level.getBlockState(pos.below());
 
-        boolean danger = false;
-        if (feet.getBlock() == Blocks.LAVA || feet.getFluidState().isSource()) danger = true;
-        else if (below.getBlock() == Blocks.LAVA) danger = true;
-        else if (DangerZone.isLavaNearby(bot, 3)) danger = true;
-        else if (bot.isOnFire() && !bot.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) danger = true;
-        else if (bot.isInWater() && bot.getAirSupply() < 60) danger = true;
-        else if (DangerZone.isDeepWater(bot) && bot.getAirSupply() < 150) danger = true;
+        boolean urgent = false;  // feet in lava, on fire, drowning → cancel task
+        boolean passive = false; // lava nearby, cliff ahead → just avoid, don't cancel
+
+        if (feet.getBlock() == Blocks.LAVA || feet.getFluidState().isSource()) urgent = true;
+        else if (below.getBlock() == Blocks.LAVA) urgent = true;
+        else if (bot.isOnFire() && !bot.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE)) urgent = true;
+        else if (bot.isInWater() && bot.getAirSupply() < 60) urgent = true;
+        else if (DangerZone.isLavaNearby(bot, 3)) passive = true;
+        else if (DangerZone.isDeepWater(bot) && bot.getAirSupply() < 150) passive = true;
         else if (bot.onGround() && DangerZone.isCliffAhead(bot)) {
             if (pos.equals(lastDangerPos)) return false;
-            danger = true;
+            passive = true;
         }
 
-        if (danger) {
+        if (urgent || passive) {
             lastDangerPos = pos;
             active = true;
             escapeTicks = 0;
-            // Cancel current AI task so bot doesn't walk back into danger
-            bot.cancelTask();
+            if (urgent) bot.cancelTask(); // only cancel for feet-in-lava/fire/drowning
             return true;
         }
         return false;
