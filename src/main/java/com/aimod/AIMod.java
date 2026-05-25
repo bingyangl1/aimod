@@ -9,11 +9,15 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import com.aimod.ai.cache.ChunkCache;
+import com.aimod.client.BotStatusScreen;
 import com.aimod.command.BotCommand;
 import com.aimod.entity.ModEntities;
 import com.aimod.entity.AIBotEntity;
+import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.fakeplayer.FakePlayerManager;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,9 +38,10 @@ public class AIMod {
         NeoForge.EVENT_BUS.addListener(this::onServerStarted);
         NeoForge.EVENT_BUS.addListener(this::onChunkLoad);
         NeoForge.EVENT_BUS.addListener(this::onChunkUnload);
+        NeoForge.EVENT_BUS.addListener(this::onEntityInteract);
         ModEntities.register(modEventBus);
         modEventBus.addListener(this::registerAttributes);
-        modContainer.registerConfig(ModConfig.Type.COMMON, com.aimod.config.ModConfig.SPEC);
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, com.aimod.config.ModConfig.SPEC);
     }
 
     private void registerAttributes(net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent event) {
@@ -80,6 +85,31 @@ public class AIMod {
     /** Get the global chunk cache (null before server start). */
     @Nullable
     public static ChunkCache getChunkCache() { return chunkCache; }
+
+    /**
+     * Handle right-click on a bot entity to open the status screen.
+     * Works for both FP mode (FakePlayer) and Dual mode (AIBotEntity).
+     */
+    private void onEntityInteract(final PlayerInteractEvent.EntityInteract event) {
+        if (event.getLevel().isClientSide) return;
+        if (!(event.getEntity() instanceof ServerPlayer viewer)) return;
+
+        // FP mode: player right-clicked a FakePlayer directly
+        if (event.getTarget() instanceof FakePlayer fp) {
+            BotStatusScreen.open(viewer, fp);
+            event.setCanceled(true);
+            return;
+        }
+
+        // Dual mode: player right-clicked the Mob wrapper
+        if (event.getTarget() instanceof AIBotEntity bot) {
+            FakePlayer fp = bot.getFakePlayer();
+            if (fp != null) {
+                BotStatusScreen.open(viewer, fp);
+                event.setCanceled(true);
+            }
+        }
+    }
 
     private int autoLoadBots(FakePlayerManager manager, net.minecraft.server.MinecraftServer server) {
         var persistence = new com.aimod.fakeplayer.BotPersistence(server);

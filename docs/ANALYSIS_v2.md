@@ -153,3 +153,31 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 - **症状**: 日志 30+ 条 `[FEEDBACK_SENT] ... Action failed` 在 400ms 内刷屏
 - **原因**: Action FAILED 后触发 `incrementalReplan()`，LLM 请求 30s。每 tick `executeTask()` 检查 `isComplete()==true` → `reportActionFailed()` 重发。`replanning=true` 防止了重复 `incrementalReplan` 调用，但 `reportActionFailed` 没有防护
 - **修复**: `reportActionFailed` + `incrementalReplan` 外包裹 `if (!replanning)` 防止重入
+
+## 五、实体模式重构 (r60)
+
+### 新增 BotMode 配置
+- **概念**: 三种实体模式（FP / Dual），通过 `config/aimod-common.toml` 的 `botMode` 设置
+- **默认**: `fp`（仅 FakePlayer）
+
+### 实现
+- **FP 模式**（默认）:
+  - 只创建 `FakePlayer(ServerPlayer)`，不创建 Mob
+  - 右键交互 → `PlayerInteractEvent.EntityInteract` 事件处理 → 打开状态界面
+  - 单个实体，无位置同步开销
+- **Dual 模式**（可选）:
+  - 创建 `FakePlayer(ServerPlayer)` + `AIBotEntity(Mob)` 两个实体
+  - Mob 作为世界可见实体（HumanoidMobRenderer，Steve 皮肤）
+  - Mob 的 `tick()` 从 FakePlayer 同步位置
+  - 右键交互 → 事件处理检查到 AIBotEntity → 通过其 FakePlayer 打开状态界面
+  - 清理时同时移除两个实体
+
+### 文件变动
+| 文件 | 改动 |
+|------|------|
+| `config/BotMode.java` | 新增枚举（FP / DUAL） |
+| `config/ModConfig.java` | 新增 `botMode` 配置项 + getter |
+| `AIMod.java` | 新增 `onEntityInteract` 事件处理 |
+| `FakePlayerManager.java` | 新增 `spawnDualMob()`，模式感知创建/清理 |
+| `entity/AIBotEntity.java` | 新增 `setFakePlayer()` / `dualLinked`；移除重复 `pickupNearbyItems()` 和已废弃的 `mobInteract` |
+| `client/ClientModEvents.java` | 无改动（渲染器在 Dual 模式使用，FP 模式不激活） |

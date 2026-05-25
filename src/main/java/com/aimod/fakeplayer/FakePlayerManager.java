@@ -1,10 +1,13 @@
 package com.aimod.fakeplayer;
 
+import com.aimod.config.BotMode;
+import com.aimod.config.ModConfig;
+import com.aimod.entity.AIBotEntity;
+import com.aimod.entity.ModEntities;
 import com.aimod.util.DevLog;
-import com.mojang.authlib.GameProfile;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -26,6 +29,8 @@ public class FakePlayerManager {
 
     private final MinecraftServer server;
     private final Map<UUID, FakePlayer> activePlayers = new ConcurrentHashMap<>();
+    /** Dual mode: tracks the Mob wrapper alongside each FakePlayer. */
+    private final Map<UUID, AIBotEntity> botEntities = new ConcurrentHashMap<>();
     private final BotProfileStore profileStore;
     private final BotPersistence persistence;
 
@@ -38,9 +43,10 @@ public class FakePlayerManager {
     /**
      * Create and register a new FakePlayer with persistent identity.
      * If a bot with this name was created before, it reuses the same UUID.
+     * Respects the configured BotMode (FP or DUAL).
      */
     @Nullable
-    public FakePlayer createFakePlayer(String name, ServerLevel level, Vec3 pos, GameType gamemode) {
+    public FakePlayer createFakePlayer(String name, ServerLevel level, Vec3 pos, GameType gamemode, BotMode mode) {
         if (activePlayers.size() >= MAX_FAKE_PLAYERS) {
             DevLog.warn("FAKE_PLAYER_LIMIT", "Max fake players reached: {}", MAX_FAKE_PLAYERS);
             return null;
@@ -59,31 +65,64 @@ public class FakePlayerManager {
         FakePlayer player = FakePlayer.createAndRegister(server, level, name, pos, gamemode, null, persistentUUID);
         if (player != null) {
             activePlayers.put(player.getUUID(), player);
-            DevLog.info("FAKE_PLAYER_CREATED", "name={}, uuid={}, persistent=true",
-                    name, player.getStringUUID());
+
+            if (mode == BotMode.DUAL) {
+                spawnDualMob(player, level, pos);
+            }
+
+            DevLog.info("FAKE_PLAYER_CREATED", "name={}, uuid={}, mode={}",
+                    name, player.getStringUUID(), mode.getKey());
         }
         return player;
     }
 
     @Nullable
+    public FakePlayer createFakePlayer(String name, ServerLevel level, Vec3 pos, GameType gamemode) {
+        return createFakePlayer(name, level, pos, gamemode, ModConfig.getBotMode());
+    }
+
+    @Nullable
     public FakePlayer createFakePlayer(String name, ServerLevel level, Vec3 pos) {
-        return createFakePlayer(name, level, pos, GameType.SURVIVAL);
+        return createFakePlayer(name, level, pos, GameType.SURVIVAL, ModConfig.getBotMode());
+    }
+
+    /**
+     * In Dual mode, spawn an AIBotEntity (Mob) that wraps the FakePlayer.
+     * The Mob syncs its position from the FakePlayer and provides
+     * Mob-specific rendering and AI goals.
+     */
+    private void spawnDualMob(FakePlayer player, ServerLevel level, Vec3 pos) {
+        AIBotEntity mob = new AIBotEntity(ModEntities.AI_BOT.get(), level);
+        mob.setFakePlayer(player);
+        mob.setPos(pos.x, pos.y, pos.z);
+        mob.setHealth(player.getHealth());
+        level.addFreshEntity(mob);
+        botEntities.put(player.getUUID(), mob);
+        DevLog.info("DUAL_MOB_SPAWNED", "name={}, mobUuid={}", player.getName().getString(), mob.getStringUUID());
     }
 
     /**
      * Remove and disconnect a FakePlayer.
+     * In Dual mode, also removes the associated Mob.
      */
     public void removeFakePlayer(FakePlayer player) {
         if (player == null) return;
         activePlayers.remove(player.getUUID());
+        // Dual mode: remove Mob wrapper
+        AIBotEntity mob = botEntities.remove(player.getUUID());
+        if (mob != null) mob.remove(Entity.RemovalReason.DISCARDED);
         player.kill();
         DevLog.info("FAKE_PLAYER_REMOVE", "name={}", player.getName().getString());
     }
 
     /**
-     * Remove all FakePlayers.
+     * Remove all FakePlayers (and their Mob wrappers in Dual mode).
      */
     public void removeAll() {
+        for (AIBotEntity mob : botEntities.values()) {
+            mob.remove(Entity.RemovalReason.DISCARDED);
+        }
+        botEntities.clear();
         for (FakePlayer player : activePlayers.values()) {
             player.kill();
         }
@@ -183,6 +222,11 @@ public class FakePlayerManager {
 
         FakePlayer player = FakePlayer.createAndRegister(server, level, info.name, pos, gamemode, null, persistentUUID);
         if (player == null) return null;
+
+        // Dual mode: spawn Mob wrapper
+        if (ModConfig.getBotMode() == BotMode.DUAL) {
+            spawnDualMob(player, level, pos);
+        }
 
         // Restore inventory
         if (info.inventory != null) {

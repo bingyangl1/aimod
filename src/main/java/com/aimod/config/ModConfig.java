@@ -150,6 +150,15 @@ public class ModConfig {
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
 
+    public static final ModConfigSpec.ConfigValue<String> BOT_MODE = BUILDER
+            .comment(
+                "Bot entity mode: 'fp' (FakePlayer only, default) or 'dual' (Mob + FakePlayer)",
+                "FP: bot is a real ServerPlayer, uses default player model, no Mob wrapper",
+                "DUAL: bot spawns a Mob entity that wraps a FakePlayer (two entities)",
+                "Changing this requires restart."
+            )
+            .define("botMode", "fp");
+
     public static final ModConfigSpec.ConfigValue<Double> MOVEMENT_SPEED = BUILDER
             .comment("Bot movement speed multiplier (0.3 = default player walk speed)")
             .defineInRange("movementSpeed", 0.3, 0.1, 1.0);
@@ -226,4 +235,6 @@ public class ModConfig {
     public static int getUndoHistory() { return UNDO_HISTORY.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
+
+    public static BotMode getBotMode() { return BotMode.fromKey(BOT_MODE.get()); }
 }
