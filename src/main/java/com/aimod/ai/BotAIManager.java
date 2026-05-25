@@ -237,21 +237,24 @@ public class BotAIManager {
                     checkDeficitsAndReplan(task);
                 }
             } else {
-                // Action failed — but check if it was a GiveItemAction with partial success
-                boolean isGiveItemPartial = (currentAction instanceof GiveItemAction g && g.getGivenCount() > 0);
-                feedback.reportActionFailed(
-                        task.getCurrentActionIndex() + 1,
-                        task.getActionCount(),
-                        currentAction.getDescription(),
-                        "Action failed");
-                if (isGiveItemPartial) {
-                    // Skip failed give_item (partial) and continue
-                    DevLog.info("GIVE_ITEM_PARTIAL_SKIP", "continuing task after partial give");
-                    task.advanceToNextAction();
-                } else {
-                    // Incremental replan: ask LLM for next step instead of failing
-                    stateMachine.requestReplan();
-                    incrementalReplan(task, currentAction.getDescription());
+                // Skip duplicate feedback if replan already in progress (LLM thread running)
+                if (!replanning) {
+                    // Action failed — but check if it was a GiveItemAction with partial success
+                    boolean isGiveItemPartial = (currentAction instanceof GiveItemAction g && g.getGivenCount() > 0);
+                    feedback.reportActionFailed(
+                            task.getCurrentActionIndex() + 1,
+                            task.getActionCount(),
+                            currentAction.getDescription(),
+                            "Action failed");
+                    if (isGiveItemPartial) {
+                        // Skip failed give_item (partial) and continue
+                        DevLog.info("GIVE_ITEM_PARTIAL_SKIP", "continuing task after partial give");
+                        task.advanceToNextAction();
+                    } else {
+                        // Incremental replan: ask LLM for next step instead of failing
+                        stateMachine.requestReplan();
+                        incrementalReplan(task, currentAction.getDescription());
+                    }
                 }
             }
         }

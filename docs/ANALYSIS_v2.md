@@ -135,11 +135,21 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 
 ### B4 — Task 永远不完成
 - **症状**: 任务在 EXECUTING 状态停滞，动作不推进
-- **原因**: 
-  1. Chain 抢占阈值 50：FoodChain(P55)、DefenseChain(P70)、DangerChain(P90) 均抢占 task，task 得不到 tick
-  2. 方块破坏使用 tick 计数，task 被抢占期间 breakProgress 不推进
-  3. DefenseChain 无最大活跃时间，可无限抢占
-- **修复**:
-  - `PREEMPT_THRESHOLD=50→65`：FoodChain(P55) 不再抢占，与 task 共存
-  - 破坏进度改用 `System.currentTimeMillis()` 实时时间，不受 tick 频率影响
-  - DefenseChain 加 `MAX_ACTIVE_TICKS=120` + `POST_COMBAT_COOLDOWN=40`
+- **原因**:
+   - `PREEMPT_THRESHOLD=50→65`：FoodChain(P55) 不再抢占，与 task 共存
+   - 破坏进度改用 `System.currentTimeMillis()` 实时时间，不受 tick 频率影响
+   - DefenseChain 加 `MAX_ACTIVE_TICKS=120` + `POST_COMBAT_COOLDOWN=40`
+
+## 四、运行时 Bug 修复 (r58)
+
+### B5 — VeinMineAction 空矿脉无限旋转
+- **症状**: 日志 `[VEIN_STUCK] skipping=$(pos)` 后，task 0/1 永久 IN_PROGRESS，动作永不推进
+- **原因**: VeinMine 唯一个矿脉块卡住被 skip → `veinBlocks` 为空 → Phase3 跳过（空集合）→ 再无代码将状态设为 COMPLETED/FAILED → execute() 每 tick 空转
+- **修复**: 
+  - VEIN_SCANNED 后检查 veinBlocks 为空 → 立即 FAILED
+  - VEIN_STUCK skip 后 veinBlocks 变空 → 立即 FAILED
+
+### B6 — FEEDBACK_SENT 风暴
+- **症状**: 日志 30+ 条 `[FEEDBACK_SENT] ... Action failed` 在 400ms 内刷屏
+- **原因**: Action FAILED 后触发 `incrementalReplan()`，LLM 请求 30s。每 tick `executeTask()` 检查 `isComplete()==true` → `reportActionFailed()` 重发。`replanning=true` 防止了重复 `incrementalReplan` 调用，但 `reportActionFailed` 没有防护
+- **修复**: `reportActionFailed` + `incrementalReplan` 外包裹 `if (!replanning)` 防止重入

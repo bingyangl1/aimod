@@ -77,6 +77,11 @@ public class VeinMineAction extends Action {
             veinBlocks = VeinScanner.findVein((ServerLevel) bot.level(), currentTarget, targetBlock, count);
             veinScanned = true;
             DevLog.info("VEIN_SCANNED", "veinSize={}", veinBlocks.size());
+            if (veinBlocks.isEmpty()) {
+                DevLog.warn("VEIN_EMPTY_SCAN", "no connected blocks for {} at {}", blockId, currentTarget.toShortString());
+                status = ActionStatus.FAILED;
+                return;
+            }
         }
 
         // Phase 3: mine next block in vein
@@ -109,6 +114,12 @@ public class VeinMineAction extends Action {
                     DevLog.warn("VEIN_STUCK", "skipping={}", currentTarget.toShortString());
                     veinBlocks.remove(0);
                     stuckTicks = 0;
+                    if (veinBlocks.isEmpty()) {
+                        DevLog.warn("VEIN_NO_MORE_BLOCKS", "mined={}/{}", minedCount, count);
+                        status = minedCount >= count ? ActionStatus.COMPLETED : ActionStatus.FAILED;
+                        stopNavigation(bot);
+                        return;
+                    }
                 }
                 return;
             }
