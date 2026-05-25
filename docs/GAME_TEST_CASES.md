@@ -11,7 +11,7 @@
 |---|------|------|
 | 1.1 | `/ai_bot spawn tester` | 出现名为 tester 的 bot |
 | 1.2 | `/ai_bot status` | 显示全部 bot + chain + state |
-| 1.3 | `/ai_bot test` | 18 项全部 PASS |
+| 1.3 | `/ai_bot test` | 25 项全部 PASS |
 | 1.4 | `/ai_bot help` | 27 条命令列表 |
 | 1.5 | `/ai_bot help goto` | goto 详细帮助+示例 |
 

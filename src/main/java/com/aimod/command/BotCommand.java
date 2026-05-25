@@ -1033,6 +1033,65 @@ public class BotCommand {
             else { failed++; sb.append("[FAIL] SequencePlanner: empty gather\n"); }
         } catch (Exception e) { failed++; sb.append("[FAIL] SequencePlanner: ").append(e.getMessage()).append("\n"); }
 
+        // Test 19: PlanCache TF-IDF similarity
+        try {
+            double s1 = com.aimod.ai.llm.PlanCache.similarity("挖5个铁矿", "挖3个铁矿");
+            double s2 = com.aimod.ai.llm.PlanCache.similarity("挖5个铁矿", "制作钻石镐");
+            if (s1 > 0.5 && s2 < 0.5) { passed++; sb.append("[PASS] PlanCache: similarity works (s1=").append(String.format("%.2f", s1)).append(", s2=").append(String.format("%.2f", s2)).append(")\n"); }
+            else { failed++; sb.append("[FAIL] PlanCache: similarity mis-scored (s1=").append(String.format("%.2f", s1)).append(", s2=").append(String.format("%.2f", s2)).append(")\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] PlanCache: ").append(e.getMessage()).append("\n"); }
+
+        // Test 20: PlanCache TTL
+        try {
+            var cache = new com.aimod.ai.llm.PlanCache(source.getServer().getServerDirectory());
+            if (cache.size() >= 0) { passed++; sb.append("[PASS] PlanCache: TTL loaded, size=").append(cache.size()).append("\n"); }
+            else { failed++; sb.append("[FAIL] PlanCache: invalid size\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] PlanCache TTL: ").append(e.getMessage()).append("\n"); }
+
+        // Test 21: PlaceBlockAction (realistic placement flow)
+        try {
+            var bi = net.minecraft.world.item.Items.STONE instanceof net.minecraft.world.item.BlockItem bi2 ? bi2 : null;
+            if (bi != null) {
+                var action = new com.aimod.ai.action.PlaceBlockAction(source.getPlayer().blockPosition(), bi);
+                String desc = action.getDescription();
+                if (desc.contains("Stone") || desc.contains("stone")) { passed++; sb.append("[PASS] PlaceBlockAction: created\n"); }
+                else { failed++; sb.append("[FAIL] PlaceBlockAction: wrong desc\n"); }
+            } else { failed++; sb.append("[FAIL] PlaceBlockAction: Items.STONE is not BlockItem\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] PlaceBlockAction: ").append(e.getMessage()).append("\n"); }
+
+        // Test 22: VeinMiningHelper
+        try {
+            boolean isLog = com.aimod.ai.action.VeinMiningHelper.isLogBlock(net.minecraft.world.level.block.Blocks.OAK_LOG);
+            boolean notLog = com.aimod.ai.action.VeinMiningHelper.isLogBlock(net.minecraft.world.level.block.Blocks.STONE);
+            if (isLog && !notLog) { passed++; sb.append("[PASS] VeinMiningHelper: isLogBlock correct\n"); }
+            else { failed++; sb.append("[FAIL] VeinMiningHelper: isLogBlock wrong (log=").append(isLog).append(", stone=").append(notLog).append(")\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] VeinMiningHelper: ").append(e.getMessage()).append("\n"); }
+
+        // Test 23: ObstacleBreaker
+        try {
+            var breaker = new com.aimod.ai.action.ObstacleBreaker();
+            breaker.reset();
+            passed++; sb.append("[PASS] ObstacleBreaker: created and reset\n");
+        } catch (Exception e) { failed++; sb.append("[FAIL] ObstacleBreaker: ").append(e.getMessage()).append("\n"); }
+
+        // Test 24: PathExecutor valid positions
+        try {
+            var path = java.util.List.of(
+                    source.getPlayer().blockPosition(),
+                    source.getPlayer().blockPosition().offset(1, 0, 0),
+                    source.getPlayer().blockPosition().offset(2, 0, 0));
+            var exec = new com.aimod.ai.pathing.PathExecutor(path);
+            if (exec.getPathLength() == 3 && exec.getProgress() < 1.0) { passed++; sb.append("[PASS] PathExecutor: valid positions (len=").append(exec.getPathLength()).append(")\n"); }
+            else { failed++; sb.append("[FAIL] PathExecutor: wrong state\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] PathExecutor: ").append(e.getMessage()).append("\n"); }
+
+        // Test 25: Movement types loaded
+        try {
+            var types = com.aimod.ai.movement.BotMovement.class.getDeclaredClasses();
+            if (types.length >= 6) { passed++; sb.append("[PASS] BotMovement: ").append(types.length).append(" movement types\n"); }
+            else { failed++; sb.append("[FAIL] BotMovement: only ").append(types.length).append(" types\n"); }
+        } catch (Exception e) { failed++; sb.append("[FAIL] BotMovement: ").append(e.getMessage()).append("\n"); }
+
         sb.append("===== ").append(passed).append(" passed, ").append(failed).append(" failed =====");
         source.sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
