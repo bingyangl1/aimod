@@ -160,9 +160,7 @@ public final class MaterialSubstitute {
         Set<TagKey<Item>> tags = new HashSet<>();
         // Only look at most common tags (avoid iterating ALL tags)
         for (var tagKey : List.of(ItemTags.PLANKS, ItemTags.LOGS, ItemTags.LOGS_THAT_BURN,
-                ItemTags.STONE_CRAFTING_MATERIALS, ItemTags.STONE_TOOL_MATERIALS,
-                ItemTags.WOODEN_TOOL_MATERIALS, ItemTags.COALS,
-                ItemTags.WOOL, ItemTags.SAPLINGS, ItemTags.SAND)) {
+                ItemTags.COALS, ItemTags.WOOL, ItemTags.SAPLINGS, ItemTags.SAND)) {
             if (item.builtInRegistryHolder().is(tagKey)) tags.add(tagKey);
         }
         return tags;
