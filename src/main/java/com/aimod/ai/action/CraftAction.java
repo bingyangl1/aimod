@@ -59,15 +59,15 @@ public class CraftAction extends Action {
             return false;
         }
 
-        // Check consumed inputs
+        // Tag-aware material check + auto-convert
         Map<Item, Integer> requiredItems = resolvedRecipe.getTotalRequiredItems();
         Map<Item, Integer> missing = InventoryUtils.missingItems(bot, requiredItems);
         if (!missing.isEmpty()) {
-            // Auto-convert: if missing planks but have logs, craft planks first
-            if (autoConvertRawMaterials(bot, missing)) {
-                // Re-check after auto-conversion
-                missing = InventoryUtils.missingItems(bot, requiredItems);
+            var inv = com.aimod.ai.recipe.MaterialSubstitute.of(bot);
+            for (var entry : new java.util.ArrayList<>(missing.entrySet())) {
+                com.aimod.ai.recipe.MaterialSubstitute.autoConvert(inv, entry.getKey());
             }
+            missing = InventoryUtils.missingItems(bot, requiredItems);
         }
         if (!missing.isEmpty()) {
             DevLog.warn("CRAFT_MISSING_ITEMS", "item={}, count={}, missing={}",
@@ -79,40 +79,6 @@ public class CraftAction extends Action {
                 itemId, resolvedRecipe.getId(), resolvedRecipe.getCategory(),
                 resolvedRecipe.getConsumedInputs().size(), resolvedRecipe.getCatalysts().size());
         return true;
-    }
-
-    /** Auto-convert raw materials: logs→planks, etc. Returns true if any conversion happened. */
-    private static boolean autoConvertRawMaterials(FakePlayer bot, Map<Item, Integer> missing) {
-        boolean changed = false;
-        for (var entry : new java.util.ArrayList<>(missing.entrySet())) {
-            Item needed = entry.getKey();
-            int shortage = entry.getValue();
-            String key = BuiltInRegistries.ITEM.getKey(needed).getPath();
-
-            // Need planks but have logs? Convert log→4 planks
-            if (key.contains("_planks")) {
-                for (int i = 0; i < bot.getInventory().getContainerSize() && shortage > 0; i++) {
-                    var stack = bot.getInventory().getItem(i);
-                    if (stack.isEmpty()) continue;
-                    String ik = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-                    if (ik.contains("_log") || ik.contains("_stem") || ik.contains("_hyphae") || ik.contains("_wood")) {
-                        // Found a log — convert to 4 planks
-                        String plankId = ik.replace("_log", "_planks").replace("_stem", "_planks")
-                                .replace("_hyphae", "_planks").replace("_wood", "_planks");
-                        Item planks = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse("minecraft:" + plankId));
-                        if (planks != null && planks != Items.AIR) {
-                            stack.shrink(1);
-                            InventoryUtils.addItem(bot, new ItemStack(planks, 4));
-                            DevLog.info("CRAFT_AUTOCONVERT", "log→planks: {}→{}", ik, plankId);
-                            changed = true;
-                            shortage -= 4;
-                        }
-                    }
-                }
-            }
-            if (shortage <= 0) missing.remove(needed);
-        }
-        return changed;
     }
 
     @Override
