@@ -41,18 +41,15 @@ neoForge {
 
         client {
             client()
-            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         server {
             server()
             programArgument '--nogui'
-            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         gameTestServer {
             type = "gameTestServer"
-            systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
         }
 
         data {

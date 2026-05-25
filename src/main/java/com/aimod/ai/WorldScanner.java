@@ -100,7 +100,7 @@ public class WorldScanner {
     public List<BlockPos> findNearbyBlocksBatched(Collection<Block> targetBlocks, int radius) {
         BlockPos botPos = bot.blockPosition();
         List<BlockPos> results = new ArrayList<>();
-        final int MAX_RESULTS = 16;
+        final int MAX_RESULTS = 64;
         int radiusSq = radius * radius;
         int botX = botPos.getX();
         int botY = botPos.getY();
@@ -111,37 +111,42 @@ public class WorldScanner {
         int minChunkZ = (botZ - radius) >> 4;
         int maxChunkZ = (botZ + radius) >> 4;
 
+        // Visit chunks by distance from bot (spiral outward)
+        int cx0 = botX >> 4, cz0 = botZ >> 4;
+        List<int[]> chunkCoords = new ArrayList<>();
         for (int cx = minChunkX; cx <= maxChunkX; cx++) {
             for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                int chunkBaseX = cx << 4;
-                int chunkBaseZ = cz << 4;
-                for (int x = chunkBaseX; x < chunkBaseX + 16; x++) {
-                    for (int z = chunkBaseZ; z < chunkBaseZ + 16; z++) {
-                        int dx = x - botX;
-                        int dz = z - botZ;
-                        if (dx * dx + dz * dz > radiusSq) continue;
+                chunkCoords.add(new int[]{cx, cz});
+            }
+        }
+        chunkCoords.sort(Comparator.comparingDouble(c -> {
+            int dx = (c[0] - cx0) * 16;
+            int dz = (c[1] - cz0) * 16;
+            return dx * dx + dz * dz;
+        }));
 
-                        // Check Y-levels: start at bot Y, expand outward
-                        for (int dy = 0; dy <= radius; dy++) {
-                            for (int sign : new int[]{-1, 1}) {
-                                int y = botY + dy * sign;
-                                if (y < bot.level().getMinBuildHeight() || y > bot.level().getMaxBuildHeight())
-                                    continue;
-                                if (dy == 0 && sign == 1) continue; // botY already checked
-                                BlockPos pos = new BlockPos(x, y, z);
-                                BlockState state = getState(pos);
-                                for (Block tb : targetBlocks) {
-                                    if (state.is(tb)) {
-                                        results.add(pos.immutable());
-                                        break;
-                                    }
-                                }
-                                if (results.size() >= MAX_RESULTS) {
-                                    results.sort(Comparator.comparingDouble(p -> bot.distanceToSqr(
-                                            p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5)));
-                                    if (results.size() > MAX_RESULTS)
-                                        results = new ArrayList<>(results.subList(0, MAX_RESULTS));
-                                    return results;
+        for (int[] cc : chunkCoords) {
+            int cx = cc[0], cz = cc[1];
+            int chunkBaseX = cx << 4;
+            int chunkBaseZ = cz << 4;
+            for (int x = chunkBaseX; x < chunkBaseX + 16; x++) {
+                for (int z = chunkBaseZ; z < chunkBaseZ + 16; z++) {
+                    int dx = x - botX;
+                    int dz = z - botZ;
+                    if (dx * dx + dz * dz > radiusSq) continue;
+
+                    for (int dy = 0; dy <= radius; dy++) {
+                        for (int sign : new int[]{-1, 1}) {
+                            int y = botY + dy * sign;
+                            if (y < bot.level().getMinBuildHeight() || y > bot.level().getMaxBuildHeight())
+                                continue;
+                            if (dy == 0 && sign == 1) continue;
+                            BlockPos pos = new BlockPos(x, y, z);
+                            BlockState state = getState(pos);
+                            for (Block tb : targetBlocks) {
+                                if (state.is(tb)) {
+                                    results.add(pos.immutable());
+                                    break;
                                 }
                             }
                         }

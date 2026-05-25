@@ -29,9 +29,10 @@ public class GatherResourceAction extends Action {
     private static final int STUCK_TIMEOUT = 200;
     private static final double REACH_DISTANCE_SQR = 6.25; // 2.5 blocks
     private static final int PLACE_BLOCK_COOLDOWN = 10;
-    private static final int MAX_SEARCH_RADIUS = 128;
-    private static final int RADIUS_EXPAND_STEP = 32;
-    private static final int MAX_NO_RESOURCE_RETRIES = 5;
+    private static final int INITIAL_SEARCH_RADIUS = 16;
+    private static final int MAX_SEARCH_RADIUS = 64;
+    private static final int RADIUS_EXPAND_STEP = 16;
+    private static final int MAX_NO_RESOURCE_RETRIES = 3;
 
     private final ResourceType resourceType;
     private final int count;
@@ -39,8 +40,8 @@ public class GatherResourceAction extends Action {
 
     private BlockPos currentTarget;
     private int gatheredCount;
-    private int breakProgress;
-    private int breakTime;
+    private long breakStartMs;
+    private int breakDurationMs;
     private boolean searching;
 
     private double lastDistSqr;
@@ -57,17 +58,19 @@ public class GatherResourceAction extends Action {
     private int waitTicks = 0;
 
     public GatherResourceAction(ResourceType resourceType, int count) {
-        this(resourceType, count, 32);
+        this(resourceType, count, INITIAL_SEARCH_RADIUS);
     }
 
     public GatherResourceAction(ResourceType resourceType, int count, int searchRadius) {
         super("Gather " + count + " " + resourceType.name());
         this.resourceType = resourceType;
         this.count = Math.max(1, count);
-        this.searchRadius = Math.min(searchRadius, MAX_SEARCH_RADIUS);
+        // Small-quantity gathers stay nearby: count<=2 → max 24, count<=8 → max 48
+        int maxRadius = count <= 2 ? 24 : (count <= 8 ? 48 : MAX_SEARCH_RADIUS);
+        this.searchRadius = Math.min(searchRadius, maxRadius);
         this.gatheredCount = 0;
-        this.breakProgress = 0;
-        this.breakTime = 0;
+        this.breakStartMs = 0;
+        this.breakDurationMs = 0;
         this.searching = true;
         this.lastDistSqr = Double.MAX_VALUE;
         this.stuckTicks = 0;
@@ -252,17 +255,17 @@ public class GatherResourceAction extends Action {
     // ========== Block Breaking ==========
 
     private void breakTarget(FakePlayer bot, BlockState blockState) {
-        if (breakTime == 0) {
-            breakTime = Math.max(1, (int) (blockState.getDestroySpeed(bot.level(), currentTarget) * 20));
-            breakProgress = 0;
-            DevLog.info("GATHER_BREAKING", "type={}, pos={}, breakTime={}",
-                    resourceType, currentTarget.toShortString(), breakTime);
+        if (breakStartMs == 0) {
+            int breakTicks = Math.max(1, (int) (blockState.getDestroySpeed(bot.level(), currentTarget) * 20));
+            breakDurationMs = breakTicks * 50;
+            breakStartMs = System.currentTimeMillis();
+            DevLog.info("GATHER_BREAKING", "type={}, pos={}, breakDurationMs={}",
+                    resourceType, currentTarget.toShortString(), breakDurationMs);
         }
 
-        breakProgress++;
         bot.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
 
-        if (breakProgress >= breakTime) {
+        if (System.currentTimeMillis() - breakStartMs >= breakDurationMs) {
             ServerLevel level = (ServerLevel) bot.level();
             Block targetBlock = blockState.getBlock();
 
@@ -275,8 +278,8 @@ public class GatherResourceAction extends Action {
                 level.destroyBlock(currentTarget, true, bot);
                 gatheredCount++;
             }
-            breakProgress = 0;
-            breakTime = 0;
+            breakStartMs = 0;
+            breakDurationMs = 0;
             DevLog.info("GATHER_COLLECTED", "type={}, total={}", resourceType, gatheredCount);
             resetTarget();
         }
@@ -532,7 +535,8 @@ public class GatherResourceAction extends Action {
         cachedPathGoal = null;
         currentTarget = null;
         searching = true;
-        breakProgress = 0;
+        breakStartMs = 0;
+        breakDurationMs = 0;
         obstacleBreaker.reset();
     }
 

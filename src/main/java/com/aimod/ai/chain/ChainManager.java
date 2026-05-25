@@ -11,8 +11,9 @@ import java.util.List;
  * Manages behavior chains with priority-based scheduling.
  * Only one chain runs per tick. Higher-priority chains preempt lower ones.
  *
- * <p>When a chain with priority > 50 is active, the AI user task is
- * preempted (survival takes priority over executing user commands).</p>
+ * <p>Preemption threshold: chains with priority > PREEMPT_THRESHOLD (65)
+ * pause the user task while active. Only DangerChain (90) and DefenseChain (70)
+ * preempt; FoodChain (55) and UnstuckChain (50) run alongside the task.</p>
  */
 public class ChainManager {
 
@@ -21,7 +22,7 @@ public class ChainManager {
     private BehaviorChain lastActiveChain;
     private boolean sorted;
 
-    public static final int PREEMPT_THRESHOLD = 50;
+    public static final int PREEMPT_THRESHOLD = 65;
 
     public ChainManager() {}
 

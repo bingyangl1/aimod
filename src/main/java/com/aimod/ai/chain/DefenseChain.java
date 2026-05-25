@@ -26,9 +26,15 @@ public class DefenseChain extends BehaviorChain {
     private static final int OVERWHELM_COUNT = 3;
     private static final double RANGED_RANGE = 10.0;
 
+    private static final int MAX_ACTIVE_TICKS = 120; // force-yield after 6s of combat
+
+    private static final int POST_COMBAT_COOLDOWN = 40; // 2s cooldown after combat
+
     private boolean active;
     private LivingEntity target;
     private int attackCooldown;
+    private int activeTicks;
+    private int cooldownTicks;
     private int hostileCount;
     private boolean retreating;
     private boolean shielding;
@@ -38,6 +44,7 @@ public class DefenseChain extends BehaviorChain {
 
     @Override
     public boolean shouldActivate(FakePlayer bot) {
+        if (cooldownTicks > 0) { cooldownTicks--; return false; }
         AABB box = bot.getBoundingBox().inflate(SCAN_RADIUS);
         List<LivingEntity> hostiles = bot.level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e instanceof Monster && e.isAlive() && !e.isDeadOrDying());
@@ -53,6 +60,7 @@ public class DefenseChain extends BehaviorChain {
         }
 
         active = true;
+        activeTicks = 0;
         attackCooldown = 0;
         retreating = false;
         shielding = false;
@@ -62,6 +70,13 @@ public class DefenseChain extends BehaviorChain {
     @Override
     public void tick(FakePlayer bot) {
         lastBot = bot;
+        activeTicks++;
+        if (activeTicks > MAX_ACTIVE_TICKS) {
+            restoreInventory(bot);
+            active = false;
+            cooldownTicks = POST_COMBAT_COOLDOWN;
+            return;
+        }
         if (target == null || !target.isAlive()) {
             active = false;
             return;
@@ -209,6 +224,7 @@ public class DefenseChain extends BehaviorChain {
     @Override public boolean isActive() { return active; }
     @Override public void stop() {
         active = false; target = null; retreating = false; shielding = false;
+        activeTicks = 0; cooldownTicks = POST_COMBAT_COOLDOWN;
         if (lastBot != null) restoreInventory(lastBot);
     }
     @Override public String name() { return "Defense"; }

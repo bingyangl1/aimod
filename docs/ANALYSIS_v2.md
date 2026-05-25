@@ -108,3 +108,38 @@ UnstuckChain  (50) → 卡住 → 分级恢复(含 PILLAR)
 |---|------|------|
 | 17 | ✅ 双实体位置同步脆弱 | FakePlayer 权威 → AIBotEntity 跟随 |
 | 18 | ✅ ChainManager 与 BotAIStateMachine 独立 | 预占时通知状态机 → PAUSED，取消时 reset |
+
+---
+
+## 三、后续发现 Bug 修复 (r55)
+
+### B1 — GameTest 服务器崩溃
+- **症状**: `ResourceLocationException: gametestregistry.aimod:empty` — 路径含 `:`
+- **原因**: NeoForge 21.1.176 的 `event.register(GameTestRegistry.class)` 自动生成 batch 名 `classname.modid:template` 含 `:`，`ResourceLocation.parse()` 拒绝路径中的冒号
+- **修复**: 从 `build.gradle` 移除 `forge.enabledGameTestNamespaces`，GameTestRegistry 保留为桩类，JUnit 134 测试为主测试方案
+
+### B2 — 近距离采集走很远
+- **症状**: 垫脚方块需求1块，bot 扫描128格远去找
+- **原因**: `GatherResourceAction` 初始 radius=32，渐进扩张至128，对1块土也走很远
+- **修复**: 
+  - `count≤2 → searchRadius≤24`，`count≤8 → ≤48`，`max≤64`
+  - `INITIAL_SEARCH_RADIUS=16`，`EXPAND_STEP=16`
+
+### B3 — WorldScanner 提前返回排序不正确
+- **症状**: `findNearbyBlocksBatched()` 达到 16 结果即提前返回，只排了部分 chunk 的结果，可能漏掉更近的方块
+- **原因**: chunk 按 raster 顺序(min→max)遍历，非距离优先；早期满 16 即截断+排序
+- **修复**: 
+  - 去掉提前返回，全扫描后统一排序
+  - chunk 按距离 bot 排序（螺旋向外）
+  - `MAX_RESULTS=16→64`
+
+### B4 — Task 永远不完成
+- **症状**: 任务在 EXECUTING 状态停滞，动作不推进
+- **原因**: 
+  1. Chain 抢占阈值 50：FoodChain(P55)、DefenseChain(P70)、DangerChain(P90) 均抢占 task，task 得不到 tick
+  2. 方块破坏使用 tick 计数，task 被抢占期间 breakProgress 不推进
+  3. DefenseChain 无最大活跃时间，可无限抢占
+- **修复**:
+  - `PREEMPT_THRESHOLD=50→65`：FoodChain(P55) 不再抢占，与 task 共存
+  - 破坏进度改用 `System.currentTimeMillis()` 实时时间，不受 tick 频率影响
+  - DefenseChain 加 `MAX_ACTIVE_TICKS=120` + `POST_COMBAT_COOLDOWN=40`
