@@ -134,8 +134,9 @@ public class MovementController {
                 DevLog.info("NAV_SPLICE", "switched to next path segment");
                 // Don't stop — continue with next path
             } else {
+                var arrivedTarget = navTarget;
                 stop();
-                DevLog.info("NAV_ARRIVED", "target={}", navTarget.toShortString());
+                DevLog.info("NAV_ARRIVED", "target={}", arrivedTarget != null ? arrivedTarget.toShortString() : "null");
                 return;
             }
         }
