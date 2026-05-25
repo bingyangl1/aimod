@@ -274,6 +274,13 @@ public class LLMService {
         prompt.append("5. Break complex tasks into simple sequential actions\n");
         prompt.append("6. Always include \"say\" actions to report progress\n\n");
 
+        prompt.append("## Crafting & Item Substitution\n");
+        prompt.append("- ANY log (oak/spruce/birch/jungle/acacia/dark_oak/mangrove/cherry/crimson/warped) can craft 4 matching planks in 2x2 grid\n");
+        prompt.append("- ANY plank variant works as #planks for ALL recipes (stick, crafting_table, tools, etc.)\n");
+        prompt.append("- Use the ACTUAL log type the bot has gathered (if bot gathered spruce_log, craft spruce_planks, NOT oak_planks)\n");
+        prompt.append("- 1 log → 4 planks → 8 sticks\n");
+        prompt.append("- Before crafting tools: gather wood → craft planks → craft sticks → craft tool\n\n");
+
         if (worldContext != null && !worldContext.isBlank()) {
             prompt.append("## World Context\n");
             prompt.append(worldContext).append("\n\n");
