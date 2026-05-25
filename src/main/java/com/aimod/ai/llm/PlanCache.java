@@ -99,6 +99,8 @@ public class PlanCache {
      * Jaccard for short strings.
      */
     static double similarity(String rawA, String rawB) {
+        if (rawA == null || rawB == null) return 0.0;
+        if (rawA.isEmpty() && rawB.isEmpty()) return 0.0;
         if (rawA.equals(rawB)) return 1.0;
         if (rawA.isEmpty() || rawB.isEmpty()) return 0.0;
 
