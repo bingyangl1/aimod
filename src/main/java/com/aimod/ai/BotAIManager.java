@@ -364,7 +364,9 @@ public class BotAIManager {
             + "/" + task.getActionCount() + "]: " + failedActionDesc
             + ". Position: " + bot.blockPosition().toShortString()
             + ". Inventory: " + (invCtx.isEmpty() ? "empty" : invCtx.toString())
-            + ". Respond ONLY with a valid JSON action like {\"type\":\"gather\",\"resource_type\":\"WOOD\",\"count\":1}.";
+            + ". Tip: logs can be crafted into 4 matching planks in 2x2 grid (no table needed). "
+            + "Use the exact log type in inventory (e.g., spruce_log→spruce_planks, NOT oak_planks)."
+            + " Respond with ONE JSON action.";
 
         Thread t = new Thread(() -> {
             try {
