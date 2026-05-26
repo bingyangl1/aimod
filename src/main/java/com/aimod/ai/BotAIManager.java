@@ -71,6 +71,11 @@ public class BotAIManager {
         return worldScanner;
     }
 
+    /** Get memory stats for /aimod status display. */
+    public String getMemoryStats() {
+        return bot.getMemoryStore().getStats();
+    }
+
     public Task parseCommand(String naturalLanguageCommand) {
         return parseCommand(naturalLanguageCommand, null);
     }
@@ -94,9 +99,12 @@ public class BotAIManager {
                 }
             }
 
-            // Collect world context and call LLM
-            String worldContext = collectWorldContext();
-            DevLog.info("TASK_CONTEXT", "worldContext={}", DevLog.compact(worldContext));
+            // Assemble context via ContextAssembler (replaces collectWorldContext)
+            String worldContext = com.aimod.ai.memory.ContextAssembler.assemble(
+                    bot.getMemoryStore(), null,
+                    com.aimod.config.ModConfig.getMaxContextTokens());
+            DevLog.info("TASK_CONTEXT", "len={}, estTokens={}",
+                    worldContext.length(), LLMService.estimateTokens(worldContext));
 
             LLMResponse response = llmService.parseCommand(naturalLanguageCommand, worldContext);
             if (response.isSuccess()) {
@@ -135,55 +143,6 @@ public class BotAIManager {
         DevLog.info("TASK_PARSE_DONE", "source=fallback, actionCount={}, actions={}",
                 fallbackActions.size(), describeActions(fallbackActions));
         return task;
-    }
-
-    /**
-     * 收集世界上下文信息，用于 LLM 提示
-     */
-    private String collectWorldContext() {
-        StringBuilder ctx = new StringBuilder();
-
-        // 假人位置
-        ctx.append("Bot position: (").append(String.format("%.1f", bot.getX()))
-           .append(", ").append(String.format("%.1f", bot.getY()))
-           .append(", ").append(String.format("%.1f", bot.getZ())).append(")\n");
-
-        // 假人生命值
-        ctx.append("Bot health: ").append(String.format("%.1f", bot.getHealth())).append("/20\n");
-
-        // 假人背包内容
-        ctx.append("Bot inventory: ");
-        java.util.Map<net.minecraft.world.item.Item, Integer> inventoryItems = new java.util.LinkedHashMap<>();
-        for (int i = 0; i < bot.getInventory().getContainerSize(); i++) {
-            net.minecraft.world.item.ItemStack stack = bot.getInventory().getItem(i);
-            if (!stack.isEmpty()) {
-                inventoryItems.merge(stack.getItem(), stack.getCount(), Integer::sum);
-            }
-        }
-        if (inventoryItems.isEmpty()) {
-            ctx.append("empty\n");
-        } else {
-            boolean first = true;
-            for (java.util.Map.Entry<net.minecraft.world.item.Item, Integer> entry : inventoryItems.entrySet()) {
-                if (!first) ctx.append(", ");
-                ctx.append(entry.getKey().getDescriptionId()).append(" x").append(entry.getValue());
-                first = false;
-            }
-            ctx.append("\n");
-        }
-
-        // 当前时间
-        long time = bot.level().getDayTime() % 24000;
-        ctx.append("Time: ").append(time < 12000 ? "day" : "night").append(" (tick ").append(time).append(")\n");
-
-        // 生物群系
-        ctx.append("Biome: ").append(bot.level().getBiome(bot.blockPosition()).unwrapKey()
-                .map(key -> key.toString()).orElse("unknown")).append("\n");
-
-        // 世界扫描信息
-        ctx.append("\n").append(worldScanner.scanEnvironment(16));
-
-        return ctx.toString();
     }
 
     /**
@@ -356,20 +315,13 @@ public class BotAIManager {
         incrReplanCount++;
         replanning = true;
 
-        // Build rich context with inventory
-        StringBuilder invCtx = new StringBuilder();
-        for (int i = 0; i < bot.getInventory().getContainerSize(); i++) {
-            var stack = bot.getInventory().getItem(i);
-            if (!stack.isEmpty()) invCtx.append(stack.getCount()).append("x ")
-                .append(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem())).append(" ");
-        }
-        String ctx = "Task: " + task.getDescription() + ". Failed action[" + task.getCurrentActionIndex()
-            + "/" + task.getActionCount() + "]: " + failedActionDesc
-            + ". Position: " + bot.blockPosition().toShortString()
-            + ". Inventory: " + (invCtx.isEmpty() ? "empty" : invCtx.toString())
-            + ". Tip: logs can be crafted into 4 matching planks in 2x2 grid (no table needed). "
-            + "Use the exact log type in inventory (e.g., spruce_log→spruce_planks, NOT oak_planks)."
-            + " Respond with ONE JSON action.";
+        // Assemble structured context via ContextAssembler
+        int replanTokens = com.aimod.config.ModConfig.getCompactTriggerTokens();
+        String ctx = com.aimod.ai.memory.ContextAssembler.assemble(
+                bot.getMemoryStore(), task, replanTokens)
+                + "\nFailed action: " + failedActionDesc
+                + "\nTip: logs→4 planks in 2x2 grid. Use exact log type. "
+                + "\nRespond with ONE JSON action.";
 
         Thread t = new Thread(() -> {
             try {
@@ -404,6 +356,16 @@ public class BotAIManager {
         if (task == null || task.isCompleted()) {
             return;
         }
+
+        // Auto-compact memory when approaching token budget (every 100 ticks ≈ 5s)
+        if (bot.getServer() != null && bot.getServer().getTickCount() % 100 == 0) {
+            int estTokens = com.aimod.ai.memory.ContextAssembler.estimateTotalTokens(bot.getMemoryStore());
+            int triggerTokens = com.aimod.config.ModConfig.getCompactTriggerTokens();
+            if (estTokens > triggerTokens) {
+                bot.getMemoryStore().compactToTokenTarget(triggerTokens);
+            }
+        }
+
         executeTask(task);
     }
 

@@ -431,6 +431,8 @@ public class BotCommand {
         // Show AI state
         var sm = bot.getAiManager().getStateMachine();
         sb.append(" | state:").append(sm.getCurrent());
+        // Show memory stats
+        sb.append("\n  Memory: ").append(bot.getMemoryStore().getStats());
         return sb.toString();
     }
 

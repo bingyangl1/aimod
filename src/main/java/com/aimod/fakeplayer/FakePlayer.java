@@ -82,6 +82,9 @@ public class FakePlayer extends ServerPlayer {
     // ── Undo ─────────────────────────────────────────────────────────────
     private final UndoManager undoManager = new UndoManager(10);
 
+    // ── Memory ───────────────────────────────────────────────────────────
+    private com.aimod.ai.memory.BotMemoryStore memoryStore;
+
     // ── Construction ────────────────────────────────────────────────────
 
     public Runnable fixStartingPosition = () -> {};
@@ -92,6 +95,10 @@ public class FakePlayer extends ServerPlayer {
         this.aiManager = new BotAIManager(this);
         this.movementController = new MovementController(this);
         this.chainManager = new ChainManager();
+        this.memoryStore = new com.aimod.ai.memory.BotMemoryStore(
+                server.getServerDirectory() != null ? server.getServerDirectory() : java.nio.file.Path.of("."),
+                com.aimod.config.ModConfig.getMaxWorkingMemory());
+        this.memoryStore.bootstrap();
         this.chainManager.addChain(new DangerChain());
         this.chainManager.addChain(new DefenseChain());
         this.chainManager.addChain(new FoodChain());
@@ -272,6 +279,10 @@ public class FakePlayer extends ServerPlayer {
         if (srv.getTickCount() % 20 == 0) {
             this.connection.resetPosition();
             this.serverLevel().getChunkSource().move(this);
+
+            // Ingest world observation into memory store (1/sec)
+            var obs = com.aimod.ai.memory.WorldObservation.from(this);
+            memoryStore.ingest(obs);
         }
 
         // Auto-pickup nearby items
@@ -561,4 +572,5 @@ public class FakePlayer extends ServerPlayer {
 
     /** Get the undo manager. */
     public UndoManager getUndoManager() { return undoManager; }
+    public com.aimod.ai.memory.BotMemoryStore getMemoryStore() { return memoryStore; }
 }

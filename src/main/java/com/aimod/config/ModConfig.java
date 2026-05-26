@@ -163,6 +163,22 @@ public class ModConfig {
             .comment("Bot movement speed multiplier (0.3 = default player walk speed)")
             .defineInRange("movementSpeed", 0.3, 0.1, 1.0);
 
+    public static final ModConfigSpec.ConfigValue<Integer> MAX_CONTEXT_TOKENS = BUILDER
+            .comment("Maximum context tokens sent to LLM (hard limit). When context exceeds this,",
+                     "older observations will be compacted via BotMemoryStore.",
+                     "Note: this controls prompt context, not LLM max_tokens (which controls response length).")
+            .defineInRange("maxContextTokens", 32000, 1024, 128000);
+
+    public static final ModConfigSpec.ConfigValue<Integer> COMPACT_TRIGGER_TOKENS = BUILDER
+            .comment("Token threshold that triggers automatic memory compaction.",
+                     "Should be ~75% of maxContextTokens. When estimated tokens exceed this,",
+                     "oldest working-memory entries are compressed into short-term summaries.")
+            .defineInRange("compactTriggerTokens", 24000, 512, 128000);
+
+    public static final ModConfigSpec.ConfigValue<Integer> MAX_WORKING_MEMORY = BUILDER
+            .comment("Maximum number of WorldObservation snapshots kept in working memory.")
+            .defineInRange("maxWorkingMemory", 100, 20, 500);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     public static String getApiUrl() {
@@ -235,6 +251,9 @@ public class ModConfig {
     public static int getUndoHistory() { return UNDO_HISTORY.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
+    public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }
+    public static int getCompactTriggerTokens() { return COMPACT_TRIGGER_TOKENS.get(); }
+    public static int getMaxWorkingMemory() { return MAX_WORKING_MEMORY.get(); }
 
     public static BotMode getBotMode() { return BotMode.fromKey(BOT_MODE.get()); }
 }

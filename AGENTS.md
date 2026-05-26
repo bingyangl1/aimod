@@ -13,6 +13,7 @@
 AIBotEntity(Mob) → FakePlayer(ServerPlayer) → BotAIManager
                     ├─ MovementController (8 Movement + A*)
                     ├─ ChainManager (Danger>Defense>Food>Unstuck)
+                    ├─ BotMemoryStore (三层记忆: 工作/摘要/长期知识)
                     ├─ PlanCache (LLM规划缓存)
                     └─ UndoManager (10次撤销)
 
@@ -29,6 +30,7 @@ AIBotEntity(Mob) → FakePlayer(ServerPlayer) → BotAIManager
 | ai/pathing/ | Pathfinder(A\*), AsyncPathfinder, CalculationContext, ToolSet |
 | ai/chain/ | ChainManager, DangerChain(P90), DefenseChain(P70), FoodChain(P55), UnstuckChain(P50) |
 | ai/llm/ | LLMService, PlanCache, BotAIStateMachine |
+| ai/memory/ | WorldObservation, BotMemoryStore, ContextAssembler |
 | ai/planner/ | CommandParser(NLP), SequencePlanner(配方树) |
 | fakeplayer/ | FakePlayer, FakePlayerManager, BotInfo, BotPersistence |
 | command/ | BotCommand(27条), DirectCommandHandler |

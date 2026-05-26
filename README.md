@@ -200,7 +200,8 @@ undoHistory = 10          # 撤销步数 (0=禁用)
 | **配方** | RecipeIndex O(1) + MaterialTree 自动合成树 + ItemUid NBT 感知 |
 | **世界** | ChunkCache 异步缓存 + BlockIterator 共享扫描 + DangerZone 危险检测 |
 | **GUI** | BotStatusScreen 9x3 箱子界面 |
-| **配置** | 18 个配置项 + 运行时 toggle |
+| **配置** | 21 个配置项 + 运行时 toggle |
+| **记忆** | WorldObservation 结构化感知 + BotMemoryStore 三层记忆 + ContextAssembler token 预算组装 + auto-compact |
 | **测试** | 129 单元测试 + 18 集成测试 + 26 GameTest |
 | **i18n** | 中英文双语（zh_cn / en_us） |
 
@@ -235,12 +236,13 @@ com.aimod/
 │   ├── pathing/                   # A* Pathfinder + Goals + CalculationContext
 │   ├── chain/                     # 4 条行为链 + DangerZone
 │   ├── llm/                       # LLMService + PlanCache + StateMachine
+│   ├── memory/                    # WorldObservation + BotMemoryStore + ContextAssembler
 │   ├── planner/                   # CommandParser + SequencePlanner
 │   ├── craft/                     # MaterialTree + MaterialNode + TreeCost
 │   ├── tool/                      # AutoReplenish/ReplaceTool/Fish
 │   └── cache/                     # ChunkCache + CachedChunkData
 ├── command/                       # BotCommand (27 条) + DirectCommandHandler
-├── config/                        # ModConfig (18 配置项)
+├── config/                        # ModConfig (21 配置项)
 ├── client/                        # ClientModEvents + BotStatusScreen
 ├── gametest/                      # GameTest 模板
 ├── mixin/                         # 3 Mixin (Connection/PlayerList/ServerConfig)

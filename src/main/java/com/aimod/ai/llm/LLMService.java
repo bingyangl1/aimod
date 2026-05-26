@@ -297,7 +297,22 @@ public class LLMService {
     }
 
     private String callLLMApi(String prompt) throws IOException, InterruptedException {
+        // Check context length before sending
+        int maxCtx = com.aimod.config.ModConfig.getMaxContextTokens();
+        int estTokens = estimateTokens(prompt);
+        if (estTokens > maxCtx) {
+            DevLog.warn("LLM_CTX_OVERLIMIT", "estTokens={}, maxCtx={}, promptLen={}",
+                    estTokens, maxCtx, prompt.length());
+        } else if (estTokens > maxCtx * 0.9) {
+            DevLog.info("LLM_CTX_NEARLIMIT", "estTokens={}, maxCtx={}", estTokens, maxCtx);
+        }
         return callWithRetry(prompt, maxTokens, readTimeoutMs);
+    }
+
+    /** Rough token estimate: characters / 3.5 for English text. */
+    public static int estimateTokens(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        return Math.max(1, (int)(text.length() / 3.5));
     }
 
     private String callWithRetry(String prompt, int maxTokens, int timeoutMs) throws IOException, InterruptedException {
