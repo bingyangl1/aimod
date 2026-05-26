@@ -1,14 +1,13 @@
 {
   "version": "1.0.51",
-  "build": "2026-05-26-r64",
+  "build": "2026-05-27-r67",
   "fixes": [
-    "P12: parseActionFromJson flattens nested 'parameters' object — craft item_id no longer empty",
-    "P13A: GatherResourceAction aborts after 5 consecutive unreachable targets",
-    "P13B: TaskFeedback message prefix changed to [Bot名 → @玩家名] for multi-bot clarity",
-    "P13B: Action failure messages include specific reason (resource not found / underground / unreachable)",
-    "P13C: /ai_bot config command — list, get, set 8 runtime configs (scanRadius, hungerThreshold, etc.)",
-    "P14: PlaceBlockAction.canExecute logs reason when failing (occupied / no item)",
-    "P15: LLM prompt warns against nested 'parameters' objects",
-    "P16: → replaced with -> throughout buildPrompt()"
+    "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
+    "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
+    "r66: PlaceBlock placement direction fix — click solid face, not air (Baritone approach)",
+    "r66: PlaceBlock fallback to direct setBlock when useItemOn fails for FakePlayer",
+    "r67: global position array/object flattening in parseActionFromJson — move_to no longer goes to (0,0,0)",
+    "r67: position supports both array [-530,173,-132] and object {x:-531,y:173,z:-129} formats",
+    "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
