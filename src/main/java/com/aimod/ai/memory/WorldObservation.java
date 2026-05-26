@@ -187,6 +187,8 @@ public final class WorldObservation {
     /** Check if two observations are functionally identical for dedup purposes. */
     public boolean isDuplicateOf(WorldObservation other) {
         if (other == null) return false;
+        // Allow through if more than 30 seconds apart (time bypass)
+        if (Math.abs(this.timestamp - other.timestamp) > 30_000) return false;
         return botPosition.equals(other.botPosition)
                 && (int) health == (int) other.health
                 && (int) food == (int) other.food

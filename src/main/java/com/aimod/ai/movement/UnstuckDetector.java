@@ -39,7 +39,15 @@ public class UnstuckDetector {
     private int shimmyDirection; // -1, 0, 1
     private volatile boolean paused;
 
-    public void setPaused(boolean paused) { this.paused = paused; }
+    public void setPaused(boolean paused) {
+        this.paused = paused;
+        if (paused) {
+            this.stuck = false;
+            this.currentStrategy = RecoveryStrategy.NONE;
+            this.stuckTicks = 0;
+            this.strategyTicks = 0;
+        }
+    }
     public boolean isPaused() { return paused; }
 
     public enum RecoveryStrategy {

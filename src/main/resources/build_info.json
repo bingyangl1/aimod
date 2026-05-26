@@ -1,13 +1,11 @@
 {
   "version": "1.0.51",
-  "build": "2026-05-26-r62",
+  "build": "2026-05-26-r63",
   "fixes": [
-    "P0: ACTION_TYPE_ALIASES — LLM-generated action types (place/placeBlock/break etc) mapped to standard names",
-    "P1: incrementalReplan empty-acts handling — consecutiveUnknown counter, skip after 2, FAIL after 3",
-    "P2: WorldObservation dedup — isDuplicateOf() skips identical observations when bot is idle",
-    "P3: UnstuckDetector paused during LLM replan — prevents false WAIT/JUMP cycling",
-    "P4: UTF-8 arrow fix — logs->4 planks (ASCII) instead of logs→4 planks (Unicode corruption)",
-    "P5: ContextAssembler replan history — injects recent failed attempts so LLM doesn't repeat them",
-    "P6: LLMService.buildPrompt() — explicit action type name enforcement in Response Format"
+    "P9: injectAction now followed by advanceToNextAction — replan-injected actions actually execute instead of being buried",
+    "P10: place_block position array parsing — JSON {position: [x,y,z]} now correctly extracts coordinates",
+    "P3cont: UnstuckDetector.setPaused(true) now clears stuck flag + strategy state — no more false WAIT/JUMP during LLM wait",
+    "P7: WorldObservation.isDuplicateOf 30s time bypass — allows 1 obs per 30s even when bot is idle",
+    "P11: PlanCache.markFailed() — invalidates cached plans that caused repeated replan failures"
   ]
 }

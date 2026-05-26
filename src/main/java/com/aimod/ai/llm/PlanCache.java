@@ -55,6 +55,7 @@ public class PlanCache {
         CachedPlan best = null;
         double bestScore = 0;
         for (var plan : plans) {
+            if (!plan.success) continue; // skip previously invalidated plans
             double score = similarity(normalized, plan.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N"));
             if (score > bestScore && score >= SIMILARITY_THRESHOLD) {
                 bestScore = score;
@@ -68,6 +69,28 @@ public class PlanCache {
         }
         DevLog.info("PLAN_CACHE_MISS", "command={}", command);
         return Optional.empty();
+    }
+
+    /** Mark a cached plan as failed so it won't be reused. */
+    public void markFailed(String command) {
+        if (command == null || command.isBlank()) return;
+        String norm = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
+        for (var plan : plans) {
+            if (plan.success && similarity(norm, plan.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N")) > 0.8) {
+                plan.success = false;
+                save();
+                DevLog.info("PLAN_CACHE_INVALIDATE", "command={}", plan.command);
+                return;
+            }
+        }
+    }
+
+    /** Invalidate (remove) all cached plans matching this command. */
+    public void invalidate(String command) {
+        if (command == null || command.isBlank()) return;
+        String norm = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
+        boolean changed = plans.removeIf(p -> similarity(norm, p.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N")) > 0.8);
+        if (changed) save();
     }
 
     /** Save a successful plan for future reuse. */

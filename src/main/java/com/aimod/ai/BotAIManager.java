@@ -328,6 +328,7 @@ public class BotAIManager {
         if (incrReplanCount >= MAX_INCR_REPLAN) {
             task.setStatus(Task.TaskStatus.FAILED);
             feedback.reportTaskFailed(task.getDescription(), "Exceeded retry limit after " + incrReplanCount + " failures");
+            planCache.markFailed(lastCommand); // invalidate bad cached plan
             incrReplanCount = 0;
             consecutiveUnknown = 0;
             return;
@@ -365,7 +366,9 @@ public class BotAIManager {
                             stateMachine.startExecuting();
                         } else {
                             task.injectAction(next);
+                            task.advanceToNextAction(); // skip the failed action, execute the injected one
                             incrReplanCount = 0;
+                            consecutiveUnknown = 0;
                             DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
                             stateMachine.startExecuting();
                         }
@@ -378,6 +381,7 @@ public class BotAIManager {
                             task.setStatus(Task.TaskStatus.FAILED);
                             feedback.reportTaskFailed(task.getDescription(),
                                     "LLM repeatedly generated unrecognized action types");
+                            planCache.markFailed(lastCommand);
                             incrReplanCount = 0;
                             consecutiveUnknown = 0;
                         } else if (consecutiveUnknown >= 2) {
@@ -471,13 +475,23 @@ public class BotAIManager {
                             getInt(obj, "z", 0)));
                 }
                 case "place_block" -> {
-                    String blockId = getString(obj, "block_id", getString(obj, "block", "minecraft:stone"));
+                    String blockId = getString(obj, "block_id",
+                            getString(obj, "block", getString(obj, "item", "minecraft:stone")));
                     BlockItem bi = getBlockItemFromString(blockId);
                     if (bi != null) {
-                        yield new PlaceBlockAction(new BlockPos(
-                                getInt(obj, "x", 0),
-                                getInt(obj, "y", 0),
-                                getInt(obj, "z", 0)), bi);
+                        int px, py, pz;
+                        // Support position array: [x, y, z]
+                        if (obj.has("position") && obj.get("position").isJsonArray()) {
+                            var arr = obj.getAsJsonArray("position");
+                            px = arr.size() >= 3 ? arr.get(0).getAsInt() : 0;
+                            py = arr.size() >= 3 ? arr.get(1).getAsInt() : 0;
+                            pz = arr.size() >= 3 ? arr.get(2).getAsInt() : 0;
+                        } else {
+                            px = getInt(obj, "x", 0);
+                            py = getInt(obj, "y", 0);
+                            pz = getInt(obj, "z", 0);
+                        }
+                        yield new PlaceBlockAction(new BlockPos(px, py, pz), bi);
                     }
                     yield null;
                 }
