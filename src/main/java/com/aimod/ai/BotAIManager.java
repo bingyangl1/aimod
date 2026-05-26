@@ -43,6 +43,7 @@ public class BotAIManager {
     private final com.aimod.ai.llm.PlanCache planCache;
     private volatile String lastOwnerName = null;
     private volatile String lastCommand = null;
+    private volatile List<String> lastCachedActions = null; // for deferred planCache.store on success
     private volatile boolean replanning = false;
 
     /** LLM常用action type名称 → 标准名称映射 */
@@ -146,8 +147,7 @@ public class BotAIManager {
                 }
                 task.setActions(actions);
                 task.setStatus(Task.TaskStatus.IN_PROGRESS);
-                // Cache successful LLM plans for future reuse
-                planCache.store(naturalLanguageCommand, response.getActions(), true);
+                lastCachedActions = new ArrayList<>(response.getActions()); // save for deferred cache on success
                 DevLog.info("TASK_PARSE_DONE", "source=llm, actionCount={}, actions={}",
                         actions.size(), describeActions(actions));
                 return task;
@@ -219,6 +219,14 @@ public class BotAIManager {
                 task.advanceToNextAction();
                 // Check deficits right when task transitions to COMPLETED
                 if (task.isCompleted()) {
+                    // Cache validated plan (only if no replanning occurred)
+                    if (lastCommand != null && !lastCommand.isBlank()
+                            && incrReplanCount == 0 && lastCachedActions != null) {
+                        planCache.store(lastCommand, lastCachedActions, true);
+                        DevLog.info("PLAN_CACHE_STORE_DEFERRED", "command={}, actions={}",
+                                lastCommand, lastCachedActions.size());
+                    }
+                    lastCachedActions = null;
                     checkDeficitsAndReplan(task);
                 }
             } else {

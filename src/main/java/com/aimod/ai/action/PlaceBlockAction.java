@@ -29,7 +29,7 @@ public class PlaceBlockAction extends Action {
     @Override
     public boolean canExecute(FakePlayer bot) {
         BlockState blockState = bot.level().getBlockState(targetPos);
-        if (!blockState.isAir()) {
+        if (!(blockState.isAir() || blockState.canBeReplaced())) {
             DevLog.warn("PLACE_BLOCK_OCCUPIED", "pos={}, state={}", targetPos.toShortString(), blockState.getBlock().getDescriptionId());
             return false;
         }
