@@ -37,6 +37,10 @@ public class UnstuckDetector {
     private RecoveryStrategy currentStrategy = RecoveryStrategy.NONE;
     private int strategyTicks;
     private int shimmyDirection; // -1, 0, 1
+    private volatile boolean paused;
+
+    public void setPaused(boolean paused) { this.paused = paused; }
+    public boolean isPaused() { return paused; }
 
     public enum RecoveryStrategy {
         NONE,
@@ -53,6 +57,7 @@ public class UnstuckDetector {
      * @return the current recovery strategy (NONE if not stuck)
      */
     public RecoveryStrategy tick(FakePlayer bot) {
+        if (paused) return RecoveryStrategy.NONE;
         Vec3 pos = bot.position();
         posHistory.addFirst(pos);
         if (posHistory.size() > HISTORY_SIZE) {

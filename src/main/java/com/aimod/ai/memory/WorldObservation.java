@@ -184,6 +184,16 @@ public final class WorldObservation {
         return result;
     }
 
+    /** Check if two observations are functionally identical for dedup purposes. */
+    public boolean isDuplicateOf(WorldObservation other) {
+        if (other == null) return false;
+        return botPosition.equals(other.botPosition)
+                && (int) health == (int) other.health
+                && (int) food == (int) other.food
+                && timeOfDay.equals(other.timeOfDay)
+                && inventorySnapshot.equals(other.inventorySnapshot);
+    }
+
     /** Rough token estimate: characters / 3.5 (typical for English text). */
     public int estimateTokens() {
         return Math.max(1, toContextBlock(Integer.MAX_VALUE).length() * 10 / 35);

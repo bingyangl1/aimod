@@ -61,6 +61,11 @@ public final class BotMemoryStore {
 
     /** Ingest a new observation. Auto-trims if over capacity. */
     public void ingest(WorldObservation obs) {
+        // Skip if identical to previous observation (bot standing still)
+        WorldObservation prev = workingMemory.peekLast();
+        if (prev != null && obs.isDuplicateOf(prev)) {
+            return; // skip duplicate
+        }
         workingMemory.addLast(obs);
         while (workingMemory.size() > maxWorking) {
             workingMemory.removeFirst();

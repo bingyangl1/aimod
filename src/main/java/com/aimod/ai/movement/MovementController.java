@@ -220,6 +220,7 @@ public class MovementController {
     public boolean isNavigating() { return navigating; }
     public boolean hasArrived() { return !navigating && navTarget != null; }
     public boolean isStuck() { return unstuckDetector.isStuck(); }
+    public UnstuckDetector getUnstuckDetector() { return unstuckDetector; }
     public BlockPos getNavTarget() { return navTarget; }
     public PathExecutor getPathExecutor() { return pathExecutor; }
     public BotMovement getActiveMovement() { return activeMovement; }

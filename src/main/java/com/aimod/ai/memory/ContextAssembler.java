@@ -26,6 +26,24 @@ public final class ContextAssembler {
     private ContextAssembler() {}
 
     /**
+     * Assemble context with recent replan history injected.
+     * Prevents LLM from repeating the same failed suggestion.
+     */
+    public static String assemble(BotMemoryStore store, Task task, int maxTokens,
+                                   List<String> recentReplanAttempts) {
+        String base = assemble(store, task, maxTokens);
+        if (recentReplanAttempts == null || recentReplanAttempts.isEmpty()) return base;
+
+        StringBuilder sb = new StringBuilder(base);
+        sb.append("\n## Recent Failed Attempts (do NOT repeat these)\n");
+        int maxAttempts = Math.min(recentReplanAttempts.size(), 5);
+        for (int i = recentReplanAttempts.size() - maxAttempts; i < recentReplanAttempts.size(); i++) {
+            sb.append("- ").append(recentReplanAttempts.get(i)).append("\n");
+        }
+        return sb.toString();
+    }
+
+    /**
      * Assemble full context for an LLM call.
      *
      * @param store    the bot's memory store

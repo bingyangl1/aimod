@@ -1,14 +1,13 @@
 {
   "version": "1.0.51",
-  "build": "2026-05-26-r61",
+  "build": "2026-05-26-r62",
   "fixes": [
-    "Phase1 ContextEngine: WorldObservation structured perception replaces ad-hoc string concatenation",
-    "BotMemoryStore: 3-tier memory (working Deque + short-term summaries JSON + long-term knowledge JSON)",
-    "ContextAssembler: token-budget dynamic assembly (60% working + 20% summaries + 10% knowledge + 10% task)",
-    "Auto-compact: triggers when estimated tokens exceed compactTriggerTokens (every 100 ticks)",
-    "Persistent resource locations & explored chunks across server restarts",
-    "ModConfig: maxContextTokens(32000), compactTriggerTokens(24000), maxWorkingMemory(100)",
-    "LLMService: estimateTokens() + context-over-limit warning before API call",
-    "/aimod status: displays MemoryStore stats (working/summaries/resources/chunks)"
+    "P0: ACTION_TYPE_ALIASES — LLM-generated action types (place/placeBlock/break etc) mapped to standard names",
+    "P1: incrementalReplan empty-acts handling — consecutiveUnknown counter, skip after 2, FAIL after 3",
+    "P2: WorldObservation dedup — isDuplicateOf() skips identical observations when bot is idle",
+    "P3: UnstuckDetector paused during LLM replan — prevents false WAIT/JUMP cycling",
+    "P4: UTF-8 arrow fix — logs->4 planks (ASCII) instead of logs→4 planks (Unicode corruption)",
+    "P5: ContextAssembler replan history — injects recent failed attempts so LLM doesn't repeat them",
+    "P6: LLMService.buildPrompt() — explicit action type name enforcement in Response Format"
   ]
 }

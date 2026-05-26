@@ -45,6 +45,23 @@ public class BotAIManager {
     private volatile String lastCommand = null;
     private volatile boolean replanning = false;
 
+    /** LLM常用action type名称 → 标准名称映射 */
+    private static final java.util.Map<String, String> ACTION_TYPE_ALIASES = java.util.Map.ofEntries(
+            java.util.Map.entry("place", "place_block"),
+            java.util.Map.entry("placeBlock", "place_block"),
+            java.util.Map.entry("break", "break_block"),
+            java.util.Map.entry("move", "move_to"),
+            java.util.Map.entry("mineBlock", "mine"),
+            java.util.Map.entry("gatherResource", "gather"),
+            java.util.Map.entry("followPlayer", "follow"),
+            java.util.Map.entry("give", "give_item"),
+            java.util.Map.entry("speak", "say"),
+            java.util.Map.entry("interactBlock", "interact"),
+            java.util.Map.entry("equipItem", "equip"),
+            java.util.Map.entry("craftItem", "craft"),
+            java.util.Map.entry("attackEntity", "attack")
+    );
+
     public BotAIManager(FakePlayer bot) {
         this.bot = bot;
         this.llmService = new LLMService();
@@ -303,6 +320,8 @@ public class BotAIManager {
      */
     private int incrReplanCount = 0;
     private static final int MAX_INCR_REPLAN = 5;
+    private int consecutiveUnknown = 0;
+    private final java.util.List<String> recentReplanAttempts = new java.util.ArrayList<>();
 
     private void incrementalReplan(Task task, String failedActionDesc) {
         if (replanning) return;
@@ -310,18 +329,26 @@ public class BotAIManager {
             task.setStatus(Task.TaskStatus.FAILED);
             feedback.reportTaskFailed(task.getDescription(), "Exceeded retry limit after " + incrReplanCount + " failures");
             incrReplanCount = 0;
+            consecutiveUnknown = 0;
             return;
         }
         incrReplanCount++;
         replanning = true;
+        // Pause UnstuckDetector while waiting for LLM response
+        bot.getMovementController().getUnstuckDetector().setPaused(true);
 
-        // Assemble structured context via ContextAssembler
+        // Track this attempt for context in future replans
+        recentReplanAttempts.add(failedActionDesc);
+        while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+
+        // Assemble structured context via ContextAssembler (with replan history)
         int replanTokens = com.aimod.config.ModConfig.getCompactTriggerTokens();
         String ctx = com.aimod.ai.memory.ContextAssembler.assemble(
-                bot.getMemoryStore(), task, replanTokens)
+                bot.getMemoryStore(), task, replanTokens, recentReplanAttempts)
                 + "\nFailed action: " + failedActionDesc
-                + "\nTip: logs→4 planks in 2x2 grid. Use exact log type. "
-                + "\nRespond with ONE JSON action.";
+                + "\nTip: logs -> 4 planks in 2x2 grid. Use exact log type."
+                + "\nRespond with ONE JSON action using these type names: "
+                + "move_to, break_block, place_block, mine, gather, craft, give_item, interact, equip, attack, follow, say, wait.";
 
         Thread t = new Thread(() -> {
             try {
@@ -330,6 +357,7 @@ public class BotAIManager {
                     var acts = convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
                         var next = acts.get(0);
+                        consecutiveUnknown = 0; // reset
                         // Skip duplicate: if same description as what just failed, advance instead
                         if (next.getDescription().equals(failedActionDesc)) {
                             task.advanceToNextAction();
@@ -341,13 +369,34 @@ public class BotAIManager {
                             DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
                             stateMachine.startExecuting();
                         }
+                    } else {
+                        // LLM returned unrecognizable actions — escalate
+                        consecutiveUnknown++;
+                        DevLog.warn("REPLAN_UNKNOWN_CONSEQ", "count={}, failedAction={}",
+                                consecutiveUnknown, failedActionDesc);
+                        if (consecutiveUnknown >= 3) {
+                            task.setStatus(Task.TaskStatus.FAILED);
+                            feedback.reportTaskFailed(task.getDescription(),
+                                    "LLM repeatedly generated unrecognized action types");
+                            incrReplanCount = 0;
+                            consecutiveUnknown = 0;
+                        } else if (consecutiveUnknown >= 2) {
+                            // Skip stuck action after 2 unknown attempts
+                            task.advanceToNextAction();
+                            incrReplanCount = 0;
+                            consecutiveUnknown = 0;
+                            stateMachine.startExecuting();
+                            DevLog.info("REPLAN_SKIP_UNKNOWN", "advanced past stuck action");
+                        }
                     }
                 }
-                // If no actions found, will retry next tick (up to MAX_INCR_REPLAN)
             } catch (Exception e) {
                 task.setStatus(Task.TaskStatus.FAILED);
                 feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
-            } finally { replanning = false; }
+            } finally {
+                replanning = false;
+                bot.getMovementController().getUnstuckDetector().setPaused(false);
+            }
         }, "AIMod-Incr-" + bot.getStringUUID().substring(0, 8));
         t.setDaemon(true); t.start();
     }
@@ -397,6 +446,9 @@ public class BotAIManager {
         String type = getString(obj, "type", "");
         if (type.isEmpty()) type = getString(obj, "action", "");
         if (type.isEmpty()) return null;
+
+        // Normalize LLM-generated aliases to standard names
+        type = ACTION_TYPE_ALIASES.getOrDefault(type, type);
 
         // Normalize item key
         if (obj.has("item") && !obj.has("item_id")) {

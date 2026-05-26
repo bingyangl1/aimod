@@ -290,6 +290,9 @@ public class LLMService {
         prompt.append(command).append("\n\n");
 
         prompt.append("## Response Format\n");
+        prompt.append("Use EXACT action type names: move_to, break_block, place_block, "
+                + "mine, gather, craft, give_item, require_items, interact, equip, "
+                + "attack, follow, say, wait. Do NOT use aliases like \"place\" or \"placeBlock\".\n");
         prompt.append("Respond ONLY with a JSON object: {\"actions\": [...]}\n");
         prompt.append("Do not include any other text or explanation.\n");
 
