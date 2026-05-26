@@ -122,7 +122,10 @@ public class PlaceBlockAction extends Action {
                 (ServerPlayer) bot, serverLevel,
                 stack, InteractionHand.MAIN_HAND, hitResult
         );
-        return result.consumesAction();
+        if (result.consumesAction()) return true;
+
+        // Fallback: direct setBlock if game mode placement fails (e.g. FakePlayer)
+        return fallbackSetBlock(bot, stack, pos);
     }
 
     /** Fallback: direct setBlock if game mode placement fails. */

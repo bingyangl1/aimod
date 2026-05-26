@@ -480,6 +480,22 @@ public class BotAIManager {
             }
         }
 
+        // Flatten "position" array/object to x/y/z (LLM uses "position": [x,y,z] or {"x":,"y":,"z":})
+        if (obj.has("position") && !obj.has("x")) {
+            var pos = obj.get("position");
+            if (pos.isJsonArray() && pos.getAsJsonArray().size() >= 3) {
+                var arr = pos.getAsJsonArray();
+                obj.addProperty("x", arr.get(0).getAsInt());
+                obj.addProperty("y", arr.get(1).getAsInt());
+                obj.addProperty("z", arr.get(2).getAsInt());
+            } else if (pos.isJsonObject()) {
+                var posObj = pos.getAsJsonObject();
+                if (posObj.has("x")) obj.add("x", posObj.get("x"));
+                if (posObj.has("y")) obj.add("y", posObj.get("y"));
+                if (posObj.has("z")) obj.add("z", posObj.get("z"));
+            }
+        }
+
         // Normalize item key
         if (obj.has("item") && !obj.has("item_id")) {
             obj.addProperty("item_id", getString(obj, "item", ""));
@@ -505,18 +521,9 @@ public class BotAIManager {
                             getString(obj, "block", getString(obj, "item", "minecraft:stone")));
                     BlockItem bi = getBlockItemFromString(blockId);
                     if (bi != null) {
-                        int px, py, pz;
-                        // Support position array: [x, y, z]
-                        if (obj.has("position") && obj.get("position").isJsonArray()) {
-                            var arr = obj.getAsJsonArray("position");
-                            px = arr.size() >= 3 ? arr.get(0).getAsInt() : 0;
-                            py = arr.size() >= 3 ? arr.get(1).getAsInt() : 0;
-                            pz = arr.size() >= 3 ? arr.get(2).getAsInt() : 0;
-                        } else {
-                            px = getInt(obj, "x", 0);
-                            py = getInt(obj, "y", 0);
-                            pz = getInt(obj, "z", 0);
-                        }
+                        int px = getInt(obj, "x", 0);
+                        int py = getInt(obj, "y", 0);
+                        int pz = getInt(obj, "z", 0);
                         yield new PlaceBlockAction(new BlockPos(px, py, pz), bi);
                     }
                     yield null;
