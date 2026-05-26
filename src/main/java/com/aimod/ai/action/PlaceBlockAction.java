@@ -104,14 +104,18 @@ public class PlaceBlockAction extends Action {
         if (slot < 0) return false;
         bot.getInventory().selected = slot;
 
-        // Build a BlockHitResult for the adjacent face
-        BlockPos adjacentPos = pos.relative(face.getOpposite());
+        // Build a BlockHitResult: click the face of the solid neighbor block
+        // face = direction FROM pos TO the solid block (e.g. DOWN if block below is solid)
+        // againstPos = the solid block we actually click on
+        // clickFace = the face of the solid block facing toward pos
+        BlockPos againstPos = pos.relative(face);
+        Direction clickFace = face.getOpposite();
         Vec3 hitLoc = new Vec3(
-                adjacentPos.getX() + 0.5 + face.getStepX() * 0.5,
-                adjacentPos.getY() + 0.5 + face.getStepY() * 0.5,
-                adjacentPos.getZ() + 0.5 + face.getStepZ() * 0.5
+                againstPos.getX() + 0.5 + clickFace.getStepX() * 0.5,
+                againstPos.getY() + 0.5 + clickFace.getStepY() * 0.5,
+                againstPos.getZ() + 0.5 + clickFace.getStepZ() * 0.5
         );
-        BlockHitResult hitResult = new BlockHitResult(hitLoc, face, adjacentPos, false);
+        BlockHitResult hitResult = new BlockHitResult(hitLoc, clickFace, againstPos, false);
 
         // Use the game mode to place the block
         InteractionResult result = bot.gameMode.useItemOn(
