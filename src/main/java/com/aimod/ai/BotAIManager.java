@@ -93,6 +93,14 @@ public class BotAIManager {
         return bot.getMemoryStore().getStats();
     }
 
+    /** Extract a more specific failure reason from an action if available. */
+    private static String getActionFailReason(Action action, String defaultReason) {
+        if (action instanceof com.aimod.ai.action.GatherResourceAction g) {
+            return g.failReason != null ? g.failReason : defaultReason;
+        }
+        return defaultReason;
+    }
+
     public Task parseCommand(String naturalLanguageCommand) {
         return parseCommand(naturalLanguageCommand, null);
     }
@@ -190,11 +198,12 @@ public class BotAIManager {
                 currentAction.execute(bot);
             } else {
                 currentAction.setStatus(Action.ActionStatus.FAILED);
+                String reason = getActionFailReason(currentAction, "Cannot execute");
                 feedback.reportActionFailed(
                         task.getCurrentActionIndex() + 1,
                         task.getActionCount(),
                         currentAction.getDescription(),
-                        "Cannot execute");
+                        reason);
             }
         } else if (currentAction.getStatus() == Action.ActionStatus.IN_PROGRESS) {
             currentAction.execute(bot);
@@ -217,11 +226,12 @@ public class BotAIManager {
                 if (!replanning) {
                     // Action failed — but check if it was a GiveItemAction with partial success
                     boolean isGiveItemPartial = (currentAction instanceof GiveItemAction g && g.getGivenCount() > 0);
+                    String reason = getActionFailReason(currentAction, "Action failed");
                     feedback.reportActionFailed(
                             task.getCurrentActionIndex() + 1,
                             task.getActionCount(),
                             currentAction.getDescription(),
-                            "Action failed");
+                            reason);
                     if (isGiveItemPartial) {
                         // Skip failed give_item (partial) and continue
                         DevLog.info("GIVE_ITEM_PARTIAL_SKIP", "continuing task after partial give");
@@ -453,6 +463,14 @@ public class BotAIManager {
 
         // Normalize LLM-generated aliases to standard names
         type = ACTION_TYPE_ALIASES.getOrDefault(type, type);
+
+        // Flatten nested "parameters" object (LLM sometimes wraps params)
+        if (obj.has("parameters") && obj.get("parameters").isJsonObject()) {
+            JsonObject params = obj.getAsJsonObject("parameters");
+            for (String key : params.keySet()) {
+                if (!obj.has(key)) obj.add(key, params.get(key));
+            }
+        }
 
         // Normalize item key
         if (obj.has("item") && !obj.has("item_id")) {

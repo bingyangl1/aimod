@@ -204,6 +204,15 @@ public class BotCommand {
                                 .executes(ctx -> veinMineUndo(ctx, 1))
                                 .then(Commands.argument("steps", IntegerArgumentType.integer(1, 10))
                                         .executes(ctx -> veinMineUndo(ctx, IntegerArgumentType.getInteger(ctx, "steps"))))))
+                // --- Config command ---
+                .then(Commands.literal("config")
+                        .executes(BotCommand::configList)
+                        .then(Commands.literal("list").executes(BotCommand::configList))
+                        .then(Commands.argument("key", StringArgumentType.word())
+                                .suggests((ctx, b) -> suggestConfigKeys(ctx, b))
+                                .executes(BotCommand::configGet)
+                                .then(Commands.argument("value", StringArgumentType.greedyString())
+                                        .executes(BotCommand::configSet))))
                 // --- Test command ---
                 .then(Commands.literal("test")
                         .executes(BotCommand::runTests))
@@ -1142,5 +1151,102 @@ public class BotCommand {
         ctx.getSource().sendSuccess(() -> Component.literal(
             Component.translatable("commands.ai_bot.help.detail_title", cmd).getString() + "\n" + detail), false);
         return 1;
+    }
+
+    // ========== Config command ==========
+
+    private static final java.util.List<String> CONFIG_KEYS = java.util.List.of(
+            "scanRadius", "hungerThreshold", "movementSpeed",
+            "veinMine", "autoReplenish", "autoReplaceTool", "autoFish", "maxBots"
+    );
+
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestConfigKeys(
+            com.mojang.brigadier.context.CommandContext<CommandSourceStack> ctx,
+            com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+        String input = builder.getRemaining().toLowerCase();
+        for (String key : CONFIG_KEYS) {
+            if (key.toLowerCase().startsWith(input)) builder.suggest(key);
+        }
+        return builder.buildFuture();
+    }
+
+    private static int configList(CommandContext<CommandSourceStack> ctx) {
+        var src = ctx.getSource();
+        StringBuilder sb = new StringBuilder("§e=== AI Bot Config ===§r\n");
+        sb.append("scanRadius: ").append(com.aimod.config.ModConfig.getDefaultScanRadius())
+          .append(" (8-128)\n");
+        sb.append("hungerThreshold: ").append(com.aimod.config.ModConfig.getHungerThreshold())
+          .append(" (0-20)\n");
+        sb.append("movementSpeed: ").append(com.aimod.config.ModConfig.getMovementSpeed())
+          .append(" (0.1-1.0)\n");
+        sb.append("veinMine: ").append(com.aimod.config.ModConfig.getVeinMine()).append("\n");
+        sb.append("autoReplenish: ").append(com.aimod.config.ModConfig.getAutoReplenish()).append("\n");
+        sb.append("autoReplaceTool: ").append(com.aimod.config.ModConfig.getAutoReplaceTool()).append("\n");
+        sb.append("autoFish: ").append(com.aimod.config.ModConfig.getAutoFish()).append("\n");
+        sb.append("maxBots: ").append(com.aimod.config.ModConfig.getMaxBots()).append(" (1-50)\n");
+        sb.append("\n§7用法: /ai_bot config <key> [value]§r");
+        src.sendSuccess(() -> Component.literal(sb.toString()), false);
+        return 1;
+    }
+
+    private static int configGet(CommandContext<CommandSourceStack> ctx) {
+        String key = StringArgumentType.getString(ctx, "key");
+        String val = getConfigValue(key);
+        if (val == null) {
+            ctx.getSource().sendFailure(Component.literal("未知配置项: " + key + "。可用: " + String.join(", ", CONFIG_KEYS)));
+            return 0;
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(key + " = " + val), false);
+        return 1;
+    }
+
+    private static int configSet(CommandContext<CommandSourceStack> ctx) {
+        String key = StringArgumentType.getString(ctx, "key");
+        String valStr = StringArgumentType.getString(ctx, "value");
+        try {
+            boolean ok = setConfigValue(key, valStr);
+            if (!ok) {
+                ctx.getSource().sendFailure(Component.literal("未知配置项: " + key));
+                return 0;
+            }
+            String newVal = getConfigValue(key);
+            ctx.getSource().sendSuccess(() -> Component.literal("§a" + key + " 已更新为 " + newVal + "§r"), true);
+        } catch (NumberFormatException e) {
+            ctx.getSource().sendFailure(Component.literal("无效值: " + valStr + " (需要数字)"));
+            return 0;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("设置失败: " + e.getMessage()));
+            return 0;
+        }
+        return 1;
+    }
+
+    @javax.annotation.Nullable
+    private static String getConfigValue(String key) {
+        return switch (key) {
+            case "scanRadius" -> String.valueOf(com.aimod.config.ModConfig.getDefaultScanRadius());
+            case "hungerThreshold" -> String.valueOf(com.aimod.config.ModConfig.getHungerThreshold());
+            case "movementSpeed" -> String.valueOf(com.aimod.config.ModConfig.getMovementSpeed());
+            case "veinMine" -> String.valueOf(com.aimod.config.ModConfig.getVeinMine());
+            case "autoReplenish" -> String.valueOf(com.aimod.config.ModConfig.getAutoReplenish());
+            case "autoReplaceTool" -> String.valueOf(com.aimod.config.ModConfig.getAutoReplaceTool());
+            case "autoFish" -> String.valueOf(com.aimod.config.ModConfig.getAutoFish());
+            case "maxBots" -> String.valueOf(com.aimod.config.ModConfig.getMaxBots());
+            default -> null;
+        };
+    }
+
+    private static boolean setConfigValue(String key, String valStr) {
+        return switch (key) {
+            case "scanRadius" -> { com.aimod.config.ModConfig.setDefaultScanRadius(Integer.parseInt(valStr)); yield true; }
+            case "hungerThreshold" -> { com.aimod.config.ModConfig.setHungerThreshold(Integer.parseInt(valStr)); yield true; }
+            case "movementSpeed" -> { com.aimod.config.ModConfig.setMovementSpeed(Double.parseDouble(valStr)); yield true; }
+            case "veinMine" -> { com.aimod.config.ModConfig.setVeinMine(Boolean.parseBoolean(valStr)); yield true; }
+            case "autoReplenish" -> { com.aimod.config.ModConfig.setAutoReplenish(Boolean.parseBoolean(valStr)); yield true; }
+            case "autoReplaceTool" -> { com.aimod.config.ModConfig.setAutoReplaceTool(Boolean.parseBoolean(valStr)); yield true; }
+            case "autoFish" -> { com.aimod.config.ModConfig.setAutoFish(Boolean.parseBoolean(valStr)); yield true; }
+            case "maxBots" -> { com.aimod.config.ModConfig.setMaxBots(Integer.parseInt(valStr)); yield true; }
+            default -> false;
+        };
     }
 }

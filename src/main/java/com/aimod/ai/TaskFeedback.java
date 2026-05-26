@@ -34,6 +34,13 @@ public class TaskFeedback {
         }
     }
 
+    /** Build prefix string like §e[jocker → @nightfall]§r */
+    private String prefix() {
+        String botName = bot.getName().getString();
+        String owner = ownerName != null ? ownerName : "?";
+        return "§e[" + botName + " → @" + owner + "]§r ";
+    }
+
     /**
      * 向任务所有者发送消息
      */
@@ -43,7 +50,7 @@ public class TaskFeedback {
         ServerLevel level = (ServerLevel) bot.level();
         Player owner = level.getServer().getPlayerList().getPlayer(ownerUUID);
         if (owner != null) {
-            owner.sendSystemMessage(Component.literal("§e[AI Bot]§r " + message));
+            owner.sendSystemMessage(Component.literal(prefix() + message));
             DevLog.info("FEEDBACK_SENT", "to={}, message={}", ownerName, DevLog.compact(message));
         }
     }
@@ -57,7 +64,7 @@ public class TaskFeedback {
         ServerLevel level = (ServerLevel) bot.level();
         Player owner = level.getServer().getPlayerList().getPlayer(ownerUUID);
         if (owner != null) {
-            owner.sendSystemMessage(Component.literal("§e[AI Bot]§r ").append(Component.translatable(key, args)));
+            owner.sendSystemMessage(Component.literal(prefix()).append(Component.translatable(key, args)));
             DevLog.info("FEEDBACK_SENT", "to={}, key={}", ownerName, key);
         }
     }
@@ -68,7 +75,7 @@ public class TaskFeedback {
     public void broadcast(String message) {
         ServerLevel level = (ServerLevel) bot.level();
         level.getServer().getPlayerList().broadcastSystemMessage(
-                Component.literal("§e[AI Bot]§r " + message), false);
+                Component.literal(prefix() + message), false);
         DevLog.info("FEEDBACK_BROADCAST", "message={}", DevLog.compact(message));
     }
 
@@ -112,6 +119,17 @@ public class TaskFeedback {
      */
     public void reportMissingResources(String description) {
         sendToOwner("§c缺少资源:§r " + description);
+    }
+
+    /** 报告资源未找到，给出配置命令提示 */
+    public void reportResourceNotFound(String resource, int radius) {
+        int nextRadius = Math.min(radius * 2, 128);
+        sendToOwner("§c在" + radius + "格内找不到" + resource + "§r，可以扩大范围: §e/ai_bot config scanRadius " + nextRadius);
+    }
+
+    /** 报告资源在地下无法到达 */
+    public void reportResourceUnderground(String resource, int y) {
+        sendToOwner("§c" + resource + "都在地下 y=" + y + "§r，无法从地表到达。需要挖掘下去或找到洞穴入口。");
     }
 
     /**

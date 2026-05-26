@@ -256,4 +256,14 @@ public class ModConfig {
     public static int getMaxWorkingMemory() { return MAX_WORKING_MEMORY.get(); }
 
     public static BotMode getBotMode() { return BotMode.fromKey(BOT_MODE.get()); }
+
+    // -- Runtime setters (for /ai_bot config command) --
+    public static void setDefaultScanRadius(int v) { DEFAULT_SCAN_RADIUS.set(v); }
+    public static void setHungerThreshold(int v) { HUNGER_THRESHOLD.set(v); }
+    public static void setMovementSpeed(double v) { MOVEMENT_SPEED.set(v); }
+    public static void setVeinMine(boolean v) { VEIN_MINE.set(v); }
+    public static void setAutoReplenish(boolean v) { AUTO_REPLENISH.set(v); }
+    public static void setAutoReplaceTool(boolean v) { AUTO_REPLACE_TOOL.set(v); }
+    public static void setAutoFish(boolean v) { AUTO_FISH.set(v); }
+    public static void setMaxBots(int v) { MAX_BOTS.set(v); }
 }

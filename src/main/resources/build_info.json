@@ -1,11 +1,14 @@
 {
   "version": "1.0.51",
-  "build": "2026-05-26-r63",
+  "build": "2026-05-26-r64",
   "fixes": [
-    "P9: injectAction now followed by advanceToNextAction — replan-injected actions actually execute instead of being buried",
-    "P10: place_block position array parsing — JSON {position: [x,y,z]} now correctly extracts coordinates",
-    "P3cont: UnstuckDetector.setPaused(true) now clears stuck flag + strategy state — no more false WAIT/JUMP during LLM wait",
-    "P7: WorldObservation.isDuplicateOf 30s time bypass — allows 1 obs per 30s even when bot is idle",
-    "P11: PlanCache.markFailed() — invalidates cached plans that caused repeated replan failures"
+    "P12: parseActionFromJson flattens nested 'parameters' object — craft item_id no longer empty",
+    "P13A: GatherResourceAction aborts after 5 consecutive unreachable targets",
+    "P13B: TaskFeedback message prefix changed to [Bot名 → @玩家名] for multi-bot clarity",
+    "P13B: Action failure messages include specific reason (resource not found / underground / unreachable)",
+    "P13C: /ai_bot config command — list, get, set 8 runtime configs (scanRadius, hungerThreshold, etc.)",
+    "P14: PlaceBlockAction.canExecute logs reason when failing (occupied / no item)",
+    "P15: LLM prompt warns against nested 'parameters' objects",
+    "P16: → replaced with -> throughout buildPrompt()"
   ]
 }

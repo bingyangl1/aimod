@@ -48,6 +48,9 @@ public class GatherResourceAction extends Action {
     private int stuckTicks;
     private int placeBlockCooldown;
     private final java.util.Set<BlockPos> failedTargets = new java.util.HashSet<>();
+    private int consecutiveUnreachable;
+    private static final int MAX_CONSECUTIVE_UNREACHABLE = 5;
+    public String failReason; // set on failure for player feedback
     private com.aimod.ai.pathing.PathExecutor cachedPathExecutor;
     private BlockPos cachedPathGoal;
     private int pathFailCooldown = 0;
@@ -125,6 +128,7 @@ public class GatherResourceAction extends Action {
                 }
                 DevLog.warn("GATHER_NO_RESOURCE", "type={}, radius={}, retries={}",
                         resourceType, searchRadius, noResourceRetries);
+                failReason = "在" + searchRadius + "格内找不到" + resourceType;
                 status = ActionStatus.FAILED;
                 return;
             }
@@ -242,7 +246,14 @@ public class GatherResourceAction extends Action {
             }
         } else {
             failedTargets.add(currentTarget);
-            DevLog.warn("GATHER_UNREACHABLE", "type={}, target={}", resourceType, currentTarget.toShortString());
+            consecutiveUnreachable++;
+            DevLog.warn("GATHER_UNREACHABLE", "type={}, target={}, consecutive={}",
+                    resourceType, currentTarget.toShortString(), consecutiveUnreachable);
+            if (consecutiveUnreachable >= MAX_CONSECUTIVE_UNREACHABLE) {
+                failReason = "连续" + MAX_CONSECUTIVE_UNREACHABLE + "个目标无法到达，可能需要工具或洞穴入口";
+                status = ActionStatus.FAILED;
+                return;
+            }
             resetTarget();
         }
     }

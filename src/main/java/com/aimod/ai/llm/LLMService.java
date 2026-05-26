@@ -278,8 +278,8 @@ public class LLMService {
         prompt.append("- ANY log (oak/spruce/birch/jungle/acacia/dark_oak/mangrove/cherry/crimson/warped) can craft 4 matching planks in 2x2 grid\n");
         prompt.append("- ANY plank variant works as #planks for ALL recipes (stick, crafting_table, tools, etc.)\n");
         prompt.append("- Use the ACTUAL log type the bot has gathered (if bot gathered spruce_log, craft spruce_planks, NOT oak_planks)\n");
-        prompt.append("- 1 log → 4 planks → 8 sticks\n");
-        prompt.append("- Before crafting tools: gather wood → craft planks → craft sticks → craft tool\n\n");
+        prompt.append("- 1 log -> 4 planks -> 8 sticks\n");
+        prompt.append("- Before crafting tools: gather wood -> craft planks -> craft sticks -> craft tool\n\n");
 
         if (worldContext != null && !worldContext.isBlank()) {
             prompt.append("## World Context\n");
@@ -293,6 +293,8 @@ public class LLMService {
         prompt.append("Use EXACT action type names: move_to, break_block, place_block, "
                 + "mine, gather, craft, give_item, require_items, interact, equip, "
                 + "attack, follow, say, wait. Do NOT use aliases like \"place\" or \"placeBlock\".\n");
+        prompt.append("Use FLAT JSON keys (e.g., \"item_id\", \"count\") — do NOT wrap "
+                + "parameters in a nested \"parameters\" object.\n");
         prompt.append("Respond ONLY with a JSON object: {\"actions\": [...]}\n");
         prompt.append("Do not include any other text or explanation.\n");
 
