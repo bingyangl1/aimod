@@ -150,6 +150,11 @@ public class ModConfig {
             .comment("Persist in-progress tasks to disk. When true, bots resume tasks after server restart.")
             .define("persistTasks", true);
 
+    public static final ModConfigSpec.ConfigValue<Boolean> SHOW_TASK_ABOVE_HEAD = BUILDER
+            .comment("Show bot task status above head as a name tag",
+                     "Displays: bot name (green) + state + task description + progress")
+            .define("showTaskAboveHead", true);
+
     public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
@@ -254,6 +259,7 @@ public class ModConfig {
     public static boolean getVeinMine() { return VEIN_MINE.get(); }
     public static int getUndoHistory() { return UNDO_HISTORY.get(); }
     public static boolean getPersistTasks() { return PERSIST_TASKS.get(); }
+    public static boolean getShowTaskAboveHead() { return SHOW_TASK_ABOVE_HEAD.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
     public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }
@@ -271,4 +277,5 @@ public class ModConfig {
     public static void setAutoReplaceTool(boolean v) { AUTO_REPLACE_TOOL.set(v); }
     public static void setAutoFish(boolean v) { AUTO_FISH.set(v); }
     public static void setMaxBots(int v) { MAX_BOTS.set(v); }
+    public static void setShowTaskAboveHead(boolean v) { SHOW_TASK_ABOVE_HEAD.set(v); }
 }

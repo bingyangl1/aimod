@@ -1157,7 +1157,8 @@ public class BotCommand {
 
     private static final java.util.List<String> CONFIG_KEYS = java.util.List.of(
             "scanRadius", "hungerThreshold", "movementSpeed",
-            "veinMine", "autoReplenish", "autoReplaceTool", "autoFish", "maxBots"
+            "veinMine", "autoReplenish", "autoReplaceTool", "autoFish", "maxBots",
+            "showTaskAboveHead"
     );
 
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestConfigKeys(
@@ -1184,6 +1185,7 @@ public class BotCommand {
         sb.append("autoReplaceTool: ").append(com.aimod.config.ModConfig.getAutoReplaceTool()).append("\n");
         sb.append("autoFish: ").append(com.aimod.config.ModConfig.getAutoFish()).append("\n");
         sb.append("maxBots: ").append(com.aimod.config.ModConfig.getMaxBots()).append(" (1-50)\n");
+        sb.append("showTaskAboveHead: ").append(com.aimod.config.ModConfig.getShowTaskAboveHead()).append("\n");
         sb.append("\n§7用法: /ai_bot config <key> [value]§r");
         src.sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
@@ -1232,6 +1234,7 @@ public class BotCommand {
             case "autoReplaceTool" -> String.valueOf(com.aimod.config.ModConfig.getAutoReplaceTool());
             case "autoFish" -> String.valueOf(com.aimod.config.ModConfig.getAutoFish());
             case "maxBots" -> String.valueOf(com.aimod.config.ModConfig.getMaxBots());
+            case "showTaskAboveHead" -> String.valueOf(com.aimod.config.ModConfig.getShowTaskAboveHead());
             default -> null;
         };
     }
@@ -1246,6 +1249,7 @@ public class BotCommand {
             case "autoReplaceTool" -> { com.aimod.config.ModConfig.setAutoReplaceTool(Boolean.parseBoolean(valStr)); yield true; }
             case "autoFish" -> { com.aimod.config.ModConfig.setAutoFish(Boolean.parseBoolean(valStr)); yield true; }
             case "maxBots" -> { com.aimod.config.ModConfig.setMaxBots(Integer.parseInt(valStr)); yield true; }
+            case "showTaskAboveHead" -> { com.aimod.config.ModConfig.setShowTaskAboveHead(Boolean.parseBoolean(valStr)); yield true; }
             default -> false;
         };
     }

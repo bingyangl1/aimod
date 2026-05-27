@@ -3,6 +3,9 @@ package com.aimod.entity;
 import com.aimod.ai.Task;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -139,9 +142,13 @@ public class AIBotEntity extends Mob {
     public void tick() {
         super.tick();
 
-        if (!this.level().isClientSide && fakePlayer != null) {
-            syncPositionToFakePlayer();
-            // Item pickup is handled by FakePlayer.tick() — not duplicated here
+        if (!this.level().isClientSide) {
+            // Control name tag visibility based on config
+            this.setCustomNameVisible(com.aimod.config.ModConfig.getShowTaskAboveHead());
+
+            if (fakePlayer != null) {
+                syncPositionToFakePlayer();
+            }
         }
     }
 
@@ -152,6 +159,57 @@ public class AIBotEntity extends Mob {
             fakePlayer = null;
         }
         super.remove(reason);
+    }
+
+    // ── Name Tag Display ────────────────────────────────────────────────
+
+    @Override
+    public Component getDisplayName() {
+        if (!com.aimod.config.ModConfig.getShowTaskAboveHead()) {
+            return super.getDisplayName();
+        }
+
+        MutableComponent name = Component.literal(this.getName().getString())
+                .withStyle(ChatFormatting.GREEN);
+
+        FakePlayer fp = this.fakePlayer;
+        if (fp == null) return name;
+
+        var sm = fp.getAiManager().getStateMachine();
+        var state = sm.getCurrent();
+
+        if (state == com.aimod.ai.llm.BotAIStateMachine.State.IDLE) {
+            return name;
+        }
+
+        MutableComponent statusLine = Component.empty();
+        statusLine.append(formatState(state));
+
+        String desc = sm.getTaskDescription();
+        if (desc != null && !desc.isBlank()) {
+            String truncated = desc.length() > 20 ? desc.substring(0, 20) + "…" : desc;
+            statusLine.append(Component.literal(" " + truncated).withStyle(ChatFormatting.YELLOW));
+        }
+
+        if (sm.getActionsTotal() > 0) {
+            statusLine.append(Component.literal(
+                    String.format(" (%d/%d)", sm.getActionsDone(), sm.getActionsTotal()))
+                    .withStyle(ChatFormatting.GRAY));
+        }
+
+        return name.append(Component.literal("\n")).append(statusLine);
+    }
+
+    private static MutableComponent formatState(com.aimod.ai.llm.BotAIStateMachine.State state) {
+        return switch (state) {
+            case PLANNING  -> Component.literal("[规划中]").withStyle(ChatFormatting.AQUA);
+            case EXECUTING -> Component.literal("[执行中]").withStyle(ChatFormatting.WHITE);
+            case PAUSED    -> Component.literal("[已暂停]").withStyle(ChatFormatting.GOLD);
+            case REPLAN    -> Component.literal("[重新规划]").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case COMPLETED -> Component.literal("[完成]").withStyle(ChatFormatting.GREEN);
+            case FAILED    -> Component.literal("[失败]").withStyle(ChatFormatting.RED);
+            default        -> Component.empty();
+        };
     }
 
     // ── Getters ─────────────────────────────────────────────────────────

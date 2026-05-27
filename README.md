@@ -12,7 +12,7 @@
 | NeoForge 版本 | 21.1.176 |
 | Java 版本 | 21 |
 | 模组 ID | `aimod` |
-| 当前版本 | 1.0.52-r68 |
+| 当前版本 | 1.0.53-r69 |
 | 许可证 | MIT |
 
 ---
@@ -201,7 +201,8 @@ undoHistory = 10          # 撤销步数 (0=禁用)
 | **配方** | RecipeIndex O(1) + MaterialTree 自动合成树 + ItemUid NBT 感知 |
 | **世界** | ChunkCache 异步缓存 + BlockIterator 共享扫描 + DangerZone 危险检测 |
 | **GUI** | BotStatusScreen 9x3 箱子界面 |
-| **配置** | 22 个配置项 + 运行时 toggle |
+| **显示** | Bot 头顶 name tag 显示状态/任务/进度（showTaskAboveHead 配置） |
+| **配置** | 23 个配置项 + 运行时 toggle |
 | **记忆** | WorldObservation 结构化感知 + BotMemoryStore 三层记忆 + ContextAssembler token 预算组装 + auto-compact |
 | **测试** | 129 单元测试 + 18 集成测试 + 26 GameTest |
 | **i18n** | 中英文双语（zh_cn / en_us） |
