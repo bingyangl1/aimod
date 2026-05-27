@@ -12,7 +12,7 @@
 | NeoForge 版本 | 21.1.176 |
 | Java 版本 | 21 |
 | 模组 ID | `aimod` |
-| 当前版本 | 1.0.54-r70 |
+| 当前版本 | 1.0.57-r73 |
 | 许可证 | MIT |
 
 ---
@@ -148,7 +148,7 @@ P50 Unstuck  ← 卡住自救（WAIT→JUMP→SHIMMY→PILLAR）
 
 | 命令 | 说明 |
 |------|------|
-| `/ai_bot inventory [name]` | 打开机器人背包（9x3 箱子） |
+| `/ai_bot inventory [name]` | 打开机器人背包（装备栏+副手+物品栏+快捷栏） |
 | `/ai_bot showpath [name]` | 显示路径粒子 |
 | `/ai_bot toggle <功能>` | 切换 autoFish/autoReplenish/autoReplace/veinMine |
 | `/ai_bot veinmine on/off/status` | 连锁采集开关 |
@@ -200,7 +200,7 @@ undoHistory = 10          # 撤销步数 (0=禁用)
 | **持久化** | BotInfo + BotPersistence（save/load/auto-load） + TaskPersistence（任务重启恢复） |
 | **配方** | RecipeIndex O(1) + MaterialTree 自动合成树 + ItemUid NBT 感知 |
 | **世界** | ChunkCache 异步缓存 + BlockIterator 共享扫描 + DangerZone 危险检测 |
-| **GUI** | BotStatusScreen 9x3 箱子界面 |
+| **GUI** | BotStatusScreen 完整玩家背包界面（装备栏+副手+物品栏+快捷栏） |
 | **显示** | Bot 头顶 name tag 显示状态/任务/进度（showTaskAboveHead 配置） |
 | **配置** | 23 个配置项 + 运行时 toggle |
 | **记忆** | WorldObservation 结构化感知 + BotMemoryStore 三层记忆 + ContextAssembler token 预算组装 + auto-compact |
@@ -246,7 +246,7 @@ com.aimod/
 │   └── cache/                     # ChunkCache + CachedChunkData
 ├── command/                       # BotCommand (27 条) + DirectCommandHandler
 ├── config/                        # ModConfig (22 配置项)
-├── client/                        # ClientModEvents + BotStatusScreen
+├── client/                        # ClientModEvents + BotStatusScreen + BotInventoryMenu + ModMenuTypes
 ├── gametest/                      # GameTest 模板
 ├── mixin/                         # 3 Mixin (Connection/PlayerList/ServerConfig)
 └── util/                          # DevLog

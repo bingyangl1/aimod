@@ -1,6 +1,6 @@
 {
-  "version": "1.0.54",
-  "build": "2026-05-27-r70",
+  "version": "1.0.57",
+  "build": "2026-05-28-r73",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -14,6 +14,12 @@
     "r70: Name tag works in fp mode — FakePlayer.getDisplayName() now shows task status (shared NameTagFormatter)",
     "r70: GatherResourceAction infinite loop fix — max 10 target skips, clear stale failedTargets on radius expand",
     "r70: A* consecutive fail fast-give-up (5 fails → skip target), ObstacleBreaker scans all 6 directions",
+    "r71: Full bot inventory GUI — armor (4) + offhand + main inventory (27) + hotbar (9) = 41 slots, vanilla inventory texture",
+    "r71: Custom BotInventoryMenu with ModMenuTypes registration, BotInventoryScreen with vanilla inventory texture",
+    "r72: DefenseChain cooldown on target-death and retreat — prevents re-triggering every 2s when no real threat",
+    "r72: BotAIStateMachine transitions — startPlanning, actionCompleted, complete called at correct lifecycle points",
+    "r72: Safety IDLE reset in FakePlayer.tick — state machine no longer stuck at EXECUTING after task completion",
+    "r73: FakePlayer name tag fix — override getTabListDisplayName + refreshTabListName every 20 ticks broadcasts task status to clients",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

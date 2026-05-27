@@ -109,6 +109,7 @@ public class BotAIManager {
     public Task parseCommand(String naturalLanguageCommand, String ownerName) {
         this.lastOwnerName = ownerName;
         this.lastCommand = naturalLanguageCommand;
+        stateMachine.startPlanning(naturalLanguageCommand, 0);
         DevLog.info("TASK_PARSE_START", "bot={}, owner={}, command={}",
                 bot.getStringUUID(), ownerName, DevLog.compact(naturalLanguageCommand));
         try {
@@ -216,9 +217,11 @@ public class BotAIManager {
                         task.getCurrentActionIndex() + 1,
                         task.getActionCount(),
                         currentAction.getDescription());
+                stateMachine.actionCompleted();
                 task.advanceToNextAction();
                 // Check deficits right when task transitions to COMPLETED
                 if (task.isCompleted()) {
+                    stateMachine.complete();
                     // Cache validated plan (only if no replanning occurred)
                     if (lastCommand != null && !lastCommand.isBlank()
                             && incrReplanCount == 0 && lastCachedActions != null) {

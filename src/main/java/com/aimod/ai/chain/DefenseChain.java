@@ -79,6 +79,7 @@ public class DefenseChain extends BehaviorChain {
         }
         if (target == null || !target.isAlive()) {
             active = false;
+            cooldownTicks = POST_COMBAT_COOLDOWN;
             return;
         }
 
@@ -132,7 +133,7 @@ public class DefenseChain extends BehaviorChain {
         bot.move(MoverType.SELF, new Vec3(away.x, bot.getDeltaMovement().y, away.z));
         // Look back at target while retreating
         bot.lookAt(target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ());
-        if (dist > 64) active = false; // far enough
+        if (dist > 64) { active = false; cooldownTicks = POST_COMBAT_COOLDOWN; } // far enough
     }
 
     private boolean shouldShield(FakePlayer bot) {

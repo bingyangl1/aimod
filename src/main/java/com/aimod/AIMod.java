@@ -40,6 +40,7 @@ public class AIMod {
         NeoForge.EVENT_BUS.addListener(this::onChunkUnload);
         NeoForge.EVENT_BUS.addListener(this::onEntityInteract);
         ModEntities.register(modEventBus);
+        com.aimod.client.ModMenuTypes.register(modEventBus);
         modEventBus.addListener(this::registerAttributes);
         modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, com.aimod.config.ModConfig.SPEC);
     }

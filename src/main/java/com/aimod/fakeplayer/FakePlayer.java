@@ -79,6 +79,7 @@ public class FakePlayer extends ServerPlayer {
 
     // ── Idle tracking ────────────────────────────────────────────────────
     private int idleTicks;
+    private int displayNameTickCounter;
 
     // ── Undo ─────────────────────────────────────────────────────────────
     private final UndoManager undoManager = new UndoManager(10);
@@ -218,6 +219,12 @@ public class FakePlayer extends ServerPlayer {
     }
 
     @Override
+    public Component getTabListDisplayName() {
+        return com.aimod.entity.NameTagFormatter.buildDisplayName(
+                this.getName().getString(), this.aiManager.getStateMachine());
+    }
+
+    @Override
     public boolean isFakePlayer() { return true; }
 
     @Override
@@ -242,6 +249,12 @@ public class FakePlayer extends ServerPlayer {
             this.doTick();
         } catch (NullPointerException ignored) {
             // FakePlayer may NPE in some vanilla paths
+        }
+
+        // Periodically broadcast updated name tag (task status) to clients
+        if (++displayNameTickCounter >= 20) {
+            displayNameTickCounter = 0;
+            this.refreshTabListName();
         }
 
         // Tick the movement controller (handles async pathfinding delivery + movement execution)
@@ -281,6 +294,11 @@ public class FakePlayer extends ServerPlayer {
             }
         } else if (!preempted && !paused && (this.currentTask == null || this.currentTask.isCompleted())) {
             idleTicks++;
+            // Safety: if task completed but state machine still stuck in EXECUTING, reset to IDLE
+            if (this.currentTask != null && this.currentTask.isCompleted()
+                    && aiManager.getStateMachine().getCurrent() == com.aimod.ai.llm.BotAIStateMachine.State.EXECUTING) {
+                aiManager.getStateMachine().reset();
+            }
         }
 
         // Idle gathering: after 5s idle, collect scaffolding materials if inventory is low
