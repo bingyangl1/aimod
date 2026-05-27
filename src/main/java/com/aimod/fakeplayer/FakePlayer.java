@@ -85,6 +85,9 @@ public class FakePlayer extends ServerPlayer {
     // ── Memory ───────────────────────────────────────────────────────────
     private com.aimod.ai.memory.BotMemoryStore memoryStore;
 
+    // ── Task Persistence ─────────────────────────────────────────────────
+    private com.aimod.ai.TaskPersistence taskPersistence;
+
     // ── Construction ────────────────────────────────────────────────────
 
     public Runnable fixStartingPosition = () -> {};
@@ -99,6 +102,8 @@ public class FakePlayer extends ServerPlayer {
                 server.getServerDirectory() != null ? server.getServerDirectory() : java.nio.file.Path.of("."),
                 com.aimod.config.ModConfig.getMaxWorkingMemory());
         this.memoryStore.bootstrap();
+        this.taskPersistence = new com.aimod.ai.TaskPersistence(
+                server.getServerDirectory() != null ? server.getServerDirectory() : java.nio.file.Path.of("."));
         this.chainManager.addChain(new DangerChain());
         this.chainManager.addChain(new DefenseChain());
         this.chainManager.addChain(new FoodChain());
@@ -183,6 +188,9 @@ public class FakePlayer extends ServerPlayer {
 
         if (callback != null) callback.accept(instance);
 
+        // Restore persisted task (if any)
+        instance.restorePersistedTask();
+
         DevLog.info("FAKE_PLAYER_CREATE", "name={}, uuid={}, pos={}, gamemode={}",
                 name, instance.getStringUUID(), pos, gamemode);
 
@@ -260,6 +268,10 @@ public class FakePlayer extends ServerPlayer {
         if (!preempted && !paused && this.currentTask != null && !this.currentTask.isCompleted()) {
             idleTicks = 0; // task active, reset idle counter
             aiManager.updateTask(this.currentTask);
+            // Clean up persistence file when task finishes
+            if (this.currentTask.isCompleted()) {
+                taskPersistence.delete(this);
+            }
         } else if (!preempted && !paused && (this.currentTask == null || this.currentTask.isCompleted())) {
             idleTicks++;
         }
@@ -410,6 +422,7 @@ public class FakePlayer extends ServerPlayer {
                             this.currentTask = task;
                             aiManager.getStateMachine().startExecuting();
                             aiManager.executeTask(this.currentTask);
+                            taskPersistence.save(this);
                         });
                     }
                 } else {
@@ -451,6 +464,7 @@ public class FakePlayer extends ServerPlayer {
         this.currentTask = task;
         aiManager.getStateMachine().startExecuting();
         aiManager.executeTask(this.currentTask);
+        taskPersistence.save(this);
     }
 
     /**
@@ -464,6 +478,7 @@ public class FakePlayer extends ServerPlayer {
             DevLog.info("BOT_TASK_CANCELLED", "bot={}, task={}", this.getStringUUID(), desc);
             this.currentTask = null;
         }
+        taskPersistence.delete(this);
         aiManager.getStateMachine().reset();
         this.paused = false;
         movementController.stop();
@@ -553,6 +568,19 @@ public class FakePlayer extends ServerPlayer {
                 itemEntity.discard();
                 DevLog.info("ITEM_PICKUP", "item={}, count={}", stack.getDescriptionId(), originalCount);
             }
+        }
+    }
+
+    // ── Task Restore ─────────────────────────────────────────────────────
+
+    private void restorePersistedTask() {
+        Task restored = taskPersistence.restore(this);
+        if (restored != null) {
+            this.currentTask = restored;
+            aiManager.getStateMachine().startExecuting();
+            aiManager.executeTask(this.currentTask);
+            DevLog.info("TASK_RESTORED", "bot={}, command={}, actions={}",
+                    this.getName().getString(), DevLog.compact(restored.getDescription()), restored.getActionCount());
         }
     }
 

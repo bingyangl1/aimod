@@ -706,7 +706,7 @@ public class BotAIManager {
     }
 
     /** Convert cached action JSON strings to Action objects. */
-    private List<Action> convertCachedToActions(List<String> actionJsons, String ownerName) {
+    public List<Action> convertCachedToActions(List<String> actionJsons, String ownerName) {
         List<Action> actions = new ArrayList<>();
         for (String json : actionJsons) {
             try {

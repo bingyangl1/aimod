@@ -34,4 +34,6 @@ public class WaitAction extends Action {
     public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
+
+    public int getTotalTicks() { return totalTicks; }
 }

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.51",
-  "build": "2026-05-27-r67",
+  "version": "1.0.52",
+  "build": "2026-05-27-r68",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -8,6 +8,8 @@
     "r66: PlaceBlock fallback to direct setBlock when useItemOn fails for FakePlayer",
     "r67: global position array/object flattening in parseActionFromJson — move_to no longer goes to (0,0,0)",
     "r67: position supports both array [-530,173,-132] and object {x:-531,y:173,z:-129} formats",
+    "r68: TaskPersistence — in-progress tasks saved to config/aimod/tasks/<uuid>.json, auto-restored on server restart",
+    "r68: persistTasks config option (default true) — disable to skip task persistence",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

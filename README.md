@@ -12,7 +12,7 @@
 | NeoForge 版本 | 21.1.176 |
 | Java 版本 | 21 |
 | 模组 ID | `aimod` |
-| 当前版本 | 1.0.51-r67 |
+| 当前版本 | 1.0.52-r68 |
 | 许可证 | MIT |
 
 ---
@@ -75,7 +75,8 @@ AIBotEntity (Mob) ← 世界中可见实体
        ├─ MovementController ← 8 种 Movement 类型 (A* 寻路)
        ├─ ChainManager ← 4 条行为链 (Danger/Defense/Food/Unstuck)
        ├─ UndoManager ← 10 次撤销历史
-       └─ PlanCache ← LLM 规划结果本地缓存
+       ├─ PlanCache ← LLM 规划结果本地缓存
+       └─ TaskPersistence ← 任务持久化（重启恢复）
 ```
 
 ### 路径/Movement 系统
@@ -196,11 +197,11 @@ undoHistory = 10          # 撤销步数 (0=禁用)
 | **生存** | 4 条行为链（Danger/Defense/Food/Unstuck）+ PILLAR 脱坑 |
 | **采集** | 连锁挖矿/砍树（BFS VeinScanner）+ 工具自动选择（ToolSet） |
 | **撤销** | UndoManager 记录 10 次操作，`/ai_bot veinmine undo` |
-| **持久化** | BotInfo + BotPersistence（save/load/auto-load） |
+| **持久化** | BotInfo + BotPersistence（save/load/auto-load） + TaskPersistence（任务重启恢复） |
 | **配方** | RecipeIndex O(1) + MaterialTree 自动合成树 + ItemUid NBT 感知 |
 | **世界** | ChunkCache 异步缓存 + BlockIterator 共享扫描 + DangerZone 危险检测 |
 | **GUI** | BotStatusScreen 9x3 箱子界面 |
-| **配置** | 21 个配置项 + 运行时 toggle |
+| **配置** | 22 个配置项 + 运行时 toggle |
 | **记忆** | WorldObservation 结构化感知 + BotMemoryStore 三层记忆 + ContextAssembler token 预算组装 + auto-compact |
 | **测试** | 129 单元测试 + 18 集成测试 + 26 GameTest |
 | **i18n** | 中英文双语（zh_cn / en_us） |
@@ -223,6 +224,7 @@ com.aimod/
 │   ├── VeinScanner.java           # BFS 连锁扫描
 │   ├── UndoManager.java           # 撤销管理
 │   ├── BlockIterator.java         # 共享扫描器
+│   ├── TaskPersistence.java       # 任务持久化（重启恢复）
 │   ├── action/                    # 15 种动作
 │   │   ├── Action.java            #   基类
 │   │   ├── GatherResourceAction   #   采集
@@ -242,7 +244,7 @@ com.aimod/
 │   ├── tool/                      # AutoReplenish/ReplaceTool/Fish
 │   └── cache/                     # ChunkCache + CachedChunkData
 ├── command/                       # BotCommand (27 条) + DirectCommandHandler
-├── config/                        # ModConfig (21 配置项)
+├── config/                        # ModConfig (22 配置项)
 ├── client/                        # ClientModEvents + BotStatusScreen
 ├── gametest/                      # GameTest 模板
 ├── mixin/                         # 3 Mixin (Connection/PlayerList/ServerConfig)

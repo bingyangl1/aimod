@@ -146,6 +146,10 @@ public class ModConfig {
             .comment("Maximum number of undo operations to remember (0 = disable undo)")
             .defineInRange("undoHistory", 10, 0, 50);
 
+    public static final ModConfigSpec.ConfigValue<Boolean> PERSIST_TASKS = BUILDER
+            .comment("Persist in-progress tasks to disk. When true, bots resume tasks after server restart.")
+            .define("persistTasks", true);
+
     public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
@@ -249,6 +253,7 @@ public class ModConfig {
     public static boolean getAutoFish() { return AUTO_FISH.get(); }
     public static boolean getVeinMine() { return VEIN_MINE.get(); }
     public static int getUndoHistory() { return UNDO_HISTORY.get(); }
+    public static boolean getPersistTasks() { return PERSIST_TASKS.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
     public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }

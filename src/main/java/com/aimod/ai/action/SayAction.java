@@ -35,4 +35,6 @@ public class SayAction extends Action {
     public boolean isComplete(FakePlayer bot) {
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
+
+    public String getMessageText() { return message; }
 }

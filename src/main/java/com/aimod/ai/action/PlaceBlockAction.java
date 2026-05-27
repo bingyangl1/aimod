@@ -212,4 +212,8 @@ public class PlaceBlockAction extends Action {
     public BlockPos getTargetPos() {
         return targetPos;
     }
+
+    public BlockItem getBlockItem() {
+        return blockItem;
+    }
 }
