@@ -1,6 +1,6 @@
 {
-  "version": "1.0.53",
-  "build": "2026-05-27-r69",
+  "version": "1.0.54",
+  "build": "2026-05-27-r70",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -11,6 +11,9 @@
     "r68: TaskPersistence — in-progress tasks saved to config/aimod/tasks/<uuid>.json, auto-restored on server restart",
     "r68: persistTasks config option (default true) — disable to skip task persistence",
     "r69: Bot task status displayed above head — name (green) + state + task + progress, showTaskAboveHead config",
+    "r70: Name tag works in fp mode — FakePlayer.getDisplayName() now shows task status (shared NameTagFormatter)",
+    "r70: GatherResourceAction infinite loop fix — max 10 target skips, clear stale failedTargets on radius expand",
+    "r70: A* consecutive fail fast-give-up (5 fails → skip target), ObstacleBreaker scans all 6 directions",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

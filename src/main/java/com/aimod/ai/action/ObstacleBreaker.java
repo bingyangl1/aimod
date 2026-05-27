@@ -19,31 +19,21 @@ public class ObstacleBreaker {
     private static final int MAX_HARDNESS = 3;
 
     /**
-     * Attempt to break an obstacle between the bot and its gather target.
+     * Attempt to break an obstacle near the bot.
+     * Scans all 6 adjacent directions (up/down/north/south/east/west)
+     * and breaks the first breakable block found.
      * @return true if breaking is in progress or complete
      */
     public boolean tryBreakObstacle(FakePlayer bot, BlockPos gatherTarget) {
-        if (gatherTarget == null) return false;
-
         BlockPos botPos = bot.blockPosition();
-
-        double dx = gatherTarget.getX() - botPos.getX();
-        double dz = gatherTarget.getZ() - botPos.getZ();
-        double dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < 0.5) return false;
-
-        int dirX = (int) Math.signum(dx);
-        int dirZ = (int) Math.signum(dz);
-
-        BlockPos[] candidates = {
-            botPos.offset(dirX, 0, dirZ),
-            botPos.offset(dirX, 1, dirZ),
-            botPos.offset(dirX, -1, dirZ),
-            botPos.offset(dirX, 0, 0),
-            botPos.offset(0, 0, dirZ),
-        };
-
         ServerLevel level = (ServerLevel) bot.level();
+
+        // Check all 6 adjacent directions + bot's own position
+        BlockPos[] candidates = {
+            botPos.north(), botPos.south(), botPos.east(), botPos.west(),
+            botPos.above(), botPos.below(),
+            botPos // in case bot is inside a block
+        };
 
         for (BlockPos pos : candidates) {
             BlockState state = level.getBlockState(pos);

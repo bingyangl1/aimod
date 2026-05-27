@@ -59,6 +59,10 @@ public class GatherResourceAction extends Action {
     private final ObstacleBreaker obstacleBreaker = new ObstacleBreaker();
     private int noResourceRetries = 0;
     private int waitTicks = 0;
+    private int totalTargetsSkipped = 0;
+    private static final int MAX_TARGETS_SKIPPED = 10;
+    private int consecutivePathFails = 0;
+    private static final int MAX_CONSECUTIVE_PATH_FAILS = 5;
 
     public GatherResourceAction(ResourceType resourceType, int count) {
         this(resourceType, count, INITIAL_SEARCH_RADIUS);
@@ -108,6 +112,14 @@ public class GatherResourceAction extends Action {
             return;
         }
 
+        // Global skip limit — prevent infinite loop cycling through unreachable targets
+        if (totalTargetsSkipped >= MAX_TARGETS_SKIPPED) {
+            failReason = "连续" + totalTargetsSkipped + "个目标无法到达，放弃采集";
+            DevLog.warn("GATHER_MAX_TARGETS_SKIPPED", "type={}, skipped={}", resourceType, totalTargetsSkipped);
+            status = ActionStatus.FAILED;
+            return;
+        }
+
         if (currentTarget == null || searching) {
             currentTarget = findResource(bot);
             searching = false;
@@ -120,6 +132,7 @@ public class GatherResourceAction extends Action {
                 if (noResourceRetries < MAX_NO_RESOURCE_RETRIES && searchRadius < MAX_SEARCH_RADIUS) {
                     // Expand search radius and retry
                     searchRadius = Math.min(searchRadius + RADIUS_EXPAND_STEP, MAX_SEARCH_RADIUS);
+                    failedTargets.clear(); // clear stale targets from previous radius
                     searching = true;
                     waitTicks = 10; // wait 0.5s before retry
                     DevLog.info("GATHER_EXPAND_RADIUS", "type={}, newRadius={}, retry={}/{}",
@@ -241,14 +254,16 @@ public class GatherResourceAction extends Action {
                             resourceType, currentTarget.toShortString(),
                             String.format("%.1f", Math.sqrt(distSqr)));
                     failedTargets.add(currentTarget);
+                    totalTargetsSkipped++;
                     resetTarget();
                 }
             }
         } else {
             failedTargets.add(currentTarget);
             consecutiveUnreachable++;
-            DevLog.warn("GATHER_UNREACHABLE", "type={}, target={}, consecutive={}",
-                    resourceType, currentTarget.toShortString(), consecutiveUnreachable);
+            totalTargetsSkipped++;
+            DevLog.warn("GATHER_UNREACHABLE", "type={}, target={}, consecutive={}, totalSkipped={}",
+                    resourceType, currentTarget.toShortString(), consecutiveUnreachable, totalTargetsSkipped);
             if (consecutiveUnreachable >= MAX_CONSECUTIVE_UNREACHABLE) {
                 failReason = "连续" + MAX_CONSECUTIVE_UNREACHABLE + "个目标无法到达，可能需要工具或洞穴入口";
                 status = ActionStatus.FAILED;
@@ -292,6 +307,8 @@ public class GatherResourceAction extends Action {
             breakStartMs = 0;
             breakDurationMs = 0;
             DevLog.info("GATHER_COLLECTED", "type={}, total={}", resourceType, gatheredCount);
+            failedTargets.clear(); // successful collection — reset failed targets
+            totalTargetsSkipped = 0;
             resetTarget();
         }
     }
@@ -325,12 +342,22 @@ public class GatherResourceAction extends Action {
             if (next != null) {
                 navigateTo(bot, next, 1.0);
             }
+            consecutivePathFails = 0; // reset on success
             DevLog.info("GATHER_ASTAR_OK", "length={}, next={}", result.getLength(), String.valueOf(next));
             return true;
         }
 
+        consecutivePathFails++;
         pathFailCooldown = PATH_FAIL_COOLDOWN_TICKS;
-        DevLog.info("GATHER_ASTAR_FAIL", "reason=no_path");
+        DevLog.info("GATHER_ASTAR_FAIL", "reason=no_path, consecutiveFails={}", consecutivePathFails);
+
+        // After too many consecutive A* failures on same target, give up early
+        if (consecutivePathFails >= MAX_CONSECUTIVE_PATH_FAILS) {
+            DevLog.warn("GATHER_PATH_GIVE_UP", "type={}, target={}, fails={}",
+                    resourceType, goal.toShortString(), consecutivePathFails);
+            consecutivePathFails = 0;
+            return false; // will trigger unreachable logic in caller
+        }
         return false;
     }
 
