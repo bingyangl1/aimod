@@ -452,6 +452,7 @@ public class FakePlayer extends ServerPlayer {
                                     this.getStringUUID(), task.getStatus(), task.getActionCount(),
                                     DevLog.compact(naturalLanguageCommand));
                             this.currentTask = task;
+                            aiManager.getStateMachine().setTaskInfo(task.getDescription(), task.getActionCount());
                             aiManager.getStateMachine().startExecuting();
                             aiManager.executeTask(this.currentTask);
                             taskPersistence.save(this);
@@ -609,6 +610,7 @@ public class FakePlayer extends ServerPlayer {
         Task restored = taskPersistence.restore(this);
         if (restored != null) {
             this.currentTask = restored;
+            aiManager.getStateMachine().setTaskInfo(restored.getDescription(), restored.getActionCount());
             aiManager.getStateMachine().startExecuting();
             aiManager.executeTask(this.currentTask);
             DevLog.info("TASK_RESTORED", "bot={}, command={}, actions={}",

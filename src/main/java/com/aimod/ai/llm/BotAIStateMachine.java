@@ -60,6 +60,7 @@ public class BotAIStateMachine {
     public int getActionsTotal() { return actionsTotal; }
     public String getTaskDescription() { return taskDescription; }
     public synchronized void setCurrentActionDesc(String desc) { this.currentActionDesc = desc; }
+    public synchronized void setTaskInfo(String desc, int total) { this.taskDescription = desc; this.actionsTotal = total; }
     public String getCurrentActionDesc() { return currentActionDesc; }
     public long getStateElapsedMs() { return System.currentTimeMillis() - stateEnteredAt; }
     public float getProgress() { return actionsTotal > 0 ? (float) actionsDone / actionsTotal : 0f; }
