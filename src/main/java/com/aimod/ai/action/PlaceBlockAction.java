@@ -28,12 +28,6 @@ public class PlaceBlockAction extends Action {
 
     @Override
     public boolean canExecute(FakePlayer bot) {
-        double distSqr = bot.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5);
-        if (distSqr > 36.0) { // > 6 blocks
-            DevLog.warn("PLACE_BLOCK_TOO_FAR", "pos={}, dist={}", targetPos.toShortString(),
-                    String.format("%.1f", Math.sqrt(distSqr)));
-            return false;
-        }
         BlockState blockState = bot.level().getBlockState(targetPos);
         if (!(blockState.isAir() || blockState.canBeReplaced())) {
             DevLog.warn("PLACE_BLOCK_OCCUPIED", "pos={}, state={}", targetPos.toShortString(), blockState.getBlock().getDescriptionId());
