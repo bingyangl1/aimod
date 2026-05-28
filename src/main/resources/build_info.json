@@ -1,6 +1,6 @@
 {
-  "version": "1.0.59",
-  "build": "2026-05-29-r74",
+  "version": "1.0.60",
+  "build": "2026-05-29-r75",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -23,6 +23,7 @@
     "r74: PlaceBlock findBlockItem expanded to slot 0-40 (was 0-35, missed armor/offhand), distance check > 6 blocks",
     "r74: Replan unknown action feedback — raw LLM output added to Recent Failed Attempts so LLM can fix format errors",
     "r74: UnstuckChain cancel reason — sends translatable message before cancelling task (stuck 15s+)",
+    "r75: Name tag shows current step — [x/y stepDesc] taskDesc format, BotAIStateMachine tracks currentActionDesc",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

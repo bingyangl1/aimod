@@ -185,6 +185,9 @@ public class BotAIManager {
         }
 
         Action currentAction = task.getCurrentAction();
+        if (currentAction != null) {
+            stateMachine.setCurrentActionDesc(currentAction.getDescription());
+        }
         if (currentAction == null) {
             task.setStatus(Task.TaskStatus.COMPLETED);
             feedback.reportTaskComplete(task.getDescription());

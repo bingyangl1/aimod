@@ -22,6 +22,7 @@ public class BotAIStateMachine {
     private State current = State.IDLE;
     private State previous = State.IDLE;
     private String taskDescription;
+    private String currentActionDesc;
     private int actionsDone;
     private int actionsTotal;
     private long stateEnteredAt;
@@ -48,7 +49,7 @@ public class BotAIStateMachine {
     public synchronized void requestReplan() { transition(State.REPLAN); }
     public synchronized void complete() { transition(State.COMPLETED); }
     public synchronized void fail() { transition(State.FAILED); }
-    public synchronized void reset() { transition(State.IDLE); actionsDone = 0; taskDescription = null; }
+    public synchronized void reset() { transition(State.IDLE); actionsDone = 0; taskDescription = null; currentActionDesc = null; }
 
     // ---- queries ----
     public State getCurrent() { return current; }
@@ -58,6 +59,8 @@ public class BotAIStateMachine {
     public int getActionsDone() { return actionsDone; }
     public int getActionsTotal() { return actionsTotal; }
     public String getTaskDescription() { return taskDescription; }
+    public synchronized void setCurrentActionDesc(String desc) { this.currentActionDesc = desc; }
+    public String getCurrentActionDesc() { return currentActionDesc; }
     public long getStateElapsedMs() { return System.currentTimeMillis() - stateEnteredAt; }
     public float getProgress() { return actionsTotal > 0 ? (float) actionsDone / actionsTotal : 0f; }
 }

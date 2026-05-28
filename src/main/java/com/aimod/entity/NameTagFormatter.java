@@ -26,18 +26,28 @@ public class NameTagFormatter {
         }
 
         MutableComponent statusLine = Component.empty();
-        statusLine.append(formatState(state));
+
+        // Format: [x/y 当前步骤] 任务描述
+        if (sm.getActionsTotal() > 0) {
+            String stepDesc = sm.getCurrentActionDesc();
+            if (stepDesc != null && !stepDesc.isBlank()) {
+                String truncatedStep = stepDesc.length() > 16 ? stepDesc.substring(0, 16) + "…" : stepDesc;
+                statusLine.append(Component.literal(
+                        String.format("[%d/%d %s]", sm.getActionsDone() + 1, sm.getActionsTotal(), truncatedStep))
+                        .withStyle(ChatFormatting.AQUA));
+            } else {
+                statusLine.append(Component.literal(
+                        String.format("[%d/%d]", sm.getActionsDone() + 1, sm.getActionsTotal()))
+                        .withStyle(ChatFormatting.AQUA));
+            }
+        } else {
+            statusLine.append(formatState(state));
+        }
 
         String desc = sm.getTaskDescription();
         if (desc != null && !desc.isBlank()) {
             String truncated = desc.length() > 20 ? desc.substring(0, 20) + "…" : desc;
             statusLine.append(Component.literal(" " + truncated).withStyle(ChatFormatting.YELLOW));
-        }
-
-        if (sm.getActionsTotal() > 0) {
-            statusLine.append(Component.literal(
-                    String.format(" (%d/%d)", sm.getActionsDone(), sm.getActionsTotal()))
-                    .withStyle(ChatFormatting.GRAY));
         }
 
         return name.append(Component.literal("\n")).append(statusLine);
