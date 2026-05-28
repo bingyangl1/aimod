@@ -48,6 +48,7 @@
   "feedback.task.completed": "任务完成: %s",
   "feedback.task.failed": "任务失败: %s (原因: %s)",
   "feedback.task.cancelled": "任务已取消: %s",
+  "feedback.task.cancelled.stuck": "§c任务因卡住超过15秒无法自救而取消§r",
   "feedback.action.completed": "进度: [%d/%d] %s 完成",
   "feedback.action.failed": "进度: [%d/%d] %s 失败: %s",
   "feedback.missing_resources": "缺少资源: %s",

@@ -28,6 +28,12 @@ public class PlaceBlockAction extends Action {
 
     @Override
     public boolean canExecute(FakePlayer bot) {
+        double distSqr = bot.distanceToSqr(targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5);
+        if (distSqr > 36.0) { // > 6 blocks
+            DevLog.warn("PLACE_BLOCK_TOO_FAR", "pos={}, dist={}", targetPos.toShortString(),
+                    String.format("%.1f", Math.sqrt(distSqr)));
+            return false;
+        }
         BlockState blockState = bot.level().getBlockState(targetPos);
         if (!(blockState.isAir() || blockState.canBeReplaced())) {
             DevLog.warn("PLACE_BLOCK_OCCUPIED", "pos={}, state={}", targetPos.toShortString(), blockState.getBlock().getDescriptionId());
@@ -168,7 +174,7 @@ public class PlaceBlockAction extends Action {
 
     private ItemStack findBlockItem(FakePlayer bot) {
         var inventory = bot.getInventory();
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i <= 40; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == blockItem) {
                 return stack;
@@ -180,7 +186,7 @@ public class PlaceBlockAction extends Action {
     /** Find the inventory slot containing the block item. */
     private int findBlockSlot(FakePlayer bot) {
         var inventory = bot.getInventory();
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i <= 40; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == blockItem) {
                 return i;

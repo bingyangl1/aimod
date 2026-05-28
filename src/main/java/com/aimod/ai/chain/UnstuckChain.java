@@ -43,6 +43,7 @@ public class UnstuckChain extends BehaviorChain {
             // All strategies exhausted or unstuck — give up
             if (currentStrategy == UnstuckDetector.RecoveryStrategy.SKIP) {
                 bot.getMovementController().stop();
+                bot.getAiManager().getFeedback().sendToOwnerTranslatable("feedback.task.cancelled.stuck");
                 bot.cancelTask();
             }
             active = false;

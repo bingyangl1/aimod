@@ -48,6 +48,7 @@
   "feedback.task.completed": "Task completed: %s",
   "feedback.task.failed": "Task failed: %s (reason: %s)",
   "feedback.task.cancelled": "Task cancelled: %s",
+  "feedback.task.cancelled.stuck": "§cTask cancelled: stuck for over 15 seconds, unable to self-rescue§r",
   "feedback.action.completed": "Progress: [%d/%d] %s completed",
   "feedback.action.failed": "Progress: [%d/%d] %s failed: %s",
   "feedback.missing_resources": "Missing resources: %s",

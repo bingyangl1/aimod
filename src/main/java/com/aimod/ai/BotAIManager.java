@@ -396,6 +396,13 @@ public class BotAIManager {
                     } else {
                         // LLM returned unrecognizable actions — escalate
                         consecutiveUnknown++;
+                        // Add raw LLM output to failed attempts so it can see the format error
+                        String rawContent = resp.getRawResponse();
+                        if (rawContent != null && !rawContent.isBlank()) {
+                            String truncated = rawContent.length() > 100 ? rawContent.substring(0, 100) + "..." : rawContent;
+                            recentReplanAttempts.add("BAD FORMAT: " + truncated);
+                            while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+                        }
                         DevLog.warn("REPLAN_UNKNOWN_CONSEQ", "count={}, failedAction={}",
                                 consecutiveUnknown, failedActionDesc);
                         if (consecutiveUnknown >= 3) {

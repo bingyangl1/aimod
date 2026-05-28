@@ -1,6 +1,6 @@
 {
-  "version": "1.0.58",
-  "build": "2026-05-29-r73",
+  "version": "1.0.59",
+  "build": "2026-05-29-r74",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -20,6 +20,9 @@
     "r72: BotAIStateMachine transitions — startPlanning, actionCompleted, complete called at correct lifecycle points",
     "r72: Safety IDLE reset in FakePlayer.tick — state machine no longer stuck at EXECUTING after task completion",
     "r73: FakePlayer name tag fix — setCustomName metadata sync + RenderNameTagEvent handler replaces profile name with task status",
+    "r74: PlaceBlock findBlockItem expanded to slot 0-40 (was 0-35, missed armor/offhand), distance check > 6 blocks",
+    "r74: Replan unknown action feedback — raw LLM output added to Recent Failed Attempts so LLM can fix format errors",
+    "r74: UnstuckChain cancel reason — sends translatable message before cancelling task (stuck 15s+)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
