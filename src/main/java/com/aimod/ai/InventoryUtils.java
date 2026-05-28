@@ -14,7 +14,7 @@ public final class InventoryUtils {
     public static int countItem(FakePlayer bot, Item item) {
         Inventory inventory = bot.getInventory();
         int total = 0;
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i <= 40; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == item) {
                 total += stack.getCount();
@@ -60,7 +60,7 @@ public final class InventoryUtils {
         Inventory inventory = bot.getInventory();
         ItemStack result = new ItemStack(item, 0);
         int remaining = count;
-        for (int i = 0; i < 36 && remaining > 0; i++) {
+        for (int i = 0; i <= 40 && remaining > 0; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == item) {
                 int taken = Math.min(remaining, stack.getCount());
@@ -85,7 +85,7 @@ public final class InventoryUtils {
         }
         Inventory inventory = bot.getInventory();
         ItemStack remaining = stack.copy();
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i <= 40; i++) {
             ItemStack existing = inventory.getItem(i);
             if (!existing.isEmpty() && ItemStack.isSameItemSameComponents(existing, remaining)) {
                 int transferable = Math.min(remaining.getCount(), existing.getMaxStackSize() - existing.getCount());
@@ -99,7 +99,7 @@ public final class InventoryUtils {
             }
         }
 
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i <= 40; i++) {
             if (inventory.getItem(i).isEmpty()) {
                 inventory.setItem(i, remaining.copy());
                 return true;
