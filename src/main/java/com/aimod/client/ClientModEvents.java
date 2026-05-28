@@ -28,6 +28,12 @@ public class ClientModEvents {
         event.register(ModMenuTypes.BOT_INVENTORY.get(), BotInventoryScreen::new);
     }
 
+    @SubscribeEvent
+    public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() ->
+                net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(BotNameTagHandler::onRenderNameTag));
+    }
+
     /** Simple humanoid renderer for the AI bot using the player model. */
     public static class AIBotRenderer extends HumanoidMobRenderer<AIBotEntity, HumanoidModel<AIBotEntity>> {
         public AIBotRenderer(EntityRendererProvider.Context context) {

@@ -80,6 +80,7 @@ public class FakePlayer extends ServerPlayer {
     // ── Idle tracking ────────────────────────────────────────────────────
     private int idleTicks;
     private int displayNameTickCounter;
+    private net.minecraft.network.chat.Component lastCustomName;
 
     // ── Undo ─────────────────────────────────────────────────────────────
     private final UndoManager undoManager = new UndoManager(10);
@@ -251,10 +252,16 @@ public class FakePlayer extends ServerPlayer {
             // FakePlayer may NPE in some vanilla paths
         }
 
-        // Periodically broadcast updated name tag (task status) to clients
+        // Periodically sync name tag (task status) to clients via entity metadata
         if (++displayNameTickCounter >= 20) {
             displayNameTickCounter = 0;
-            this.refreshTabListName();
+            net.minecraft.network.chat.Component newName = com.aimod.entity.NameTagFormatter.buildDisplayName(
+                    this.getName().getString(), this.aiManager.getStateMachine());
+            if (!newName.equals(lastCustomName)) {
+                lastCustomName = newName;
+                this.setCustomName(newName);
+                this.setCustomNameVisible(true);
+            }
         }
 
         // Tick the movement controller (handles async pathfinding delivery + movement execution)
