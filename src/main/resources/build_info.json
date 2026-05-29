@@ -1,6 +1,6 @@
 {
-  "version": "1.0.61",
-  "build": "2026-05-29-p2a",
+  "version": "1.0.62",
+  "build": "2026-05-29-p2b",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -27,6 +27,7 @@
     "p2a: GatherResourceAction findBestStandPos dy range -2~+3 → -10~+3, findAdjacentStandPos adds downward search",
     "p2a: Reach check dy >= -1.5 → -3.0, MAX_FALL_BLOCKS 4 → 10 for deeper underground pathfinding",
     "p2a: LLM shorthand JSON auto-correction — {\"mine\":\"iron_ore\"} → {\"type\":\"mine\",\"block_type\":\"iron_ore\"}",
+    "p2b: BotAIManager decomposition — TaskPlanner (LLM+parse), TaskExecutor (action loop), TaskReplanner (replan logic)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
