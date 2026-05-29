@@ -42,7 +42,7 @@ public final class InventoryUtils {
         Inventory inventory = bot.getInventory();
         for (Map.Entry<Item, Integer> entry : requiredItems.entrySet()) {
             int remaining = entry.getValue();
-            for (int i = 0; i < 36 && remaining > 0; i++) {
+            for (int i = 0; i <= 40 && remaining > 0; i++) {
                 ItemStack stack = inventory.getItem(i);
                 if (!stack.isEmpty() && stack.getItem() == entry.getKey()) {
                     int used = Math.min(remaining, stack.getCount());
@@ -166,6 +166,11 @@ public final class InventoryUtils {
         }
         // Main inventory (9-35)
         for (int i = 9; i < 36; i++) {
+            ItemStack stack = inv.getItem(i);
+            if (predicate.test(stack)) return new FindItemResult(i, stack.getCount());
+        }
+        // Armor (36-39)
+        for (int i = 36; i < 40; i++) {
             ItemStack stack = inv.getItem(i);
             if (predicate.test(stack)) return new FindItemResult(i, stack.getCount());
         }

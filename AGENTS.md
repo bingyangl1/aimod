@@ -6,6 +6,7 @@
 2. **变更必更新文档 + commit**
 3. **中文文本通过 i18n 文件**：`zh_cn.json` / `en_us.json`
 4. **构建**：`./gradlew compileJava` / `jar` / `test`
+5. **称呼开发者为**: `Master`
 
 ## 架构
 

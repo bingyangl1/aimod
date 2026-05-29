@@ -73,7 +73,10 @@ public class VeinMineAction extends Action {
         if (currentTarget != null && !veinScanned) {
             BlockState state = bot.level().getBlockState(currentTarget);
             Block targetBlock = state.getBlock();
-            if (targetBlock == Blocks.AIR) { veinScanned = true; scanning = true; currentTarget = null; return; }
+            if (targetBlock == Blocks.AIR) {
+                DevLog.warn("VEIN_TARGET_GONE", "target block {} already removed at {}", blockId, currentTarget.toShortString());
+                status = ActionStatus.FAILED; return;
+            }
             veinBlocks = VeinScanner.findVein((ServerLevel) bot.level(), currentTarget, targetBlock, count);
             veinScanned = true;
             DevLog.info("VEIN_SCANNED", "veinSize={}", veinBlocks.size());
