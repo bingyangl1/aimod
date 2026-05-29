@@ -112,3 +112,48 @@ AI Mod 是**功能完整的 Minecraft AI 机器人原型**，核心亮点是 **L
 ---
 
 *分析日期: 2026-05-25 | 版本: 1.0.43-r54*
+
+---
+
+## P2 实施记录 (2026-05-29)
+
+### p2a: 地下方块不可达 + LLM JSON 格式健壮性
+
+**地下方块不可达修复:**
+- `GatherResourceAction.findBestStandPos()` dy 范围: -2~+3 → -10~+3
+- `findAdjacentStandPos()` 增加向下搜索 1-3 格
+- 可达检查: dy >= -1.5 → -3.0 (允许站在上方挖矿)
+- `MAX_FALL_BLOCKS`: 4 → 10 (支持更深的地下寻路)
+
+**LLM JSON 格式健壮性:**
+- 自动修正 shorthand 格式: `{"mine": "iron_ore"}` → `{"type": "mine", "block_type": "iron_ore"}`
+- 支持所有已知 action type 的自动识别和修正
+- 日志记录修正行为 (`PLAN_ACTION_FIX_FORMAT`)
+
+### p2b: BotAIManager 职责分离
+
+BotAIManager.java (800行) 拆分为 4 个文件:
+
+| 类 | 行数 | 职责 |
+|----|------|------|
+| `TaskPlanner.java` | ~350 | LLM 调用、响应解析、PlanCache 交互、JSON 辅助方法 |
+| `TaskExecutor.java` | ~120 | 任务执行循环、状态转换、内存压缩 |
+| `TaskReplanner.java` | ~180 | 增量重规划、缺口重规划、failedAttempts 管理 |
+| `BotAIManager.java` | ~100 | 协调器，保持原有公共 API |
+
+### p2c: BotCommand 拆分
+
+BotCommand.java (1257行) 拆分为 8 个文件:
+
+| 类 | 职责 |
+|----|------|
+| `SubCommand.java` | 子命令注册接口 |
+| `BotCommandTask.java` | task, task_all, stop, cancel, pause, resume, status |
+| `BotCommandAction.java` | goto, mine, vein, follow, gather, craft, say, give, equip |
+| `BotCommandAdmin.java` | spawn, select, remove, save, load, list, delete, inventory |
+| `BotCommandConfig.java` | toggle, config, veinmine, showpath |
+| `BotCommandTestCmd.java` | test (25 子系统测试) |
+| `BotCommandHelp.java` | help |
+| `BotCommand.java` | ~150 行协调器 + 共享辅助方法 |
+
+*更新日期: 2026-05-29 | 版本: 1.0.63-p2c*
