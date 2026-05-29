@@ -1,6 +1,6 @@
 {
-  "version": "1.0.60",
-  "build": "2026-05-29-r75",
+  "version": "1.0.61",
+  "build": "2026-05-29-p2a",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -24,6 +24,9 @@
     "r74: Replan unknown action feedback — raw LLM output added to Recent Failed Attempts so LLM can fix format errors",
     "r74: UnstuckChain cancel reason — sends translatable message before cancelling task (stuck 15s+)",
     "r75: Name tag shows current step — [x/y stepDesc] taskDesc format, BotAIStateMachine tracks currentActionDesc",
+    "p2a: GatherResourceAction findBestStandPos dy range -2~+3 → -10~+3, findAdjacentStandPos adds downward search",
+    "p2a: Reach check dy >= -1.5 → -3.0, MAX_FALL_BLOCKS 4 → 10 for deeper underground pathfinding",
+    "p2a: LLM shorthand JSON auto-correction — {\"mine\":\"iron_ore\"} → {\"type\":\"mine\",\"block_type\":\"iron_ore\"}",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

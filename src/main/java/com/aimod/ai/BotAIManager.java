@@ -63,6 +63,13 @@ public class BotAIManager {
             java.util.Map.entry("attackEntity", "attack")
     );
 
+    /** Known action type strings — used to detect shorthand LLM output like {"mine": "iron_ore"} */
+    private static final java.util.Set<String> KNOWN_ACTION_TYPES = java.util.Set.of(
+            "move_to", "break_block", "place_block", "attack", "craft", "follow",
+            "give_item", "require_items", "say", "wait", "mine", "gather", "interact", "equip",
+            "vein_mine"
+    );
+
     public BotAIManager(FakePlayer bot) {
         this.bot = bot;
         this.llmService = new LLMService();
@@ -480,6 +487,42 @@ public class BotAIManager {
     private Action parseActionFromJson(JsonObject obj, String ownerName) {
         String type = getString(obj, "type", "");
         if (type.isEmpty()) type = getString(obj, "action", "");
+
+        // Fix shorthand format: {"mine": "iron_ore"} → {"type": "mine", "block_type": "iron_ore"}
+        if (type.isEmpty()) {
+            for (String knownType : KNOWN_ACTION_TYPES) {
+                if (obj.has(knownType)) {
+                    var value = obj.get(knownType);
+                    obj.remove(knownType);
+                    obj.addProperty("type", knownType);
+                    // Extract value as appropriate field
+                    if (value.isJsonPrimitive()) {
+                        String valStr = value.getAsString();
+                        if (knownType.equals("mine") || knownType.equals("break_block")) {
+                            if (!obj.has("block_type") && !obj.has("block_id"))
+                                obj.addProperty("block_type", valStr);
+                        } else if (knownType.equals("equip")) {
+                            if (!obj.has("item_id")) obj.addProperty("item_id", valStr);
+                        } else if (knownType.equals("say")) {
+                            if (!obj.has("message")) obj.addProperty("message", valStr);
+                        } else if (knownType.equals("follow")) {
+                            if (!obj.has("player")) obj.addProperty("player", valStr);
+                        } else if (knownType.equals("attack")) {
+                            if (!obj.has("target")) obj.addProperty("target", valStr);
+                        }
+                    } else if (value.isJsonObject()) {
+                        // Merge nested object: {"break_block": {"x":1,...}} → {"type":"break_block","x":1,...}
+                        for (var entry : value.getAsJsonObject().entrySet()) {
+                            if (!obj.has(entry.getKey())) obj.add(entry.getKey(), entry.getValue());
+                        }
+                    }
+                    type = knownType;
+                    DevLog.info("PLAN_ACTION_FIX_FORMAT", "original={}", DevLog.compact(value.toString()));
+                    break;
+                }
+            }
+        }
+
         if (type.isEmpty()) return null;
 
         // Normalize LLM-generated aliases to standard names

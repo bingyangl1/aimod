@@ -172,7 +172,7 @@ public class GatherResourceAction extends Action {
 
         // === Close enough to break? ===
         double dxzSqr = dx * dx + dz * dz;
-        boolean canReach = (dxzSqr <= 9.0 && dy >= -1.5 && dy <= 4.0);
+        boolean canReach = (dxzSqr <= 9.0 && dy >= -3.0 && dy <= 4.0);
         if (canReach) {
             // If target is overhead (XZ close but Y > 2 blocks up), pillar up
             if (dxzSqr <= 1.5 && dy > 1.8) {
@@ -387,6 +387,18 @@ public class GatherResourceAction extends Action {
                 best = above;
             }
         }
+        // Check below target (for mining from above)
+        for (int dy = 1; dy <= 3; dy++) {
+            BlockPos below = currentTarget.below(dy);
+            if (canStandAt(bot, below)) {
+                double dist = bot.distanceToSqr(
+                        below.getX() + 0.5, below.getY(), below.getZ() + 0.5);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    best = below;
+                }
+            }
+        }
         return best;
     }
 
@@ -398,7 +410,7 @@ public class GatherResourceAction extends Action {
 
         for (int dx = -searchR; dx <= searchR; dx++) {
             for (int dz = -searchR; dz <= searchR; dz++) {
-                for (int dy = -2; dy <= 3; dy++) {
+                for (int dy = -10; dy <= 3; dy++) {
                     BlockPos candidate = currentTarget.offset(dx, dy, dz);
                     if (canStandAt(bot, candidate)) {
                         double distToBot = bot.distanceToSqr(

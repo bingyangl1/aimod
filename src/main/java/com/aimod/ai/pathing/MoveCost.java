@@ -23,7 +23,7 @@ public final class MoveCost {
     public static final double BREAK_HARDNESS_MULT = 3.0;
     public static final double VOID_COST = 1000000.0;
     public static final double WATER_COST = WALK_IN_WATER;
-    public static final int MAX_FALL_BLOCKS = 4;
+    public static final int MAX_FALL_BLOCKS = 10;
     public static final double FALL_DAMAGE_THRESHOLD = 3.0;
     private MoveCost() {}
     public static final int[][] OFFSETS = {
