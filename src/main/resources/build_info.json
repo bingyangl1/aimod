@@ -1,6 +1,6 @@
 {
-  "version": "1.0.63",
-  "build": "2026-05-29-p2c",
+  "version": "1.0.64",
+  "build": "2026-05-29-p3a",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -29,6 +29,7 @@
     "p2a: LLM shorthand JSON auto-correction — {\"mine\":\"iron_ore\"} → {\"type\":\"mine\",\"block_type\":\"iron_ore\"}",
     "p2b: BotAIManager decomposition — TaskPlanner (LLM+parse), TaskExecutor (action loop), TaskReplanner (replan logic)",
     "p2c: BotCommand decomposition — SubCommand interface + BotCommandTask/Action/Admin/Config/TestCmd/Help. BotCommand reduced to 150-line coordinator.",
+    "p3a: Test coverage expansion — ActionFactoryTest, NameTagFormatterTest, InventoryUtilsTest. Total 18 test files, 150+ test methods.",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

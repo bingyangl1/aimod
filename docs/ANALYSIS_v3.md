@@ -157,3 +157,21 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | `BotCommand.java` | ~150 行协调器 + 共享辅助方法 |
 
 *更新日期: 2026-05-29 | 版本: 1.0.63-p2c*
+
+---
+
+## P3 实施记录 (2026-05-29)
+
+### p3a: 测试覆盖扩展
+
+新增测试文件:
+
+| 文件 | 覆盖目标 |
+|------|----------|
+| `ActionFactoryTest.java` | Action JSON 解析 (move_to, mine, craft, equip, say, aliases, position flattening) |
+| `NameTagFormatterTest.java` | BotAIStateMachine 状态转换、计数器、重置 |
+| `InventoryUtilsTest.java` | FindItemResult 属性 (found, isHotbar, slot, count) |
+
+测试总计: 18 个文件, 150+ 测试方法。
+
+*更新日期: 2026-05-29 | 版本: 1.0.64-p3a*
