@@ -56,7 +56,12 @@ public class BotCommandConfig implements SubCommand {
                 .executes(BotCommandConfig::showPath)
                 .then(Commands.argument("name", StringArgumentType.word())
                         .suggests(BotCommand.suggestBots())
-                        .executes(BotCommandConfig::showPathNamed)));
+                        .executes(BotCommandConfig::showPathNamed)))
+            .then(Commands.literal("metrics")
+                .executes(BotCommandConfig::showMetrics)
+                .then(Commands.argument("name", StringArgumentType.word())
+                        .suggests(BotCommand.suggestBots())
+                        .executes(BotCommandConfig::showMetricsNamed)));
     }
 
     private static int toggleFeature(CommandContext<CommandSourceStack> ctx) {
@@ -215,6 +220,28 @@ public class BotCommandConfig implements SubCommand {
         var level = (ServerLevel) bot.level();
         int restored = bot.getUndoManager().undo(level, steps);
         source.sendSuccess(() -> Component.literal("Undone " + restored + " blocks in " + steps + " operation(s)"), true);
+        return 1;
+    }
+
+    // ========== Metrics ==========
+
+    private static int showMetrics(CommandContext<CommandSourceStack> ctx) {
+        return showMetricsInternal(ctx, null);
+    }
+
+    private static int showMetricsNamed(CommandContext<CommandSourceStack> ctx) {
+        return showMetricsInternal(ctx, StringArgumentType.getString(ctx, "name"));
+    }
+
+    private static int showMetricsInternal(CommandContext<CommandSourceStack> context, @javax.annotation.Nullable String name) {
+        CommandSourceStack source = context.getSource();
+        var manager = BotCommand.getManager();
+        if (manager == null) { source.sendFailure(Component.translatable("commands.ai_bot.task.not_initialized")); return 0; }
+        FakePlayer bot = name != null ? manager.getByName(name)
+                : (source.getEntity() instanceof Player player ? manager.getNearest(player.getX(), player.getY(), player.getZ(), 32.0) : null);
+        if (bot == null) { source.sendFailure(Component.translatable("commands.ai_bot.no_bot")); return 0; }
+        String metrics = bot.getAiManager().getMetrics().format();
+        source.sendSuccess(() -> Component.literal(metrics), false);
         return 1;
     }
 

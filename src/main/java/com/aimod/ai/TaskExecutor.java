@@ -17,14 +17,17 @@ public class TaskExecutor {
     private final TaskReplanner replanner;
     private final TaskFeedback feedback;
     private final com.aimod.ai.llm.BotAIStateMachine stateMachine;
+    private final BotMetrics metrics;
 
     public TaskExecutor(FakePlayer bot, TaskPlanner planner, TaskReplanner replanner,
-                        TaskFeedback feedback, com.aimod.ai.llm.BotAIStateMachine stateMachine) {
+                        TaskFeedback feedback, com.aimod.ai.llm.BotAIStateMachine stateMachine,
+                        BotMetrics metrics) {
         this.bot = bot;
         this.planner = planner;
         this.replanner = replanner;
         this.feedback = feedback;
         this.stateMachine = stateMachine;
+        this.metrics = metrics;
     }
 
     /**
@@ -47,6 +50,7 @@ public class TaskExecutor {
         if (currentAction == null) {
             task.setStatus(Task.TaskStatus.COMPLETED);
             stateMachine.complete();
+            metrics.recordTaskCompleted();
             feedback.reportTaskComplete(task.getDescription());
             replanner.checkDeficitsAndReplan(task);
             return;
@@ -72,6 +76,7 @@ public class TaskExecutor {
         // Check if action completed
         if (currentAction.isComplete(bot)) {
             if (currentAction.getStatus() == Action.ActionStatus.COMPLETED) {
+                metrics.recordActionSucceeded();
                 feedback.reportActionComplete(
                         task.getCurrentActionIndex() + 1,
                         task.getActionCount(),
@@ -93,6 +98,7 @@ public class TaskExecutor {
                 }
             } else {
                 // Action failed — check if replan already in progress
+                metrics.recordActionFailed();
                 if (!replanner.isReplanning()) {
                     boolean isGiveItemPartial = (currentAction instanceof GiveItemAction g && g.getGivenCount() > 0);
                     String reason = TaskPlanner.getActionFailReason(currentAction, "Action failed");

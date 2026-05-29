@@ -1,6 +1,6 @@
 {
-  "version": "1.0.66",
-  "build": "2026-05-30-p3b",
+  "version": "1.0.67",
+  "build": "2026-05-30-p3c",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -34,6 +34,7 @@
     "r76: InventoryUtils.find() armor slot check — added loop for slots 36-39 (armor) so elytra/pumpkin in armor slots are found",
     "r76: VeinMineAction AIR race condition — target removed between Phase1 and Phase2 now sets FAILED instead of infinite IN_PROGRESS",
     "p3b: Multi-model routing — CHEAP_MODEL_NAME config for replan, LLMService.sendPromptWithModel(), TaskReplanner uses cheap model",
+    "p3c: BotMetrics observability — thread-safe counters for LLM calls, tasks, actions, replans. /ai_bot metrics command.",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

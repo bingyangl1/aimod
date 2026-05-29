@@ -22,15 +22,17 @@ public class BotAIManager {
     private final TaskPlanner planner;
     private final TaskExecutor executor;
     private final TaskReplanner replanner;
+    private final BotMetrics metrics;
 
     public BotAIManager(FakePlayer bot) {
         this.bot = bot;
         this.feedback = new TaskFeedback(bot);
         this.worldScanner = new WorldScanner(bot);
         this.stateMachine = new com.aimod.ai.llm.BotAIStateMachine();
-        this.planner = new TaskPlanner(bot, feedback);
-        this.replanner = new TaskReplanner(bot, planner, feedback, stateMachine);
-        this.executor = new TaskExecutor(bot, planner, replanner, feedback, stateMachine);
+        this.metrics = new BotMetrics();
+        this.planner = new TaskPlanner(bot, feedback, metrics);
+        this.replanner = new TaskReplanner(bot, planner, feedback, stateMachine, metrics);
+        this.executor = new TaskExecutor(bot, planner, replanner, feedback, stateMachine, metrics);
     }
 
     // === Public API (unchanged) ===
@@ -38,6 +40,7 @@ public class BotAIManager {
     public com.aimod.ai.llm.BotAIStateMachine getStateMachine() { return stateMachine; }
     public TaskFeedback getFeedback() { return feedback; }
     public WorldScanner getWorldScanner() { return worldScanner; }
+    public BotMetrics getMetrics() { return metrics; }
     public String getMemoryStats() { return bot.getMemoryStore().getStats(); }
 
     /**

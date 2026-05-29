@@ -27,6 +27,7 @@ public class TaskPlanner {
     private final LLMService llmService;
     private final com.aimod.ai.llm.PlanCache planCache;
     private final TaskFeedback feedback;
+    private final BotMetrics metrics;
 
     /** LLM action type aliases → standard names */
     private static final Map<String, String> ACTION_TYPE_ALIASES = Map.ofEntries(
@@ -57,12 +58,13 @@ public class TaskPlanner {
     private volatile String lastCommand = null;
     private volatile String lastOwnerName = null;
 
-    public TaskPlanner(FakePlayer bot, TaskFeedback feedback) {
+    public TaskPlanner(FakePlayer bot, TaskFeedback feedback, BotMetrics metrics) {
         this.bot = bot;
         this.llmService = new LLMService();
         this.planCache = new com.aimod.ai.llm.PlanCache(
                 bot.getServer() != null ? bot.getServer().getServerDirectory() : Path.of("."));
         this.feedback = feedback;
+        this.metrics = metrics;
     }
 
     public LLMService getLlmService() { return llmService; }
@@ -104,7 +106,10 @@ public class TaskPlanner {
             DevLog.info("TASK_CONTEXT", "len={}, estTokens={}",
                     worldContext.length(), LLMService.estimateTokens(worldContext));
 
+            long llmStart = System.currentTimeMillis();
             LLMResponse response = llmService.parseCommand(naturalLanguageCommand, worldContext);
+            long llmElapsed = System.currentTimeMillis() - llmStart;
+            metrics.recordLlmCall(response.isSuccess(), llmElapsed);
             if (response.isSuccess()) {
                 Task task = new Task(naturalLanguageCommand);
                 List<Action> actions = convertResponseToActions(response, ownerName);

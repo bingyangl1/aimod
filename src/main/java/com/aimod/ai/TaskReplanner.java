@@ -23,6 +23,7 @@ public class TaskReplanner {
     private final TaskPlanner planner;
     private final TaskFeedback feedback;
     private final com.aimod.ai.llm.BotAIStateMachine stateMachine;
+    private final BotMetrics metrics;
 
     private volatile boolean replanning = false;
     private int incrReplanCount = 0;
@@ -32,11 +33,12 @@ public class TaskReplanner {
     private String lastOwnerName = null;
 
     public TaskReplanner(FakePlayer bot, TaskPlanner planner, TaskFeedback feedback,
-                         com.aimod.ai.llm.BotAIStateMachine stateMachine) {
+                         com.aimod.ai.llm.BotAIStateMachine stateMachine, BotMetrics metrics) {
         this.bot = bot;
         this.planner = planner;
         this.feedback = feedback;
         this.stateMachine = stateMachine;
+        this.metrics = metrics;
     }
 
     public boolean isReplanning() { return replanning; }
@@ -58,6 +60,7 @@ public class TaskReplanner {
         }
         incrReplanCount++;
         replanning = true;
+        metrics.recordReplanTriggered();
         bot.getMovementController().getUnstuckDetector().setPaused(true);
 
         // Track this attempt for context
@@ -77,7 +80,10 @@ public class TaskReplanner {
             try {
                 // Use cheap model for incremental replan (simpler task, less intelligence needed)
                 String cheapModel = com.aimod.config.ModConfig.getCheapModelName();
+                long llmStart = System.currentTimeMillis();
                 LLMResponse resp = planner.getLlmService().sendPromptWithModel(ctx, cheapModel);
+                long llmElapsed = System.currentTimeMillis() - llmStart;
+                metrics.recordLlmCall(resp.isSuccess(), llmElapsed);
                 if (resp.isSuccess()) {
                     var acts = planner.convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
@@ -86,12 +92,14 @@ public class TaskReplanner {
                         if (next.getDescription().equals(failedActionDesc)) {
                             task.advanceToNextAction();
                             incrReplanCount = 0;
+                            metrics.recordReplanSucceeded();
                             stateMachine.startExecuting();
                         } else {
                             task.injectAction(next);
                             task.advanceToNextAction();
                             incrReplanCount = 0;
                             consecutiveUnknown = 0;
+                            metrics.recordReplanSucceeded();
                             DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
                             stateMachine.startExecuting();
                         }

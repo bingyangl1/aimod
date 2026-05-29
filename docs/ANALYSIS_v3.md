@@ -196,3 +196,29 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 默认 CHEAP_MODEL_NAME 为空，回退到 MODEL_NAME
 
 *更新日期: 2026-05-30 | 版本: 1.0.66-p3b*
+
+### p3c: BotMetrics 可观测性
+
+**设计方案:**
+
+新建 `BotMetrics.java` — 线程安全的指标收集器：
+
+| 指标类型 | 计数器 |
+|----------|--------|
+| LLM 调用 | llmCalls, llmSuccesses, llmFailures, llmTotalMs, llmMaxMs |
+| 任务 | tasksStarted, tasksCompleted, tasksFailed |
+| 动作 | actionsExecuted, actionsSucceeded, actionsFailed |
+| 重规划 | replansTriggered, replansSucceeded |
+
+**集成点:**
+| 文件 | 记录内容 |
+|------|----------|
+| `TaskPlanner.java` | LLM 调用成功/失败 + 耗时 |
+| `TaskExecutor.java` | 动作成功/失败、任务完成 |
+| `TaskReplanner.java` | 重规划触发/成功、LLM 调用 |
+
+**命令:**
+- `/ai_bot metrics` — 显示当前 bot 的指标摘要
+- `/ai_bot metrics <name>` — 显示指定 bot 的指标
+
+*更新日期: 2026-05-30 | 版本: 1.0.67-p3c*
