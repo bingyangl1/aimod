@@ -175,3 +175,24 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 测试总计: 18 个文件, 150+ 测试方法。
 
 *更新日期: 2026-05-29 | 版本: 1.0.64-p3a*
+
+### p3b: 多模型路由 (CHEAP/PREMIUM)
+
+**设计方案:**
+- 新增 `CHEAP_MODEL_NAME` 配置 — 用于 incremental replan 等简单任务
+- `PREMIUM_MODEL_NAME` 使用原有的 `MODEL_NAME` — 用于完整任务规划
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `ModConfig.java` | 新增 `CHEAP_MODEL_NAME` 配置项和 getter/setter |
+| `LLMService.java` | 新增 `sendPromptWithModel()` 方法支持模型名覆盖 |
+| `TaskReplanner.java` | incremental replan 使用 cheap model |
+| `BotCommandConfig.java` | 配置命令支持 cheapModelName 显示和设置 |
+
+**路由逻辑:**
+- `TaskPlanner.parseCommand()` → 使用 PREMIUM 模型 (MODEL_NAME)
+- `TaskReplanner.incrementalReplan()` → 使用 CHEAP 模型 (CHEAP_MODEL_NAME)
+- 默认 CHEAP_MODEL_NAME 为空，回退到 MODEL_NAME
+
+*更新日期: 2026-05-30 | 版本: 1.0.66-p3b*

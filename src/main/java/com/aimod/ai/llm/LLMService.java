@@ -187,6 +187,25 @@ public class LLMService {
         }
     }
 
+    /**
+     * Send a prompt with a specific model override (for multi-model routing).
+     * Used by TaskReplanner to use cheaper models for incremental replan.
+     */
+    public LLMResponse sendPromptWithModel(String prompt, String modelOverride) {
+        if (apiKey == null || apiKey.isBlank()) return LLMResponse.failure("No API key");
+        String originalModel = this.model;
+        try {
+            this.model = modelOverride;
+            if (!isModelAvailable()) return LLMResponse.failure("Model health check failed");
+            String response = callLLMApi(prompt);
+            return parseResponse(response);
+        } catch (Exception e) {
+            return LLMResponse.failure("Prompt failed: " + e.getMessage());
+        } finally {
+            this.model = originalModel;
+        }
+    }
+
     private boolean isModelAvailable() {
         if (!modelHealthCheck) {
             DevLog.info("LLM_HEALTH_SKIP", "reason=disabled");

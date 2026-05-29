@@ -1,6 +1,6 @@
 {
-  "version": "1.0.65",
-  "build": "2026-05-30-r76",
+  "version": "1.0.66",
+  "build": "2026-05-30-p3b",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -33,6 +33,7 @@
     "r76: InventoryUtils.consumeItems slot 0-40 (was 0-35, missed armor/offhand) — same bug pattern as r74 findBlockItem/findBlockSlot",
     "r76: InventoryUtils.find() armor slot check — added loop for slots 36-39 (armor) so elytra/pumpkin in armor slots are found",
     "r76: VeinMineAction AIR race condition — target removed between Phase1 and Phase2 now sets FAILED instead of infinite IN_PROGRESS",
+    "p3b: Multi-model routing — CHEAP_MODEL_NAME config for replan, LLMService.sendPromptWithModel(), TaskReplanner uses cheap model",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

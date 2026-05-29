@@ -25,12 +25,20 @@ public class ModConfig {
 
     public static final ModConfigSpec.ConfigValue<String> MODEL_NAME = BUILDER
             .comment(
-                "Model name to use",
+                "Model name to use for full task planning (premium model)",
                 "OpenAI: gpt-3.5-turbo, gpt-4, gpt-4o",
                 "Claude: claude-3-sonnet-20240229",
                 "Ollama: llama3, qwen2, mistral"
             )
             .define("modelName", "deepseek-v4-pro");
+
+    public static final ModConfigSpec.ConfigValue<String> CHEAP_MODEL_NAME = BUILDER
+            .comment(
+                "Model name for incremental replan (cheaper/faster model)",
+                "Used for replan after action failure — simpler tasks need less intelligence",
+                "Leave empty to use the same model as modelName"
+            )
+            .define("cheapModelName", "");
 
     public static final ModConfigSpec.ConfigValue<Integer> MAX_TOKENS = BUILDER
             .comment("Maximum tokens for LLM response (higher = more detailed actions)")
@@ -202,6 +210,11 @@ public class ModConfig {
         return MODEL_NAME.get();
     }
 
+    public static String getCheapModelName() {
+        String cheap = CHEAP_MODEL_NAME.get();
+        return (cheap != null && !cheap.isBlank()) ? cheap : getModelName();
+    }
+
     public static int getMaxTokens() {
         return MAX_TOKENS.get();
     }
@@ -278,4 +291,5 @@ public class ModConfig {
     public static void setAutoFish(boolean v) { AUTO_FISH.set(v); }
     public static void setMaxBots(int v) { MAX_BOTS.set(v); }
     public static void setShowTaskAboveHead(boolean v) { SHOW_TASK_ABOVE_HEAD.set(v); }
+    public static void setCheapModelName(String v) { CHEAP_MODEL_NAME.set(v); }
 }

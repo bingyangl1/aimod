@@ -75,7 +75,9 @@ public class TaskReplanner {
 
         Thread t = new Thread(() -> {
             try {
-                LLMResponse resp = planner.getLlmService().sendPrompt(ctx);
+                // Use cheap model for incremental replan (simpler task, less intelligence needed)
+                String cheapModel = com.aimod.config.ModConfig.getCheapModelName();
+                LLMResponse resp = planner.getLlmService().sendPromptWithModel(ctx, cheapModel);
                 if (resp.isSuccess()) {
                     var acts = planner.convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
