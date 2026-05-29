@@ -83,7 +83,7 @@ public class TaskExecutor {
                     stateMachine.complete();
                     // Cache validated plan (only if no replanning occurred)
                     if (planner.getLastCommand() != null && !planner.getLastCommand().isBlank()
-                            && planner.getLastCachedActions() != null) {
+                            && !replanner.hasReplanned() && planner.getLastCachedActions() != null) {
                         planner.getPlanCache().store(planner.getLastCommand(), planner.getLastCachedActions(), true);
                         DevLog.info("PLAN_CACHE_STORE_DEFERRED", "command={}, actions={}",
                                 planner.getLastCommand(), planner.getLastCachedActions().size());
@@ -106,7 +106,7 @@ public class TaskExecutor {
                         task.advanceToNextAction();
                     } else {
                         stateMachine.requestReplan();
-                        replanner.incrementalReplan(task, currentAction.getDescription());
+                        replanner.incrementalReplan(task, currentAction.getDescription(), planner.getLastOwnerName());
                     }
                 }
             }

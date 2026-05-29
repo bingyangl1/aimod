@@ -29,6 +29,7 @@ public class TaskReplanner {
     private static final int MAX_INCR_REPLAN = 5;
     private int consecutiveUnknown = 0;
     private final List<String> recentReplanAttempts = new ArrayList<>();
+    private String lastOwnerName = null;
 
     public TaskReplanner(FakePlayer bot, TaskPlanner planner, TaskFeedback feedback,
                          com.aimod.ai.llm.BotAIStateMachine stateMachine) {
@@ -39,11 +40,13 @@ public class TaskReplanner {
     }
 
     public boolean isReplanning() { return replanning; }
+    public boolean hasReplanned() { return incrReplanCount > 0; }
 
     /**
      * Incremental replan: ask LLM for next action after a failure.
      */
-    public void incrementalReplan(Task task, String failedActionDesc) {
+    public void incrementalReplan(Task task, String failedActionDesc, String ownerName) {
+        this.lastOwnerName = ownerName;
         if (replanning) return;
         if (incrReplanCount >= MAX_INCR_REPLAN) {
             task.setStatus(Task.TaskStatus.FAILED);
@@ -74,7 +77,7 @@ public class TaskReplanner {
             try {
                 LLMResponse resp = planner.getLlmService().sendPrompt(ctx);
                 if (resp.isSuccess()) {
-                    var acts = planner.convertResponseToActions(resp, null);
+                    var acts = planner.convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
                         var next = acts.get(0);
                         consecutiveUnknown = 0;

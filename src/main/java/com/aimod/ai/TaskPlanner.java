@@ -68,6 +68,7 @@ public class TaskPlanner {
     public LLMService getLlmService() { return llmService; }
     public com.aimod.ai.llm.PlanCache getPlanCache() { return planCache; }
     public String getLastCommand() { return lastCommand; }
+    public String getLastOwnerName() { return lastOwnerName; }
     public List<String> getLastCachedActions() { return lastCachedActions; }
     public void clearLastCachedActions() { lastCachedActions = null; }
 
