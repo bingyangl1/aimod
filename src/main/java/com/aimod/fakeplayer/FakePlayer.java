@@ -109,6 +109,7 @@ public class FakePlayer extends ServerPlayer {
                 server.getServerDirectory() != null ? server.getServerDirectory() : java.nio.file.Path.of("."));
         this.chainManager.addChain(new DangerChain());
         this.chainManager.addChain(new DefenseChain());
+        this.chainManager.addChain(new com.aimod.ai.chain.PlayerDefenseChain());
         this.chainManager.addChain(new FoodChain());
         this.chainManager.addChain(new UnstuckChain());
     }

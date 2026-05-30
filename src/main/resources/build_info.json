@@ -1,6 +1,6 @@
 {
-  "version": "1.0.72",
-  "build": "2026-05-30-p5b",
+  "version": "1.0.73",
+  "build": "2026-05-30-p5c",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -40,6 +40,7 @@
     "p4c: MovementDigDown — multi-block vertical dig-down (dy<=-2), break block below + gravity fall, safety checks for liquids/bedrock/void",
     "p5a: GatherResourceAction Strategy 4 (tryDigDown) — breaks block below to reach underground targets, safety for void/bedrock/liquids",
     "p5b: Detailed failure feedback — Action.failReason field, specific messages for equip/craft/place/break actions",
+    "p5c: PlayerDefenseChain — PvP defense (priority 65), retreat + shield when attacked by non-owner players, enablePvpDefense config",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

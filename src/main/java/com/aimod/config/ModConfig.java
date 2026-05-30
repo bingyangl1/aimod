@@ -163,6 +163,11 @@ public class ModConfig {
                      "Displays: bot name (green) + state + task description + progress")
             .define("showTaskAboveHead", true);
 
+    public static final ModConfigSpec.ConfigValue<Boolean> ENABLE_PVP_DEFENSE = BUILDER
+            .comment("Enable PvP defense chain — bot retreats/shields when attacked by other players",
+                     "Default: false (disabled)")
+            .define("enablePvpDefense", false);
+
     public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
@@ -273,6 +278,7 @@ public class ModConfig {
     public static int getUndoHistory() { return UNDO_HISTORY.get(); }
     public static boolean getPersistTasks() { return PERSIST_TASKS.get(); }
     public static boolean getShowTaskAboveHead() { return SHOW_TASK_ABOVE_HEAD.get(); }
+    public static boolean getEnablePvpDefense() { return ENABLE_PVP_DEFENSE.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
     public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }
@@ -291,5 +297,6 @@ public class ModConfig {
     public static void setAutoFish(boolean v) { AUTO_FISH.set(v); }
     public static void setMaxBots(int v) { MAX_BOTS.set(v); }
     public static void setShowTaskAboveHead(boolean v) { SHOW_TASK_ABOVE_HEAD.set(v); }
+    public static void setEnablePvpDefense(boolean v) { ENABLE_PVP_DEFENSE.set(v); }
     public static void setCheapModelName(String v) { CHEAP_MODEL_NAME.set(v); }
 }

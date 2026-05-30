@@ -327,3 +327,28 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 **效果:** 任务失败时用户能看到具体原因，而不是笼统的 "Action failed"。
 
 *更新日期: 2026-05-30 | 版本: 1.0.72-p5b*
+
+### p5c: PlayerDefenseChain — PvP 防御
+
+**设计方案:**
+
+新建 `PlayerDefenseChain.java` — PvP 防御行为链。
+
+| 特性 | 说明 |
+|------|------|
+| 优先级 | 65（低于 DefenseChain 的 70） |
+| 检测范围 | 16 格内的非主人玩家 |
+| 触发条件 | 玩家持有武器且距离 < 6 格，或距离 < 3 格 |
+| 防御行为 | 逃跑（远离威胁）+ 举盾（如果副手有盾） |
+| 最大活跃时间 | 100 tick（5 秒） |
+| 冷却时间 | 60 tick（3 秒） |
+| 默认禁用 | 通过 `enablePvpDefense` 配置启用 |
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `PlayerDefenseChain.java` | 新建，PvP 防御行为链 |
+| `FakePlayer.java` | 注册 PlayerDefenseChain 到 ChainManager |
+| `ModConfig.java` | 新增 `enablePvpDefense` 配置项 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.73-p5c*
