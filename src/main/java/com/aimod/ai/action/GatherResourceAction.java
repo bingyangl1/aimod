@@ -302,11 +302,19 @@ public class GatherResourceAction extends Action {
             ServerLevel level = (ServerLevel) bot.level();
             Block targetBlock = blockState.getBlock();
 
-            if (resourceType == ResourceType.WOOD && com.aimod.config.ModConfig.getVeinMine()
-                    && VeinMiningHelper.isLogBlock(targetBlock)) {
-                int treeSize = VeinMiningHelper.veinMineTree(level, currentTarget, targetBlock, 64, true);
-                gatheredCount += treeSize;
-                DevLog.info("GATHER_VEIN_TREE", "type={}, treeSize={}, total={}", resourceType, treeSize, gatheredCount);
+            if (com.aimod.config.ModConfig.getVeinMine()) {
+                if (resourceType == ResourceType.WOOD && VeinMiningHelper.isLogBlock(targetBlock)) {
+                    int treeSize = VeinMiningHelper.veinMineTree(level, currentTarget, targetBlock, 64, true);
+                    gatheredCount += treeSize;
+                    DevLog.info("GATHER_VEIN_TREE", "type={}, treeSize={}, total={}", resourceType, treeSize, gatheredCount);
+                } else if (VeinMiningHelper.isOreBlock(targetBlock)) {
+                    int oreSize = VeinMiningHelper.veinMineOre(level, currentTarget, targetBlock, 64, true);
+                    gatheredCount += oreSize;
+                    DevLog.info("GATHER_VEIN_ORE", "type={}, oreSize={}, total={}", resourceType, oreSize, gatheredCount);
+                } else {
+                    level.destroyBlock(currentTarget, true, bot);
+                    gatheredCount++;
+                }
             } else {
                 level.destroyBlock(currentTarget, true, bot);
                 gatheredCount++;

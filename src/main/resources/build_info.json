@@ -1,6 +1,6 @@
 {
-  "version": "1.0.74",
-  "build": "2026-05-30-p6a",
+  "version": "1.0.75",
+  "build": "2026-05-30-p6b",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -42,6 +42,7 @@
     "p5b: Detailed failure feedback — Action.failReason field, specific messages for equip/craft/place/break actions",
     "p5c: PlayerDefenseChain — PvP defense (priority 65), retreat + shield when attacked by non-owner players, enablePvpDefense config",
     "p6a: MovementDigDown tool validation — hasPickaxe check, getToolSpeed for break time, warn on bare-hand dig",
+    "p6b: VeinMiningHelper ore support — veinMineOre() + isOreBlock(), GatherResourceAction vein mines ores when enabled",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

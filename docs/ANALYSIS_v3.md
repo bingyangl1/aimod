@@ -373,3 +373,27 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | `MovementDigDown.java` | 增加 `getToolSpeed()`, `hasPickaxe()`, 工具效率计算 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.74-p6a*
+
+### p6b: VeinMiningHelper 矿石连锁
+
+**改进内容:**
+
+| 改进项 | 说明 |
+|--------|------|
+| `veinMineOre()` | 新增矿石连锁方法，使用 `VeinScanner.findVein()` (6方向 BFS) |
+| `isOreBlock()` | 新增矿石检测，支持 18 种矿石方块（含深板岩变种） |
+| `breakTarget()` | 矿石类型触发连锁采集（当 `veinMine` 配置启用时） |
+
+**支持的矿石:**
+- 煤矿/深板层煤矿、铁矿/深板层铁矿、金矿/深板层金矿
+- 钻石矿/深板层钻石矿、绿宝石矿/深板层绿宝石矿
+- 红石矿/深板层红石矿、青金石矿/深板层青金石矿
+- 铜矿/深板层铜矿、下界金矿、下界石英矿
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `VeinMiningHelper.java` | 增加 `veinMineOre()`, `isOreBlock()` |
+| `GatherResourceAction.java` | `breakTarget()` 中矿石类型触发连锁 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.75-p6b*
