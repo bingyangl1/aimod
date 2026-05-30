@@ -6,6 +6,9 @@ import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TieredItem;
+import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -71,6 +74,11 @@ public class MovementDigDown extends BotMovement {
         if (status == Status.PENDING) {
             // Pre-validate: check if we can dig down
             ServerLevel level = (ServerLevel) bot.level();
+
+            // Warn if no pickaxe (will be very slow)
+            if (!hasPickaxe(bot)) {
+                DevLog.warn("DIG_DOWN_NO_PICKAXE", "bot will dig slowly without a pickaxe");
+            }
             for (int i = 1; i <= targetDepth; i++) {
                 BlockPos checkPos = src.below(i);
                 if (checkPos.getY() < -64) {
@@ -178,9 +186,10 @@ public class MovementDigDown extends BotMovement {
             return true;
         }
 
-        // Simulate breaking
+        // Simulate breaking with tool efficiency
         breakProgress++;
-        int breakTime = Math.max(1, (int) (hardness * 20));
+        float toolSpeed = getToolSpeed(bot);
+        int breakTime = Math.max(1, (int) (hardness * 20 / toolSpeed));
 
         if (breakProgress >= breakTime) {
             // Break the block
@@ -188,9 +197,41 @@ public class MovementDigDown extends BotMovement {
             blocksDug++;
             breakProgress = 0;
             settleCooldown = SETTLE_TICKS;
-            DevLog.info("DIG_DOWN_DUG", "pos={}, blocksDug={}", belowFeet.toShortString(), blocksDug);
+            DevLog.info("DIG_DOWN_DUG", "pos={}, blocksDug={}, toolSpeed={}", belowFeet.toShortString(), blocksDug, toolSpeed);
         }
 
+        return false;
+    }
+
+    /**
+     * Get the best tool speed from the bot's inventory.
+     * Returns 1.0 for bare hands, higher for appropriate tools.
+     */
+    private float getToolSpeed(FakePlayer bot) {
+        float bestSpeed = 1.0f;
+        for (int i = 0; i <= 40; i++) {
+            ItemStack stack = bot.getInventory().getItem(i);
+            if (stack.isEmpty()) continue;
+            if (stack.getItem() instanceof TieredItem tiered) {
+                float speed = tiered.getTier().getSpeed();
+                if (speed > bestSpeed) {
+                    bestSpeed = speed;
+                }
+            }
+        }
+        return bestSpeed;
+    }
+
+    /**
+     * Check if the bot has any pickaxe in inventory.
+     */
+    private boolean hasPickaxe(FakePlayer bot) {
+        for (int i = 0; i <= 40; i++) {
+            ItemStack stack = bot.getInventory().getItem(i);
+            if (stack.isEmpty()) continue;
+            String name = stack.getItem().getClass().getSimpleName().toLowerCase();
+            if (name.contains("pickaxe")) return true;
+        }
         return false;
     }
 }

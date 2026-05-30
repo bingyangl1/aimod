@@ -352,3 +352,24 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | `ModConfig.java` | 新增 `enablePvpDefense` 配置项 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.73-p5c*
+
+---
+
+## P6 实施记录 (2026-05-30)
+
+### p6a: MovementDigDown 工具验证
+
+**改进内容:**
+
+| 改进项 | 说明 |
+|--------|------|
+| 镐检测 | `canExecute()` 检查背包中是否有镐，无镐时警告 |
+| 工具效率 | `update()` 使用 `getToolSpeed()` 计算挖掘时间，镐比裸手快 20x |
+| 挖掘时间 | `breakTime = hardness * 20 / toolSpeed`（原来固定 `hardness * 20`） |
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `MovementDigDown.java` | 增加 `getToolSpeed()`, `hasPickaxe()`, 工具效率计算 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.74-p6a*
