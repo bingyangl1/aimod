@@ -1,6 +1,6 @@
 {
-  "version": "1.0.69",
-  "build": "2026-05-30-p4b",
+  "version": "1.0.70",
+  "build": "2026-05-30-p4c",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -37,6 +37,7 @@
     "p3c: BotMetrics observability — thread-safe counters for LLM calls, tasks, actions, replans. /ai_bot metrics command.",
     "p4a: Test coverage expansion — BotMemoryStoreTest, ContextAssemblerTest, TaskPersistenceTest. Total 21 test files, 170+ test methods.",
     "p4b: TaskPersistence hardening — version field, atomic write (tmp+rename), corrupted JSON backup, action index validation",
+    "p4c: MovementDigDown — multi-block vertical dig-down (dy<=-2), break block below + gravity fall, safety checks for liquids/bedrock/void",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

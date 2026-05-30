@@ -100,6 +100,7 @@ public abstract class BotMovement {
         if (dy == 1 && adx + adz == 0) return new MovementPillar(src, dest);
         if (dy == 1 && adx + adz == 2) return new MovementAscend(src, dest);
         if (dy == -1 && adx + adz == 1 && adx + adz <= 1) return new MovementDescend(src, dest);
+        if (dy <= -2 && adx + adz == 0) return new MovementDigDown(src, dest); // multi-block dig down
         if (dy < -1) return new MovementFall(src, dest);
         if (dy == -1 && adx + adz == 0) return new MovementDownward(src, dest);
         if (dy == 0 && adx + adz == 2) return new MovementDiagonal(src, dest);

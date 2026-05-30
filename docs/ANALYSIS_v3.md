@@ -256,3 +256,30 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 空命令处理 | `data.command` 为 null 时使用默认值 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.69-p4b*
+
+### p4c: MovementDigDown — 挖洞下探
+
+**设计方案:**
+
+新建 `MovementDigDown.java` — 多格垂直挖掘下降移动类。
+
+| 特性 | 说明 |
+|------|------|
+| 触发条件 | `dy <= -2, adx+adz == 0`（垂直向下 2+ 格） |
+| 工作流程 | 重复：挖脚下方块 → 等待下落 → 到达目标深度 |
+| 安全检查 | 不破坏基岩、不在液体上方挖、不在虚空下方挖 |
+| 成本计算 | 每格: BREAK_BASE + 硬度 * 1.5 + WALK_ONE_BLOCK |
+| 超时保护 | 单格 40 tick，总超时 dy * 50 tick |
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `MovementDigDown.java` | 新建，多格挖掘下降类 |
+| `BotMovement.java` | 工厂方法增加 `MovementDigDown` 分支 (dy<=-2, adx+adz=0) |
+
+**与现有移动类型的关系:**
+- `MovementDownward`: dy=-1, 1格挖掘下降（保留不变）
+- `MovementDigDown`: dy<=-2, 多格挖掘下降（新建）
+- `MovementFall`: dy<-1, 需要现成空间的下落（保留不变）
+
+*更新日期: 2026-05-30 | 版本: 1.0.70-p4c*
