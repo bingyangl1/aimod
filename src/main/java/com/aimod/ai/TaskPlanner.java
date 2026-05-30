@@ -138,7 +138,9 @@ public class TaskPlanner {
         List<Action> fallbackActions = createFallbackActions(naturalLanguageCommand, ownerName);
         if (fallbackActions.isEmpty()) {
             DevLog.warn("TASK_PARSE_NO_FALLBACK", "command={}", DevLog.compact(naturalLanguageCommand));
-            return null;
+            Task failedTask = new Task(naturalLanguageCommand);
+            failedTask.setStatus(Task.TaskStatus.FAILED);
+            return failedTask;
         }
         Task task = new Task(naturalLanguageCommand);
         task.setActions(fallbackActions);

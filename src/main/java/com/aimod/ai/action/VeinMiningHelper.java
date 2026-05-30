@@ -15,22 +15,32 @@ public final class VeinMiningHelper {
 
     /** Break all connected logs at and around the given position. */
     public static int veinMineTree(ServerLevel level, BlockPos start, Block targetBlock, int maxBlocks, boolean dropItems) {
+        return veinMineTree(level, start, targetBlock, maxBlocks, dropItems, null);
+    }
+
+    /** Break all connected logs with a player entity for loot table context. */
+    public static int veinMineTree(ServerLevel level, BlockPos start, Block targetBlock, int maxBlocks, boolean dropItems, net.minecraft.world.entity.player.Player player) {
         var vein = com.aimod.ai.VeinScanner.findTree(level, start, targetBlock, maxBlocks);
         if (vein.isEmpty()) return 0;
 
         for (BlockPos vp : vein) {
-            level.destroyBlock(vp, dropItems, null);
+            level.destroyBlock(vp, dropItems, player);
         }
         return vein.size();
     }
 
     /** Break all connected ore blocks at and around the given position. */
     public static int veinMineOre(ServerLevel level, BlockPos start, Block targetBlock, int maxBlocks, boolean dropItems) {
+        return veinMineOre(level, start, targetBlock, maxBlocks, dropItems, null);
+    }
+
+    /** Break all connected ore blocks with a player entity for loot table context. */
+    public static int veinMineOre(ServerLevel level, BlockPos start, Block targetBlock, int maxBlocks, boolean dropItems, net.minecraft.world.entity.player.Player player) {
         var vein = com.aimod.ai.VeinScanner.findVein(level, start, targetBlock, maxBlocks);
         if (vein.isEmpty()) return 0;
 
         for (BlockPos vp : vein) {
-            level.destroyBlock(vp, dropItems, null);
+            level.destroyBlock(vp, dropItems, player);
         }
         return vein.size();
     }

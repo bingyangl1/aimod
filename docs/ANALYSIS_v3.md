@@ -450,3 +450,15 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 4 | `GatherResourceAction.java` | `tryPillarUp()` 增加窒息检查（头部固体方块检测） |
 
 *更新日期: 2026-05-30 | 版本: 1.0.79-r79*
+
+### r80: 审计 Medium 级别修复
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `TaskPlanner.java` | 返回失败 Task 替代 null |
+| 2 | `GatherResourceAction.java` | 水中逃生 5 秒超时保护 |
+| 3 | `PlaceBlockAction.java` | `findBlockSlot()` 物品在 armor/offhand 时交换到 hotbar |
+| 4 | `VeinMiningHelper.java` | 传递 bot 实体到 `destroyBlock` 以获取正确战利品表 |
+| 5 | `FakePlayer.java` | `tick()` 捕获所有 Exception（原来只捕获 NPE） |
+
+*更新日期: 2026-05-30 | 版本: 1.0.80-r80*

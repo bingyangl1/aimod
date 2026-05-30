@@ -1,6 +1,6 @@
 {
-  "version": "1.0.79",
-  "build": "2026-05-30-r79",
+  "version": "1.0.80",
+  "build": "2026-05-30-r80",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -54,6 +54,11 @@
     "r79: GatherResourceAction.breakTarget uses tick-based timing (was wall-clock System.currentTimeMillis)",
     "r79: MovementFall.update() runtime safety — fails on lava contact or Y < -64",
     "r79: GatherResourceAction.tryPillarUp suffocation check — blocks placement if head position is solid",
+    "r80: TaskPlanner returns failed Task instead of null when all parsing fails",
+    "r80: GatherResourceAction water escape timeout (5s) — prevents infinite loop in ocean",
+    "r80: PlaceBlockAction.findBlockSlot swaps item to hotbar when found in armor/offhand slots",
+    "r80: VeinMiningHelper passes bot entity to destroyBlock for proper loot table context",
+    "r80: FakePlayer.tick() catches all Exception (was only NullPointerException)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

@@ -182,10 +182,34 @@ public class PlaceBlockAction extends Action {
     /** Find the inventory slot containing the block item. */
     private int findBlockSlot(FakePlayer bot) {
         var inventory = bot.getInventory();
-        for (int i = 0; i <= 40; i++) {
+        // First check hotbar slots (0-8) — these can be directly selected
+        for (int i = 0; i <= 8; i++) {
             ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() == blockItem) {
                 return i;
+            }
+        }
+        // Then check main inventory (9-35) — need to swap to hotbar
+        for (int i = 9; i <= 35; i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!stack.isEmpty() && stack.getItem() == blockItem) {
+                // Swap with current hotbar slot
+                int hotbarSlot = inventory.selected;
+                ItemStack hotbarItem = inventory.getItem(hotbarSlot);
+                inventory.setItem(hotbarSlot, stack);
+                inventory.setItem(i, hotbarItem);
+                return hotbarSlot;
+            }
+        }
+        // Check armor/offhand (36-40) — need to swap to hotbar
+        for (int i = 36; i <= 40; i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (!stack.isEmpty() && stack.getItem() == blockItem) {
+                int hotbarSlot = inventory.selected;
+                ItemStack hotbarItem = inventory.getItem(hotbarSlot);
+                inventory.setItem(hotbarSlot, stack);
+                inventory.setItem(i, hotbarItem);
+                return hotbarSlot;
             }
         }
         return -1;

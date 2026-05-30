@@ -260,8 +260,9 @@ public class FakePlayer extends ServerPlayer {
         try {
             super.tick();
             this.doTick();
-        } catch (NullPointerException ignored) {
-            // FakePlayer may NPE in some vanilla paths
+        } catch (Exception e) {
+            // FakePlayer may throw in some vanilla paths (NPE, IAE, etc.)
+            DevLog.warn("FAKE_PLAYER_TICK_EXCEPTION", "err={}", e.getMessage());
         }
 
         // Periodically sync name tag (task status) to clients via entity metadata

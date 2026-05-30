@@ -162,6 +162,8 @@ public class GatherResourceAction extends Action {
         if (isInWater(bot)) {
             handleWaterEscape(bot);
             return;
+        } else {
+            waterEscapeTicks = 0; // reset when out of water
         }
 
         // === Calculate distance to target ===
@@ -304,11 +306,11 @@ public class GatherResourceAction extends Action {
 
             if (com.aimod.config.ModConfig.getVeinMine()) {
                 if (resourceType == ResourceType.WOOD && VeinMiningHelper.isLogBlock(targetBlock)) {
-                    int treeSize = VeinMiningHelper.veinMineTree(level, currentTarget, targetBlock, 64, true);
+                    int treeSize = VeinMiningHelper.veinMineTree(level, currentTarget, targetBlock, 64, true, bot);
                     gatheredCount += treeSize;
                     DevLog.info("GATHER_VEIN_TREE", "type={}, treeSize={}, total={}", resourceType, treeSize, gatheredCount);
                 } else if (VeinMiningHelper.isOreBlock(targetBlock)) {
-                    int oreSize = VeinMiningHelper.veinMineOre(level, currentTarget, targetBlock, 64, true);
+                    int oreSize = VeinMiningHelper.veinMineOre(level, currentTarget, targetBlock, 64, true, bot);
                     gatheredCount += oreSize;
                     DevLog.info("GATHER_VEIN_ORE", "type={}, oreSize={}, total={}", resourceType, oreSize, gatheredCount);
                 } else {
@@ -620,12 +622,23 @@ public class GatherResourceAction extends Action {
 
     // ========== Water Handling ==========
 
+    private int waterEscapeTicks = 0;
+    private static final int MAX_WATER_ESCAPE_TICKS = 100; // 5 seconds
+
     private boolean isInWater(FakePlayer bot) {
         return !bot.level().getFluidState(bot.blockPosition()).isEmpty()
                 || !bot.level().getFluidState(bot.blockPosition().below()).isEmpty();
     }
 
     private void handleWaterEscape(FakePlayer bot) {
+        waterEscapeTicks++;
+        if (waterEscapeTicks > MAX_WATER_ESCAPE_TICKS) {
+            DevLog.warn("GATHER_WATER_ESCAPE_TIMEOUT", "ticks={}", waterEscapeTicks);
+            status = ActionStatus.FAILED;
+            failReason = "溺水：无法找到干燥陆地";
+            return;
+        }
+
         if (bot.onGround() || bot.isInWater()) {
             bot.jumpFromGround();
         }
