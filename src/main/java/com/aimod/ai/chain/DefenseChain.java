@@ -72,12 +72,15 @@ public class DefenseChain extends BehaviorChain {
         lastBot = bot;
         activeTicks++;
         if (activeTicks > MAX_ACTIVE_TICKS) {
+            bot.stopUsingItem();
             restoreInventory(bot);
             active = false;
             cooldownTicks = POST_COMBAT_COOLDOWN;
             return;
         }
         if (target == null || !target.isAlive()) {
+            bot.stopUsingItem();
+            restoreInventory(bot);
             active = false;
             cooldownTicks = POST_COMBAT_COOLDOWN;
             return;
@@ -226,7 +229,10 @@ public class DefenseChain extends BehaviorChain {
     @Override public void stop() {
         active = false; target = null; retreating = false; shielding = false;
         activeTicks = 0; cooldownTicks = POST_COMBAT_COOLDOWN;
-        if (lastBot != null) restoreInventory(lastBot);
+        if (lastBot != null) {
+            lastBot.stopUsingItem();
+            restoreInventory(lastBot);
+        }
     }
     @Override public String name() { return "Defense"; }
 }

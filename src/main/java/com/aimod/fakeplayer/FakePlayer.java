@@ -473,6 +473,8 @@ public class FakePlayer extends ServerPlayer {
                 } else {
                     DevLog.warn("BOT_TASK_NULL", "bot={}, command={}",
                             this.getStringUUID(), DevLog.compact(naturalLanguageCommand));
+                    // Reset state machine back to IDLE when task parsing fails
+                    aiManager.getStateMachine().reset();
                 }
             } catch (Exception e) {
                 DevLog.error("BOT_PARSE_THREAD_EXCEPTION", "failed to parse task", e);

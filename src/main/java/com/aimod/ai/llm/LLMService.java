@@ -190,19 +190,16 @@ public class LLMService {
     /**
      * Send a prompt with a specific model override (for multi-model routing).
      * Used by TaskReplanner to use cheaper models for incremental replan.
+     * Thread-safe: does not mutate shared instance fields.
      */
     public LLMResponse sendPromptWithModel(String prompt, String modelOverride) {
         if (apiKey == null || apiKey.isBlank()) return LLMResponse.failure("No API key");
-        String originalModel = this.model;
         try {
-            this.model = modelOverride;
-            if (!isModelAvailable()) return LLMResponse.failure("Model health check failed");
-            String response = callLLMApi(prompt);
+            if (!isModelAvailable(modelOverride)) return LLMResponse.failure("Model health check failed");
+            String response = callLLMApiWithModel(prompt, modelOverride);
             return parseResponse(response);
         } catch (Exception e) {
             return LLMResponse.failure("Prompt failed: " + e.getMessage());
-        } finally {
-            this.model = originalModel;
         }
     }
 
@@ -227,6 +224,39 @@ public class LLMService {
         try {
             long healthStartMs = System.currentTimeMillis();
             callLLMApiDirect("ping", HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
+            long healthElapsedMs = System.currentTimeMillis() - healthStartMs;
+            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, true));
+            DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", healthElapsedMs);
+            return true;
+        } catch (Exception e) {
+            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, false));
+            DevLog.warn("LLM_HEALTH_FAIL", "error={}", e.getMessage());
+            return false;
+        }
+    }
+
+    /** Thread-safe health check for a specific model. */
+    private boolean isModelAvailable(String modelToCheck) {
+        if (!modelHealthCheck) {
+            DevLog.info("LLM_HEALTH_SKIP", "reason=disabled");
+            return true;
+        }
+
+        String healthKey = apiUrl + "|" + modelToCheck;
+        long now = System.currentTimeMillis();
+        HealthCheckResult cached = HEALTH_CHECK_CACHE.get();
+        if (cached.isOk && healthKey.equals(cached.key) &&
+                healthCheckIntervalMs > 0 && now - cached.checkedAtMs < healthCheckIntervalMs) {
+            DevLog.info("LLM_HEALTH_CACHE", "status=ok, ageMs={}, intervalMs={}",
+                    now - cached.checkedAtMs, healthCheckIntervalMs);
+            return true;
+        }
+
+        DevLog.info("LLM_HEALTH_START", "url={}, model={}, maxTokens={}, timeoutMs={}",
+                apiUrl, modelToCheck, HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
+        try {
+            long healthStartMs = System.currentTimeMillis();
+            callLLMApiDirectWithModel("ping", HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs, modelToCheck);
             long healthElapsedMs = System.currentTimeMillis() - healthStartMs;
             HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, true));
             DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", healthElapsedMs);
@@ -333,6 +363,17 @@ public class LLMService {
         return callWithRetry(prompt, maxTokens, readTimeoutMs);
     }
 
+    /** Thread-safe variant that uses a specific model without mutating instance state. */
+    private String callLLMApiWithModel(String prompt, String modelOverride) throws IOException, InterruptedException {
+        int maxCtx = com.aimod.config.ModConfig.getMaxContextTokens();
+        int estTokens = estimateTokens(prompt);
+        if (estTokens > maxCtx) {
+            DevLog.warn("LLM_CTX_OVERLIMIT", "estTokens={}, maxCtx={}, promptLen={}",
+                    estTokens, maxCtx, prompt.length());
+        }
+        return callWithRetryAndModel(prompt, maxTokens, readTimeoutMs, modelOverride);
+    }
+
     /** Rough token estimate: characters / 3.5 for English text. */
     public static int estimateTokens(String text) {
         if (text == null || text.isEmpty()) return 0;
@@ -362,6 +403,30 @@ public class LLMService {
         }
     }
 
+    /** Thread-safe retry wrapper that uses a specific model. */
+    private String callWithRetryAndModel(String prompt, int maxTokens, int timeoutMs, String modelOverride) throws IOException, InterruptedException {
+        int retries = Math.max(0, maxRetries);
+        if (retries == 0) {
+            return callLLMApiDirectWithModel(prompt, maxTokens, timeoutMs, modelOverride);
+        }
+        long delay = RETRY_BASE_DELAY_MS;
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return callLLMApiDirectWithModel(prompt, maxTokens, timeoutMs, modelOverride);
+            } catch (IOException e) {
+                if (attempt >= retries || !isRetryable(e)) {
+                    throw e;
+                }
+                long jitter = (long) (delay * 0.25 * (Math.random() * 2.0 - 1.0));
+                long sleepMs = Math.max(1, delay + jitter);
+                DevLog.info("LLM_RETRY", "attempt={}/{}, sleepMs={}, error={}",
+                        attempt + 1, retries, sleepMs, e.getMessage());
+                Thread.sleep(sleepMs);
+                delay = Math.min(delay * 2, RETRY_MAX_DELAY_MS);
+            }
+        }
+    }
+
     private static boolean isRetryable(IOException e) {
         if (e instanceof java.net.SocketTimeoutException) {
             return true;
@@ -376,6 +441,11 @@ public class LLMService {
     }
 
     private String callLLMApiDirect(String prompt, int maxTokens, int timeoutMs) throws IOException, InterruptedException {
+        return callLLMApiDirectWithModel(prompt, maxTokens, timeoutMs, this.model);
+    }
+
+    /** Thread-safe variant that uses a specific model without mutating instance state. */
+    private String callLLMApiDirectWithModel(String prompt, int maxTokens, int timeoutMs, String modelToUse) throws IOException, InterruptedException {
         if (rateLimiter != null) {
             rateLimiter.acquire();
         }
@@ -383,7 +453,7 @@ public class LLMService {
 
         URI uri = URI.create(apiUrl);
         JsonObject requestBody = new JsonObject();
-        requestBody.addProperty("model", model);
+        requestBody.addProperty("model", modelToUse);
         requestBody.addProperty("max_tokens", maxTokens);
         requestBody.addProperty("temperature", temperature);
 

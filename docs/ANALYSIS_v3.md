@@ -415,3 +415,17 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | `FakePlayer.java` | 条件注册链（`if (config.getEnable...())`） |
 
 *更新日期: 2026-05-30 | 版本: 1.0.76-p6c*
+
+---
+
+## 代码审计修复 (2026-05-30)
+
+### r77: 审计发现的 Critical/High 级别修复
+
+| # | 严重度 | 文件 | 修复内容 |
+|---|--------|------|----------|
+| 1 | Critical | `LLMService.java` | `sendPromptWithModel()` 不再修改共享 `this.model`，改为传递参数到调用链 |
+| 2 | High | `FakePlayer.java` | `parseCommand()` 返回 null 时重置状态机回 IDLE |
+| 3 | High | `DefenseChain.java` | 战斗结束/超时/停止时调用 `stopUsingItem()` 放下盾牌 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.77-r77*
