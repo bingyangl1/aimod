@@ -222,3 +222,21 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - `/ai_bot metrics <name>` — 显示指定 bot 的指标
 
 *更新日期: 2026-05-30 | 版本: 1.0.67-p3c*
+
+---
+
+## P4 实施记录 (2026-05-30)
+
+### p4a: 测试覆盖扩展（第二轮）
+
+新增测试文件:
+
+| 文件 | 覆盖目标 |
+|------|----------|
+| `BotMemoryStoreTest.java` | 工作内存、资源位置、chunk 探索、统计、清除、ResourceLocation 数据类 |
+| `ContextAssemblerTest.java` | Token 转换（charsToTokens/tokensToChars）、estimateTotalTokens、assemble 方法 |
+| `TaskPersistenceTest.java` | TaskData 序列化/反序列化、文件操作、JSON 读写 |
+
+测试总计: 21 个文件, 170+ 测试方法。
+
+*更新日期: 2026-05-30 | 版本: 1.0.68-p4a*

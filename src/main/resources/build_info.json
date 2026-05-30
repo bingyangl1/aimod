@@ -1,6 +1,6 @@
 {
-  "version": "1.0.67",
-  "build": "2026-05-30-p3c",
+  "version": "1.0.68",
+  "build": "2026-05-30-p4a",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -35,6 +35,7 @@
     "r76: VeinMineAction AIR race condition — target removed between Phase1 and Phase2 now sets FAILED instead of infinite IN_PROGRESS",
     "p3b: Multi-model routing — CHEAP_MODEL_NAME config for replan, LLMService.sendPromptWithModel(), TaskReplanner uses cheap model",
     "p3c: BotMetrics observability — thread-safe counters for LLM calls, tasks, actions, replans. /ai_bot metrics command.",
+    "p4a: Test coverage expansion — BotMemoryStoreTest, ContextAssemblerTest, TaskPersistenceTest. Total 21 test files, 170+ test methods.",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
