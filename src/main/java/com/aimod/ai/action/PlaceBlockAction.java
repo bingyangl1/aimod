@@ -30,10 +30,12 @@ public class PlaceBlockAction extends Action {
     public boolean canExecute(FakePlayer bot) {
         BlockState blockState = bot.level().getBlockState(targetPos);
         if (!(blockState.isAir() || blockState.canBeReplaced())) {
+            setFailReason("目标位置被占用: " + targetPos.toShortString());
             DevLog.warn("PLACE_BLOCK_OCCUPIED", "pos={}, state={}", targetPos.toShortString(), blockState.getBlock().getDescriptionId());
             return false;
         }
         if (!hasBlockItem(bot)) {
+            setFailReason("背包中没有 " + blockItem.getDescription().getString());
             DevLog.warn("PLACE_BLOCK_NO_ITEM", "pos={}, item={}", targetPos.toShortString(), blockItem.getDescriptionId());
             return false;
         }

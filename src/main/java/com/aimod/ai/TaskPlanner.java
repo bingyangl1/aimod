@@ -458,6 +458,11 @@ public class TaskPlanner {
 
     /** Get failure reason from action if available. */
     public static String getActionFailReason(Action action, String defaultReason) {
+        // Check base class failReason first
+        if (action.getFailReason() != null) {
+            return action.getFailReason();
+        }
+        // Legacy: GatherResourceAction has its own failReason field
         if (action instanceof GatherResourceAction g) {
             return g.failReason != null ? g.failReason : defaultReason;
         }

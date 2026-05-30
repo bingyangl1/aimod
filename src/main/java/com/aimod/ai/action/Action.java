@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 public abstract class Action {
     protected ActionStatus status;
     protected String description;
+    protected String failReason; // detailed reason for failure
 
     public Action(String description) {
         this.description = description;
@@ -20,6 +21,8 @@ public abstract class Action {
     public ActionStatus getStatus() { return status; }
     public void setStatus(ActionStatus status) { this.status = status; }
     public String getDescription() { return description; }
+    public String getFailReason() { return failReason; }
+    protected void setFailReason(String reason) { this.failReason = reason; }
 
     /**
      * Get the bot's MovementController for centralized movement.

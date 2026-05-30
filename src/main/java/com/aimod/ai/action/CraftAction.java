@@ -45,6 +45,7 @@ public class CraftAction extends Action {
 
         Item resultItem = resolveItem(itemId);
         if (resultItem == Items.AIR) {
+            setFailReason("未知物品: " + itemId);
             DevLog.warn("CRAFT_NO_ITEM", "item={}", itemId);
             return false;
         }
@@ -55,6 +56,7 @@ public class CraftAction extends Action {
         );
 
         if (resolvedRecipe == null) {
+            setFailReason("没有合成配方: " + itemId);
             DevLog.warn("CRAFT_NO_RECIPE", "item={}", itemId);
             return false;
         }
@@ -70,6 +72,7 @@ public class CraftAction extends Action {
             missing = InventoryUtils.missingItems(bot, requiredItems);
         }
         if (!missing.isEmpty()) {
+            setFailReason("缺少材料: " + InventoryUtils.describeItems(missing));
             DevLog.warn("CRAFT_MISSING_ITEMS", "item={}, count={}, missing={}",
                     itemId, count, InventoryUtils.describeItems(missing));
             return false;

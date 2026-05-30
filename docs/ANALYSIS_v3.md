@@ -307,3 +307,23 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | `GatherResourceAction.java` | 增加 Strategy 4 + `tryDigDown()` 方法 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.71-p5a*
+
+### p5b: 失败任务详细反馈
+
+**设计方案:**
+
+在 `Action` 基类中增加 `failReason` 字段，各 Action 在 `canExecute()` 失败时设置具体原因。
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `Action.java` | 增加 `failReason` 字段 + getter/setter |
+| `TaskPlanner.java` | `getActionFailReason()` 优先使用 `action.getFailReason()` |
+| `EquipItemAction.java` | 设置具体原因："未知物品" / "背包中没有 xxx" |
+| `CraftAction.java` | 设置具体原因："未知物品" / "没有合成配方" / "缺少材料: xxx" |
+| `PlaceBlockAction.java` | 设置具体原因："目标位置被占用" / "背包中没有 xxx" |
+| `BreakBlockAction.java` | 设置具体原因："目标位置已经是空气" / "方块不可破坏" |
+
+**效果:** 任务失败时用户能看到具体原因，而不是笼统的 "Action failed"。
+
+*更新日期: 2026-05-30 | 版本: 1.0.72-p5b*

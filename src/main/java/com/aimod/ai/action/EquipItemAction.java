@@ -33,9 +33,14 @@ public class EquipItemAction extends Action {
     public boolean canExecute(FakePlayer bot) {
         Item item = resolveItem();
         if (item == Items.AIR) {
+            setFailReason("未知物品: " + itemId);
             return false;
         }
-        return InventoryUtils.countItem(bot, item) > 0;
+        if (InventoryUtils.countItem(bot, item) <= 0) {
+            setFailReason("背包中没有 " + itemId);
+            return false;
+        }
+        return true;
     }
 
     @Override

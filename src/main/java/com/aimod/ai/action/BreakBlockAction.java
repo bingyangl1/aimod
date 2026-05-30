@@ -23,7 +23,15 @@ public class BreakBlockAction extends Action {
     @Override
     public boolean canExecute(FakePlayer bot) {
         BlockState blockState = bot.level().getBlockState(targetPos);
-        return !blockState.isAir() && blockState.getDestroySpeed(bot.level(), targetPos) >= 0;
+        if (blockState.isAir()) {
+            setFailReason("目标位置已经是空气: " + targetPos.toShortString());
+            return false;
+        }
+        if (blockState.getDestroySpeed(bot.level(), targetPos) < 0) {
+            setFailReason("方块不可破坏: " + blockState.getBlock().getDescriptionId());
+            return false;
+        }
+        return true;
     }
 
     @Override
