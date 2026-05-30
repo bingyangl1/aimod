@@ -37,6 +37,7 @@ public class PlanCache {
 
     private final Path cacheFile;
     private final List<CachedPlan> plans;
+    private final Object lock = new Object();
 
     public PlanCache(Path serverDir) {
         this.cacheFile = serverDir.resolve("config/aimod/plan_cache.json");
@@ -51,36 +52,40 @@ public class PlanCache {
     /** Try to find a matching cached plan for the given command. */
     public Optional<List<String>> find(String command) {
         if (command == null || command.isBlank()) return Optional.empty();
-        String normalized = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
-        CachedPlan best = null;
-        double bestScore = 0;
-        for (var plan : plans) {
-            if (!plan.success) continue; // skip previously invalidated plans
-            double score = similarity(normalized, plan.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N"));
-            if (score > bestScore && score >= SIMILARITY_THRESHOLD) {
-                bestScore = score;
-                best = plan;
+        synchronized (lock) {
+            String normalized = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
+            CachedPlan best = null;
+            double bestScore = 0;
+            for (var plan : plans) {
+                if (!plan.success) continue; // skip previously invalidated plans
+                double score = similarity(normalized, plan.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N"));
+                if (score > bestScore && score >= SIMILARITY_THRESHOLD) {
+                    bestScore = score;
+                    best = plan;
+                }
             }
+            if (best != null) {
+                best.useCount++;
+                DevLog.info("PLAN_CACHE_HIT", "command={}, score={}, uses={}", command, String.format("%.2f", bestScore), best.useCount);
+                return Optional.of(best.actions);
+            }
+            DevLog.info("PLAN_CACHE_MISS", "command={}", command);
+            return Optional.empty();
         }
-        if (best != null) {
-            best.useCount++;
-            DevLog.info("PLAN_CACHE_HIT", "command={}, score={}, uses={}", command, String.format("%.2f", bestScore), best.useCount);
-            return Optional.of(best.actions);
-        }
-        DevLog.info("PLAN_CACHE_MISS", "command={}", command);
-        return Optional.empty();
     }
 
     /** Mark a cached plan as failed so it won't be reused. */
     public void markFailed(String command) {
         if (command == null || command.isBlank()) return;
-        String norm = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
-        for (var plan : plans) {
-            if (plan.success && similarity(norm, plan.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N")) > 0.8) {
-                plan.success = false;
-                save();
-                DevLog.info("PLAN_CACHE_INVALIDATE", "command={}", plan.command);
-                return;
+        synchronized (lock) {
+            String norm = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
+            for (var plan : plans) {
+                if (plan.success && similarity(norm, plan.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N")) > 0.8) {
+                    plan.success = false;
+                    save();
+                    DevLog.info("PLAN_CACHE_INVALIDATE", "command={}", plan.command);
+                    return;
+                }
             }
         }
     }
@@ -99,20 +104,22 @@ public class PlanCache {
         // Don't cache plans that are too short or too long
         if (actions.size() < 2 || actions.size() > 50) return;
 
-        // Replace existing entry for same command
-        String normCmd = command.toLowerCase(Locale.ROOT);
-        plans.removeIf(p -> similarity(normCmd, p.command.toLowerCase(Locale.ROOT)) > 0.9);
-        var plan = new CachedPlan();
-        plan.command = command;
-        plan.actions = new ArrayList<>(actions);
-        plan.success = success;
-        plan.timestamp = System.currentTimeMillis();
-        plan.useCount = 1;
-        plans.add(0, plan);
+        synchronized (lock) {
+            // Replace existing entry for same command
+            String normCmd = command.toLowerCase(Locale.ROOT);
+            plans.removeIf(p -> similarity(normCmd, p.command.toLowerCase(Locale.ROOT)) > 0.9);
+            var plan = new CachedPlan();
+            plan.command = command;
+            plan.actions = new ArrayList<>(actions);
+            plan.success = success;
+            plan.timestamp = System.currentTimeMillis();
+            plan.useCount = 1;
+            plans.add(0, plan);
 
-        // Trim to max size
-        while (plans.size() > MAX_ENTRIES) plans.remove(plans.size() - 1);
-        save();
+            // Trim to max size
+            while (plans.size() > MAX_ENTRIES) plans.remove(plans.size() - 1);
+            save();
+        }
     }
 
     /**

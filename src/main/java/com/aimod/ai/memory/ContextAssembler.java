@@ -34,11 +34,19 @@ public final class ContextAssembler {
         String base = assemble(store, task, maxTokens);
         if (recentReplanAttempts == null || recentReplanAttempts.isEmpty()) return base;
 
+        int maxChars = tokensToChars(maxTokens);
+        int remaining = maxChars - base.length();
+        if (remaining < 100) return base; // not enough budget for replan section
+
         StringBuilder sb = new StringBuilder(base);
         sb.append("\n## Recent Failed Attempts (do NOT repeat these)\n");
+        int used = 0;
         int maxAttempts = Math.min(recentReplanAttempts.size(), 5);
         for (int i = recentReplanAttempts.size() - maxAttempts; i < recentReplanAttempts.size(); i++) {
-            sb.append("- ").append(recentReplanAttempts.get(i)).append("\n");
+            String line = "- " + recentReplanAttempts.get(i) + "\n";
+            if (used + line.length() > remaining) break;
+            sb.append(line);
+            used += line.length();
         }
         return sb.toString();
     }

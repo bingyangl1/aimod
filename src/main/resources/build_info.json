@@ -1,6 +1,6 @@
 {
-  "version": "1.0.80",
-  "build": "2026-05-30-r80",
+  "version": "1.0.81",
+  "build": "2026-05-30-r81",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -59,6 +59,11 @@
     "r80: PlaceBlockAction.findBlockSlot swaps item to hotbar when found in armor/offhand slots",
     "r80: VeinMiningHelper passes bot entity to destroyBlock for proper loot table context",
     "r80: FakePlayer.tick() catches all Exception (was only NullPointerException)",
+    "r81: ContextAssembler replan history respects token budget — truncates when base context is near limit",
+    "r81: CraftAction output count capped to max stack size",
+    "r81: MovementDigDown getToolSpeed only considers PickaxeItem (was any TieredItem)",
+    "r81: PlaceBlockAction findNearbyAir returns bot position instead of occupied targetPos",
+    "r81: PlanCache synchronized — find/markFailed/store use lock for thread safety",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

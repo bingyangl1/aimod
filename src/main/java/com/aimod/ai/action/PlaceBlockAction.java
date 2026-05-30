@@ -156,7 +156,7 @@ public class PlaceBlockAction extends Action {
                 }
             }
         }
-        return targetPos; // fallback
+        return bot.blockPosition(); // fallback to bot position (not occupied targetPos)
     }
 
     @Override

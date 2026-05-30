@@ -462,3 +462,15 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 5 | `FakePlayer.java` | `tick()` 捕获所有 Exception（原来只捕获 NPE） |
 
 *更新日期: 2026-05-30 | 版本: 1.0.80-r80*
+
+### r81: 审计 Medium 级别修复（第二批）
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `ContextAssembler.java` | replan 历史追加时检查 token 预算，超出则截断 |
+| 2 | `CraftAction.java` | 输出数量限制为最大堆叠大小 |
+| 3 | `MovementDigDown.java` | `getToolSpeed()` 只考虑镐（原来任何 TieredItem） |
+| 4 | `PlaceBlockAction.java` | `findNearbyAir()` 返回 bot 位置替代已占用的 targetPos |
+| 5 | `PlanCache.java` | 所有公共方法加 synchronized 保证线程安全 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.81-r81*

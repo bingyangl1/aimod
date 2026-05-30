@@ -212,8 +212,9 @@ public class MovementDigDown extends BotMovement {
         for (int i = 0; i <= 40; i++) {
             ItemStack stack = bot.getInventory().getItem(i);
             if (stack.isEmpty()) continue;
-            if (stack.getItem() instanceof TieredItem tiered) {
-                float speed = tiered.getTier().getSpeed();
+            // Only consider pickaxes for mining (swords/axes are not effective on stone)
+            if (stack.getItem() instanceof net.minecraft.world.item.PickaxeItem pickaxe) {
+                float speed = pickaxe.getTier().getSpeed();
                 if (speed > bestSpeed) {
                     bestSpeed = speed;
                 }

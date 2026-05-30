@@ -133,7 +133,8 @@ public class CraftAction extends Action {
                 ItemStack result = resolvedRecipe.getHolder().value()
                         .getResultItem(bot.level().registryAccess());
                 ItemStack output = result.copy();
-                output.setCount(output.getCount() * count);
+                int totalCount = Math.min(output.getCount() * count, output.getMaxStackSize());
+                output.setCount(totalCount);
 
                 boolean added = InventoryUtils.addItem(bot, output);
                 if (added) {
