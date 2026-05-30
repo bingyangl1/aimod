@@ -168,6 +168,26 @@ public class ModConfig {
                      "Default: false (disabled)")
             .define("enablePvpDefense", false);
 
+    public static final ModConfigSpec.ConfigValue<Boolean> ENABLE_DANGER_CHAIN = BUILDER
+            .comment("Enable danger avoidance chain (lava, fire, drowning, falls)",
+                     "Default: true")
+            .define("enableDangerChain", true);
+
+    public static final ModConfigSpec.ConfigValue<Boolean> ENABLE_DEFENSE_CHAIN = BUILDER
+            .comment("Enable mob defense chain (attacks hostile mobs)",
+                     "Default: true")
+            .define("enableDefenseChain", true);
+
+    public static final ModConfigSpec.ConfigValue<Boolean> ENABLE_FOOD_CHAIN = BUILDER
+            .comment("Enable auto-eating chain",
+                     "Default: true")
+            .define("enableFoodChain", true);
+
+    public static final ModConfigSpec.ConfigValue<Boolean> ENABLE_UNSTUCK_CHAIN = BUILDER
+            .comment("Enable stuck detection and recovery chain",
+                     "Default: true")
+            .define("enableUnstuckChain", true);
+
     public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
@@ -279,6 +299,10 @@ public class ModConfig {
     public static boolean getPersistTasks() { return PERSIST_TASKS.get(); }
     public static boolean getShowTaskAboveHead() { return SHOW_TASK_ABOVE_HEAD.get(); }
     public static boolean getEnablePvpDefense() { return ENABLE_PVP_DEFENSE.get(); }
+    public static boolean getEnableDangerChain() { return ENABLE_DANGER_CHAIN.get(); }
+    public static boolean getEnableDefenseChain() { return ENABLE_DEFENSE_CHAIN.get(); }
+    public static boolean getEnableFoodChain() { return ENABLE_FOOD_CHAIN.get(); }
+    public static boolean getEnableUnstuckChain() { return ENABLE_UNSTUCK_CHAIN.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
     public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }
@@ -298,5 +322,9 @@ public class ModConfig {
     public static void setMaxBots(int v) { MAX_BOTS.set(v); }
     public static void setShowTaskAboveHead(boolean v) { SHOW_TASK_ABOVE_HEAD.set(v); }
     public static void setEnablePvpDefense(boolean v) { ENABLE_PVP_DEFENSE.set(v); }
+    public static void setEnableDangerChain(boolean v) { ENABLE_DANGER_CHAIN.set(v); }
+    public static void setEnableDefenseChain(boolean v) { ENABLE_DEFENSE_CHAIN.set(v); }
+    public static void setEnableFoodChain(boolean v) { ENABLE_FOOD_CHAIN.set(v); }
+    public static void setEnableUnstuckChain(boolean v) { ENABLE_UNSTUCK_CHAIN.set(v); }
     public static void setCheapModelName(String v) { CHEAP_MODEL_NAME.set(v); }
 }

@@ -397,3 +397,21 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | `GatherResourceAction.java` | `breakTarget()` 中矿石类型触发连锁 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.75-p6b*
+
+### p6c: ChainManager 配置化注册
+
+**改进内容:**
+
+| 改进项 | 说明 |
+|--------|------|
+| 配置选项 | 新增 `enableDangerChain`, `enableDefenseChain`, `enableFoodChain`, `enableUnstuckChain` |
+| 条件注册 | `FakePlayer` 构造函数根据配置条件注册链 |
+| 默认值 | 所有链默认启用（true），PvP 防御链默认禁用（false） |
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `ModConfig.java` | 新增 4 个链启用配置 + getter/setter |
+| `FakePlayer.java` | 条件注册链（`if (config.getEnable...())`） |
+
+*更新日期: 2026-05-30 | 版本: 1.0.76-p6c*

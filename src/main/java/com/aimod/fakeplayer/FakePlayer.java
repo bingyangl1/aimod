@@ -107,11 +107,22 @@ public class FakePlayer extends ServerPlayer {
         this.memoryStore.bootstrap();
         this.taskPersistence = new com.aimod.ai.TaskPersistence(
                 server.getServerDirectory() != null ? server.getServerDirectory() : java.nio.file.Path.of("."));
-        this.chainManager.addChain(new DangerChain());
-        this.chainManager.addChain(new DefenseChain());
-        this.chainManager.addChain(new com.aimod.ai.chain.PlayerDefenseChain());
-        this.chainManager.addChain(new FoodChain());
-        this.chainManager.addChain(new UnstuckChain());
+        // Register behavior chains based on config
+        if (com.aimod.config.ModConfig.getEnableDangerChain()) {
+            this.chainManager.addChain(new DangerChain());
+        }
+        if (com.aimod.config.ModConfig.getEnableDefenseChain()) {
+            this.chainManager.addChain(new DefenseChain());
+        }
+        if (com.aimod.config.ModConfig.getEnablePvpDefense()) {
+            this.chainManager.addChain(new com.aimod.ai.chain.PlayerDefenseChain());
+        }
+        if (com.aimod.config.ModConfig.getEnableFoodChain()) {
+            this.chainManager.addChain(new FoodChain());
+        }
+        if (com.aimod.config.ModConfig.getEnableUnstuckChain()) {
+            this.chainManager.addChain(new UnstuckChain());
+        }
     }
 
     /**
