@@ -151,27 +151,30 @@ public class DangerChain extends BehaviorChain {
         BlockPos best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
 
-        for (int dx = -searchRadius; dx <= searchRadius; dx += 4) {
-            for (int dz = -searchRadius; dz <= searchRadius; dz += 4) {
-                BlockPos candidate = pos.offset(dx, 0, dz);
-                if (candidate.equals(pos)) continue;
+        // Search at current Y and up to 3 blocks above (for escaping underground lava)
+        for (int dy = 0; dy <= 3; dy++) {
+            for (int dx = -searchRadius; dx <= searchRadius; dx += 4) {
+                for (int dz = -searchRadius; dz <= searchRadius; dz += 4) {
+                    BlockPos candidate = pos.offset(dx, dy, dz);
+                    if (candidate.equals(pos)) continue;
 
-                BlockState there = level.getBlockState(candidate);
-                BlockState belowThere = level.getBlockState(candidate.below());
+                    BlockState there = level.getBlockState(candidate);
+                    BlockState belowThere = level.getBlockState(candidate.below());
 
-                // Must be safe: no lava, solid ground
-                if (there.getBlock() == Blocks.LAVA || there.getFluidState().isSource()) continue;
-                if (belowThere.getBlock() == Blocks.LAVA) continue;
-                if (!belowThere.isSolid()) continue;
+                    // Must be safe: no lava, solid ground
+                    if (there.getBlock() == Blocks.LAVA || there.getFluidState().isSource()) continue;
+                    if (belowThere.getBlock() == Blocks.LAVA) continue;
+                    if (!belowThere.isSolid()) continue;
 
-                // Prefer: further from lava, closer to water, away from current pos
-                double distFromPos = pos.distSqr(candidate);
-                double lavaPenalty = DangerZone.isLavaNearbyAt(bot, candidate, 3) ? -200 : 0;
-                double score = distFromPos + lavaPenalty;
+                    // Prefer: further from lava, closer to water, away from current pos
+                    double distFromPos = pos.distSqr(candidate);
+                    double lavaPenalty = DangerZone.isLavaNearbyAt(bot, candidate, 3) ? -200 : 0;
+                    double score = distFromPos + lavaPenalty;
 
-                if (score > bestScore) {
-                    bestScore = score;
-                    best = candidate;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = candidate;
+                    }
                 }
             }
         }

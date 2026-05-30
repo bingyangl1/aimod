@@ -429,3 +429,13 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 3 | High | `DefenseChain.java` | 战斗结束/超时/停止时调用 `stopUsingItem()` 放下盾牌 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.77-r77*
+
+### r78: 审计 High 级别修复
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `TaskReplanner.java` | `incrReplanCount`/`consecutiveUnknown` 改为 AtomicInteger；`recentReplanAttempts` 改为 synchronizedList |
+| 2 | `DangerChain.java` | 逃逸目标搜索从 Y+0 扩展到 Y+0~3，支持地下岩浆逃生 |
+| 3 | `PlayerDefenseChain.java` | 武器检测从类名字符串匹配改为 instanceof 检查 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.78-r78*

@@ -128,9 +128,12 @@ public class PlayerDefenseChain extends BehaviorChain {
 
     private boolean isWeapon(ItemStack stack) {
         if (stack.isEmpty()) return false;
-        String name = stack.getItem().getClass().getSimpleName().toLowerCase();
-        return name.contains("sword") || name.contains("axe") || name.contains("trident")
-                || name.contains("bow") || name.contains("crossbow");
+        // Use instanceof checks for reliability (class names can be obfuscated)
+        return stack.getItem() instanceof net.minecraft.world.item.SwordItem
+            || stack.getItem() instanceof net.minecraft.world.item.AxeItem
+            || stack.getItem() instanceof net.minecraft.world.item.TridentItem
+            || stack.getItem() instanceof net.minecraft.world.item.BowItem
+            || stack.getItem() instanceof net.minecraft.world.item.CrossbowItem;
     }
 
     private void retreat(FakePlayer bot, Player threat) {

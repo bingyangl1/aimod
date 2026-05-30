@@ -26,11 +26,11 @@ public class TaskReplanner {
     private final BotMetrics metrics;
 
     private volatile boolean replanning = false;
-    private int incrReplanCount = 0;
+    private final java.util.concurrent.atomic.AtomicInteger incrReplanCount = new java.util.concurrent.atomic.AtomicInteger(0);
     private static final int MAX_INCR_REPLAN = 5;
-    private int consecutiveUnknown = 0;
-    private final List<String> recentReplanAttempts = new ArrayList<>();
-    private String lastOwnerName = null;
+    private final java.util.concurrent.atomic.AtomicInteger consecutiveUnknown = new java.util.concurrent.atomic.AtomicInteger(0);
+    private final List<String> recentReplanAttempts = java.util.Collections.synchronizedList(new ArrayList<>());
+    private volatile String lastOwnerName = null;
 
     public TaskReplanner(FakePlayer bot, TaskPlanner planner, TaskFeedback feedback,
                          com.aimod.ai.llm.BotAIStateMachine stateMachine, BotMetrics metrics) {
@@ -42,7 +42,7 @@ public class TaskReplanner {
     }
 
     public boolean isReplanning() { return replanning; }
-    public boolean hasReplanned() { return incrReplanCount > 0; }
+    public boolean hasReplanned() { return incrReplanCount.get() > 0; }
 
     /**
      * Incremental replan: ask LLM for next action after a failure.
@@ -50,22 +50,24 @@ public class TaskReplanner {
     public void incrementalReplan(Task task, String failedActionDesc, String ownerName) {
         this.lastOwnerName = ownerName;
         if (replanning) return;
-        if (incrReplanCount >= MAX_INCR_REPLAN) {
+        if (incrReplanCount.get() >= MAX_INCR_REPLAN) {
             task.setStatus(Task.TaskStatus.FAILED);
-            feedback.reportTaskFailed(task.getDescription(), "Exceeded retry limit after " + incrReplanCount + " failures");
+            feedback.reportTaskFailed(task.getDescription(), "Exceeded retry limit after " + incrReplanCount.get() + " failures");
             planner.getPlanCache().markFailed(planner.getLastCommand());
-            incrReplanCount = 0;
-            consecutiveUnknown = 0;
+            incrReplanCount.set(0);
+            consecutiveUnknown.set(0);
             return;
         }
-        incrReplanCount++;
+        incrReplanCount.incrementAndGet();
         replanning = true;
         metrics.recordReplanTriggered();
         bot.getMovementController().getUnstuckDetector().setPaused(true);
 
         // Track this attempt for context
         recentReplanAttempts.add(failedActionDesc);
-        while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+        synchronized (recentReplanAttempts) {
+            while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+        }
 
         // Assemble context with replan history
         int replanTokens = com.aimod.config.ModConfig.getCompactTriggerTokens();
@@ -88,42 +90,44 @@ public class TaskReplanner {
                     var acts = planner.convertResponseToActions(resp, lastOwnerName);
                     if (!acts.isEmpty()) {
                         var next = acts.get(0);
-                        consecutiveUnknown = 0;
+                        consecutiveUnknown.set(0);
                         if (next.getDescription().equals(failedActionDesc)) {
                             task.advanceToNextAction();
-                            incrReplanCount = 0;
+                            incrReplanCount.set(0);
                             metrics.recordReplanSucceeded();
                             stateMachine.startExecuting();
                         } else {
                             task.injectAction(next);
                             task.advanceToNextAction();
-                            incrReplanCount = 0;
-                            consecutiveUnknown = 0;
+                            incrReplanCount.set(0);
+                            consecutiveUnknown.set(0);
                             metrics.recordReplanSucceeded();
                             DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
                             stateMachine.startExecuting();
                         }
                     } else {
-                        consecutiveUnknown++;
+                        consecutiveUnknown.incrementAndGet();
                         String rawContent = resp.getRawResponse();
                         if (rawContent != null && !rawContent.isBlank()) {
                             String truncated = rawContent.length() > 100 ? rawContent.substring(0, 100) + "..." : rawContent;
                             recentReplanAttempts.add("BAD FORMAT: " + truncated);
-                            while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+                            synchronized (recentReplanAttempts) {
+                                while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+                            }
                         }
                         DevLog.warn("REPLAN_UNKNOWN_CONSEQ", "count={}, failedAction={}",
-                                consecutiveUnknown, failedActionDesc);
-                        if (consecutiveUnknown >= 3) {
+                                consecutiveUnknown.get(), failedActionDesc);
+                        if (consecutiveUnknown.get() >= 3) {
                             task.setStatus(Task.TaskStatus.FAILED);
                             feedback.reportTaskFailed(task.getDescription(),
                                     "LLM repeatedly generated unrecognized action types");
                             planner.getPlanCache().markFailed(planner.getLastCommand());
-                            incrReplanCount = 0;
-                            consecutiveUnknown = 0;
-                        } else if (consecutiveUnknown >= 2) {
+                            incrReplanCount.set(0);
+                            consecutiveUnknown.set(0);
+                        } else if (consecutiveUnknown.get() >= 2) {
                             task.advanceToNextAction();
-                            incrReplanCount = 0;
-                            consecutiveUnknown = 0;
+                            incrReplanCount.set(0);
+                            consecutiveUnknown.set(0);
                             stateMachine.startExecuting();
                             DevLog.info("REPLAN_SKIP_UNKNOWN", "advanced past stuck action");
                         }
@@ -211,8 +215,8 @@ public class TaskReplanner {
      * Reset replan counters (called when task completes or is cancelled).
      */
     public void reset() {
-        incrReplanCount = 0;
-        consecutiveUnknown = 0;
+        incrReplanCount.set(0);
+        consecutiveUnknown.set(0);
         recentReplanAttempts.clear();
     }
 }
