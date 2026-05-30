@@ -22,9 +22,11 @@ import java.util.List;
 public class TaskPersistence {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final int CURRENT_VERSION = 2;
 
     /** Persisted task data — serialized to/from JSON. */
     public static class TaskData {
+        public int version = 0;        // 0 = legacy (no version field), 2 = current
         public String botUuid;
         public String botName;
         public String command;
@@ -33,6 +35,7 @@ public class TaskPersistence {
         public int currentActionIndex;
         public List<String> actions;   // raw JSON action strings
         public long createdAt;
+        public long savedAt;           // last save timestamp
     }
 
     private final Path tasksDir;
@@ -49,6 +52,7 @@ public class TaskPersistence {
         if (task == null || task.isCompleted()) return;
 
         TaskData data = new TaskData();
+        data.version = CURRENT_VERSION;
         data.botUuid = bot.getStringUUID();
         data.botName = bot.getName().getString();
         data.command = task.getDescription();
@@ -57,16 +61,24 @@ public class TaskPersistence {
         data.currentActionIndex = task.getCurrentActionIndex();
         data.actions = actionsToJson(task.getActions());
         data.createdAt = System.currentTimeMillis();
+        data.savedAt = System.currentTimeMillis();
 
         try {
             Files.createDirectories(tasksDir);
             Path file = tasksDir.resolve(bot.getStringUUID() + ".json");
-            Files.writeString(file, GSON.toJson(data),
+            Path tmpFile = tasksDir.resolve(bot.getStringUUID() + ".json.tmp");
+
+            // Atomic write: write to temp file first, then rename
+            Files.writeString(tmpFile, GSON.toJson(data),
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-            DevLog.info("TASK_PERSIST_SAVE", "bot={}, actions={}, idx={}",
-                    data.botName, data.actions.size(), data.currentActionIndex);
+            Files.move(tmpFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+
+            DevLog.info("TASK_PERSIST_SAVE", "bot={}, actions={}, idx={}, version={}",
+                    data.botName, data.actions.size(), data.currentActionIndex, data.version);
         } catch (IOException e) {
             DevLog.warn("TASK_PERSIST_SAVE_FAIL", "bot={}, err={}", data.botName, e.getMessage());
+            // Clean up temp file on failure
+            try { Files.deleteIfExists(tasksDir.resolve(bot.getStringUUID() + ".json.tmp")); } catch (IOException ignored) {}
         }
     }
 
@@ -82,13 +94,46 @@ public class TaskPersistence {
 
         try {
             String json = Files.readString(file);
-            TaskData data = GSON.fromJson(json, TaskData.class);
-            if (data == null || data.actions == null || data.actions.isEmpty()) return null;
+            if (json == null || json.isBlank()) {
+                DevLog.warn("TASK_PERSIST_EMPTY_FILE", "bot={}", bot.getName().getString());
+                delete(bot);
+                return null;
+            }
+
+            TaskData data;
+            try {
+                data = GSON.fromJson(json, TaskData.class);
+            } catch (com.google.gson.JsonSyntaxException e) {
+                DevLog.warn("TASK_PERSIST_CORRUPTED", "bot={}, err={}", bot.getName().getString(), e.getMessage());
+                backupAndDelete(file, bot.getStringUUID());
+                return null;
+            }
+
+            if (data == null || data.actions == null || data.actions.isEmpty()) {
+                DevLog.warn("TASK_PERSIST_INVALID_DATA", "bot={}", bot.getName().getString());
+                delete(bot);
+                return null;
+            }
+
+            // Version migration: legacy files (version=0) are still valid
+            if (data.version > CURRENT_VERSION) {
+                DevLog.warn("TASK_PERSIST_VERSION_MISMATCH", "bot={}, fileVersion={}, currentVersion={}",
+                        data.botName, data.version, CURRENT_VERSION);
+                delete(bot);
+                return null;
+            }
 
             // Skip if task was already completed/failed before shutdown
             if ("COMPLETED".equals(data.status) || "FAILED".equals(data.status)) {
                 delete(bot);
                 return null;
+            }
+
+            // Validate action index
+            if (data.currentActionIndex < 0 || data.currentActionIndex >= data.actions.size()) {
+                DevLog.warn("TASK_PERSIST_INVALID_INDEX", "bot={}, idx={}, actions={}",
+                        data.botName, data.currentActionIndex, data.actions.size());
+                data.currentActionIndex = 0; // reset to start
             }
 
             List<Action> actions = bot.getAiManager().convertCachedToActions(data.actions, data.ownerName);
@@ -98,7 +143,7 @@ public class TaskPersistence {
                 return null;
             }
 
-            Task task = new Task(data.command);
+            Task task = new Task(data.command != null ? data.command : "restored task");
             task.setActions(actions);
             task.setStatus(Task.TaskStatus.IN_PROGRESS);
 
@@ -107,13 +152,13 @@ public class TaskPersistence {
                 task.advanceToNextAction();
             }
 
-            DevLog.info("TASK_PERSIST_RESTORE", "bot={}, command={}, actions={}, idx={}",
-                    data.botName, DevLog.compact(data.command), actions.size(), data.currentActionIndex);
+            DevLog.info("TASK_PERSIST_RESTORE", "bot={}, command={}, actions={}, idx={}, version={}",
+                    data.botName, DevLog.compact(data.command), actions.size(), data.currentActionIndex, data.version);
             return task;
         } catch (Exception e) {
             DevLog.warn("TASK_PERSIST_RESTORE_FAIL", "bot={}, err={}",
                     bot.getName().getString(), e.getMessage());
-            delete(bot);
+            backupAndDelete(file, bot.getStringUUID());
             return null;
         }
     }
@@ -131,6 +176,33 @@ public class TaskPersistence {
     /** Check if a persisted task exists for a bot. */
     public boolean exists(FakePlayer bot) {
         return Files.exists(tasksDir.resolve(bot.getStringUUID() + ".json"));
+    }
+
+    /**
+     * Backup a corrupted file and delete the original.
+     * Preserves evidence for debugging while preventing repeated failures.
+     */
+    private void backupAndDelete(Path file, String botUuid) {
+        try {
+            Path backupDir = tasksDir.resolve("backup");
+            Files.createDirectories(backupDir);
+            Path backup = backupDir.resolve(botUuid + "." + System.currentTimeMillis() + ".json.bak");
+            Files.move(file, backup, StandardCopyOption.REPLACE_EXISTING);
+            DevLog.info("TASK_PERSIST_BACKUP", "file={} -> {}", file.getFileName(), backup.getFileName());
+        } catch (IOException e) {
+            // If backup fails, just delete
+            DevLog.warn("TASK_PERSIST_BACKUP_FAIL", "err={}", e.getMessage());
+            delete(file);
+        }
+    }
+
+    /** Delete a specific file. */
+    private void delete(Path file) {
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException e) {
+            DevLog.warn("TASK_PERSIST_DELETE_FAIL", "err={}", e.getMessage());
+        }
     }
 
     /** Convert Action objects to JSON strings for persistence. */
