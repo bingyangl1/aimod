@@ -229,6 +229,13 @@ public class GatherResourceAction extends Action {
             }
         }
 
+        // Strategy 4: Target is below — try to dig down
+        if (!moved) {
+            if (currentTarget.getY() < bot.blockPosition().getY() - 1) {
+                moved = tryDigDown(bot);
+            }
+        }
+
         // === Stuck detection ===
         if (moved) {
             if (distSqr >= lastDistSqr - 0.01) {
@@ -486,6 +493,60 @@ public class GatherResourceAction extends Action {
 
         return false;
     }
+
+    /**
+     * Try to dig down to reach a target below the bot.
+     * Breaks the block below the bot's feet and lets gravity pull it down.
+     */
+    private boolean tryDigDown(FakePlayer bot) {
+        if (digDownCooldown > 0) {
+            digDownCooldown--;
+            return true;
+        }
+
+        BlockPos feetPos = bot.blockPosition();
+        BlockPos belowFeet = feetPos.below();
+
+        // Safety: don't dig below Y=-64 (void)
+        if (belowFeet.getY() < -64) {
+            DevLog.warn("GATHER_DIG_DOWN_VOID", "pos={}", belowFeet.toShortString());
+            return false;
+        }
+
+        ServerLevel level = (ServerLevel) bot.level();
+        BlockState belowState = level.getBlockState(belowFeet);
+
+        // If already air, just fall
+        if (belowState.isAir()) {
+            if (!bot.onGround()) {
+                // Already falling, wait
+                return true;
+            }
+            // Need to move to a position with solid ground below to dig further
+            return false;
+        }
+
+        // Safety: don't break bedrock
+        float hardness = belowState.getDestroySpeed(level, belowFeet);
+        if (hardness < 0) {
+            DevLog.warn("GATHER_DIG_DOWN_UNBREAKABLE", "pos={}", belowFeet.toShortString());
+            return false;
+        }
+
+        // Safety: don't dig into liquids
+        if (!level.getFluidState(belowFeet).isEmpty()) {
+            DevLog.warn("GATHER_DIG_DOWN_LIQUID", "pos={}", belowFeet.toShortString());
+            return false;
+        }
+
+        // Break the block below
+        level.destroyBlock(belowFeet, true, bot);
+        digDownCooldown = 5; // wait for gravity
+        DevLog.info("GATHER_DIG_DOWN", "pos={}, target={}", belowFeet.toShortString(), currentTarget.toShortString());
+        return true;
+    }
+
+    private int digDownCooldown = 0;
 
     private boolean mineNearbyGround(FakePlayer bot) {
         BlockPos botPos = bot.blockPosition();

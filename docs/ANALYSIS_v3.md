@@ -283,3 +283,27 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - `MovementFall`: dy<-1, 需要现成空间的下落（保留不变）
 
 *更新日期: 2026-05-30 | 版本: 1.0.70-p4c*
+
+---
+
+## P5 实施记录 (2026-05-30)
+
+### p5a: GatherResourceAction 挖洞下探集成
+
+**设计方案:**
+
+在 `GatherResourceAction` 中增加 Strategy 4（tryDigDown），当目标在 bot 下方且无法通过走路到达时，自动挖洞下去。
+
+**工作流程:**
+1. 检查目标是否在 bot 下方 (dy < -1)
+2. 检查脚下方块是否可破坏（非基岩、非液体、Y >= -64）
+3. 调用 `level.destroyBlock()` 破坏脚下方块
+4. 等待重力将 bot 拉下
+5. 重复直到到达目标深度
+
+**修改文件:**
+| 文件 | 修改内容 |
+|------|----------|
+| `GatherResourceAction.java` | 增加 Strategy 4 + `tryDigDown()` 方法 |
+
+*更新日期: 2026-05-30 | 版本: 1.0.71-p5a*
