@@ -29,13 +29,13 @@ public class MovementController {
     private final AsyncPathfinder asyncPathfinder;
     private final UnstuckDetector unstuckDetector;
 
-    private BlockPos navTarget;
-    private boolean navigating;
-    private PathExecutor pathExecutor;
-    private PathExecutor nextPathExecutor;
-    private BlockPos pathGoal;
-    private boolean directMovement;
-    private BotMovement activeMovement;
+    private volatile BlockPos navTarget;
+    private volatile boolean navigating;
+    private volatile PathExecutor pathExecutor;
+    private volatile PathExecutor nextPathExecutor;
+    private volatile BlockPos pathGoal;
+    private volatile boolean directMovement;
+    private volatile BotMovement activeMovement;
 
     /** Look ahead for next-path precomputation (in ticks). */
     private static final int PLANNING_LOOKAHEAD_TICKS = 40; // 2 seconds

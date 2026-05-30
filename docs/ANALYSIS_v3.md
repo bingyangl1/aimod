@@ -439,3 +439,14 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 3 | `PlayerDefenseChain.java` | 武器检测从类名字符串匹配改为 instanceof 检查 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.78-r78*
+
+### r79: 审计 High 级别修复（第二批）
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `MovementController.java` | `pathExecutor`/`nextPathExecutor`/`directMovement`/`activeMovement` 改为 volatile |
+| 2 | `GatherResourceAction.java` | `breakTarget()` 从墙钟时间改为 tick 计数 |
+| 3 | `MovementFall.java` | `update()` 增加运行时安全检查（岩浆/虚空） |
+| 4 | `GatherResourceAction.java` | `tryPillarUp()` 增加窒息检查（头部固体方块检测） |
+
+*更新日期: 2026-05-30 | 版本: 1.0.79-r79*

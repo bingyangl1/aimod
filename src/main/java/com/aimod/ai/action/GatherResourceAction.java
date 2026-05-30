@@ -40,8 +40,8 @@ public class GatherResourceAction extends Action {
 
     private BlockPos currentTarget;
     private int gatheredCount;
-    private long breakStartMs;
-    private int breakDurationMs;
+    private int breakStartTick;
+    private int breakDurationTicks;
     private boolean searching;
 
     private double lastDistSqr;
@@ -76,8 +76,8 @@ public class GatherResourceAction extends Action {
         int maxRadius = count <= 2 ? 24 : (count <= 8 ? 48 : MAX_SEARCH_RADIUS);
         this.searchRadius = Math.min(searchRadius, maxRadius);
         this.gatheredCount = 0;
-        this.breakStartMs = 0;
-        this.breakDurationMs = 0;
+        this.breakStartTick = 0;
+        this.breakDurationTicks = 0;
         this.searching = true;
         this.lastDistSqr = Double.MAX_VALUE;
         this.stuckTicks = 0;
@@ -288,17 +288,17 @@ public class GatherResourceAction extends Action {
     // ========== Block Breaking ==========
 
     private void breakTarget(FakePlayer bot, BlockState blockState) {
-        if (breakStartMs == 0) {
-            int breakTicks = Math.max(1, (int) (blockState.getDestroySpeed(bot.level(), currentTarget) * 20));
-            breakDurationMs = breakTicks * 50;
-            breakStartMs = System.currentTimeMillis();
-            DevLog.info("GATHER_BREAKING", "type={}, pos={}, breakDurationMs={}",
-                    resourceType, currentTarget.toShortString(), breakDurationMs);
+        if (breakStartTick == 0) {
+            breakDurationTicks = Math.max(1, (int) (blockState.getDestroySpeed(bot.level(), currentTarget) * 20));
+            breakStartTick = bot.getServer().getTickCount();
+            DevLog.info("GATHER_BREAKING", "type={}, pos={}, breakDurationTicks={}",
+                    resourceType, currentTarget.toShortString(), breakDurationTicks);
         }
 
         bot.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
 
-        if (System.currentTimeMillis() - breakStartMs >= breakDurationMs) {
+        int currentTick = bot.getServer().getTickCount();
+        if (currentTick - breakStartTick >= breakDurationTicks) {
             ServerLevel level = (ServerLevel) bot.level();
             Block targetBlock = blockState.getBlock();
 
@@ -319,8 +319,8 @@ public class GatherResourceAction extends Action {
                 level.destroyBlock(currentTarget, true, bot);
                 gatheredCount++;
             }
-            breakStartMs = 0;
-            breakDurationMs = 0;
+            breakStartTick = 0;
+            breakDurationTicks = 0;
             DevLog.info("GATHER_COLLECTED", "type={}, total={}", resourceType, gatheredCount);
             failedTargets.clear(); // successful collection — reset failed targets
             totalTargetsSkipped = 0;
@@ -490,6 +490,14 @@ public class GatherResourceAction extends Action {
         if (block == null) return false;
 
         if (solidBelow && bot.onGround()) {
+            // Check for suffocation: block above head must be clear
+            BlockPos headPos = feetPos.above(2); // bot is 1.8 blocks tall
+            BlockState headState = bot.level().getBlockState(headPos);
+            if (headState.isSolid()) {
+                DevLog.warn("GATHER_PILLAR_SUFFOCATION", "headPos={}, state={}", headPos.toShortString(), headState.getBlock().getDescriptionId());
+                return false;
+            }
+
             BlockState placeState = block.defaultBlockState();
             bot.level().setBlock(feetPos, placeState, 3);
             throwaway.shrink(1);
@@ -654,8 +662,8 @@ public class GatherResourceAction extends Action {
         cachedPathGoal = null;
         currentTarget = null;
         searching = true;
-        breakStartMs = 0;
-        breakDurationMs = 0;
+        breakStartTick = 0;
+        breakDurationTicks = 0;
         obstacleBreaker.reset();
     }
 

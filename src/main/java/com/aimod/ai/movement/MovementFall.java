@@ -2,6 +2,7 @@ package com.aimod.ai.movement;
 
 import com.aimod.ai.pathing.MoveCost;
 import com.aimod.fakeplayer.FakePlayer;
+import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MoverType;
@@ -94,6 +95,20 @@ public class MovementFall extends BotMovement {
     public boolean update(FakePlayer bot) {
         if (status == Status.PENDING) canExecute(bot);
         if (status == Status.FAILED || status == Status.COMPLETE) return true;
+
+        // Runtime safety: check for lava/void during fall
+        if (bot.getY() < -64) {
+            DevLog.warn("FALL_VOID", "bot fell below Y=-64");
+            status = Status.FAILED;
+            return true;
+        }
+        var level = bot.level();
+        var feetState = level.getBlockState(bot.blockPosition());
+        if (feetState.getFluidState().is(net.minecraft.world.level.material.Fluids.LAVA)) {
+            DevLog.warn("FALL_LAVA", "bot fell into lava at {}", bot.blockPosition().toShortString());
+            status = Status.FAILED;
+            return true;
+        }
 
         double dx = dest.getX() + 0.5 - bot.getX();
         double dy = dest.getY() - bot.getY();
