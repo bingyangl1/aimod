@@ -119,6 +119,7 @@ public class TaskPlanner {
                 }
                 if (actions.isEmpty()) {
                     task.setStatus(Task.TaskStatus.FAILED);
+                    metrics.recordTaskFailed();
                     DevLog.warn("TASK_PARSE_FAILED", "no actions available for command={}", DevLog.compact(naturalLanguageCommand));
                     return task;
                 }

@@ -465,6 +465,7 @@ public class FakePlayer extends ServerPlayer {
                                     this.getStringUUID(), task.getStatus(), task.getActionCount(),
                                     DevLog.compact(naturalLanguageCommand));
                             this.currentTask = task;
+                            aiManager.getMetrics().recordTaskStarted();
                             aiManager.getStateMachine().setTaskInfo(task.getDescription(), task.getActionCount());
                             aiManager.getStateMachine().startExecuting();
                             aiManager.executeTask(this.currentTask);
@@ -522,6 +523,7 @@ public class FakePlayer extends ServerPlayer {
         if (this.currentTask != null) {
             String desc = this.currentTask.getDescription();
             this.currentTask.setStatus(Task.TaskStatus.FAILED);
+            aiManager.getMetrics().recordTaskFailed();
             aiManager.getFeedback().sendToOwnerTranslatable("feedback.task.cancelled", desc);
             DevLog.info("BOT_TASK_CANCELLED", "bot={}, task={}", this.getStringUUID(), desc);
             this.currentTask = null;

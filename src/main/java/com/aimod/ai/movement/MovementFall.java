@@ -25,6 +25,7 @@ public class MovementFall extends BotMovement {
 
     public MovementFall(BlockPos src, BlockPos dest) {
         super(src, dest);
+        this.fallDistance = src.getY() - dest.getY();
     }
 
     @Override
@@ -38,7 +39,6 @@ public class MovementFall extends BotMovement {
         if (Math.abs(dx) > 1 || Math.abs(dz) > 1) return Double.POSITIVE_INFINITY;
         if (Math.abs(dx) + Math.abs(dz) != 1) return Double.POSITIVE_INFINITY;
 
-        fallDistance = -dy;
         if (fallDistance < 2 || fallDistance > MoveCost.MAX_FALL_BLOCKS) {
             return Double.POSITIVE_INFINITY;
         }

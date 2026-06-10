@@ -23,6 +23,11 @@ public final class VeinMiningHelper {
         var vein = com.aimod.ai.VeinScanner.findTree(level, start, targetBlock, maxBlocks);
         if (vein.isEmpty()) return 0;
 
+        if (vein.size() >= maxBlocks) {
+            com.aimod.util.DevLog.warn("VEIN_MINE_TREE_TRUNCATED", "size={}, maxBlocks={}, pos={}",
+                    vein.size(), maxBlocks, start.toShortString());
+        }
+
         for (BlockPos vp : vein) {
             level.destroyBlock(vp, dropItems, player);
         }
@@ -38,6 +43,11 @@ public final class VeinMiningHelper {
     public static int veinMineOre(ServerLevel level, BlockPos start, Block targetBlock, int maxBlocks, boolean dropItems, net.minecraft.world.entity.player.Player player) {
         var vein = com.aimod.ai.VeinScanner.findVein(level, start, targetBlock, maxBlocks);
         if (vein.isEmpty()) return 0;
+
+        if (vein.size() >= maxBlocks) {
+            com.aimod.util.DevLog.warn("VEIN_MINE_ORE_TRUNCATED", "size={}, maxBlocks={}, pos={}",
+                    vein.size(), maxBlocks, start.toShortString());
+        }
 
         for (BlockPos vp : vein) {
             level.destroyBlock(vp, dropItems, player);

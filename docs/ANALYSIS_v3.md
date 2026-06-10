@@ -485,3 +485,17 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 每 5 tick 冷却等待重力生效
 
 *更新日期: 2026-06-05 | 版本: 1.0.82-r82*
+
+### r83: P7 任务 — BotMetrics 完善 + 代码清理
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `FakePlayer.java` | `assignTask()` 调用 `metrics.recordTaskStarted()` |
+| 2 | `FakePlayer.java` | `cancelTask()` 调用 `metrics.recordTaskFailed()` |
+| 3 | `TaskPlanner.java` | 解析失败时调用 `metrics.recordTaskFailed()` |
+| 4 | `TaskReplanner.java` | 3 个失败路径调用 `metrics.recordTaskFailed()` |
+| 5 | `VeinMiningHelper.java` | 矿脉截断时输出警告日志 |
+| 6 | `MovementFall.java` | `fallDistance` 在构造函数中计算 |
+| 7 | `TaskReplanner.java` | 移除重复的 `consecutiveUnknown.set(0)` |
+
+*更新日期: 2026-06-05 | 版本: 1.0.83-r83*

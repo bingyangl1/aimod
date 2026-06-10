@@ -52,6 +52,7 @@ public class TaskReplanner {
         if (replanning) return;
         if (incrReplanCount.get() >= MAX_INCR_REPLAN) {
             task.setStatus(Task.TaskStatus.FAILED);
+            metrics.recordTaskFailed();
             feedback.reportTaskFailed(task.getDescription(), "Exceeded retry limit after " + incrReplanCount.get() + " failures");
             planner.getPlanCache().markFailed(planner.getLastCommand());
             incrReplanCount.set(0);
@@ -100,7 +101,6 @@ public class TaskReplanner {
                             task.injectAction(next);
                             task.advanceToNextAction();
                             incrReplanCount.set(0);
-                            consecutiveUnknown.set(0);
                             metrics.recordReplanSucceeded();
                             DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
                             stateMachine.startExecuting();
@@ -119,6 +119,7 @@ public class TaskReplanner {
                                 consecutiveUnknown.get(), failedActionDesc);
                         if (consecutiveUnknown.get() >= 3) {
                             task.setStatus(Task.TaskStatus.FAILED);
+                            metrics.recordTaskFailed();
                             feedback.reportTaskFailed(task.getDescription(),
                                     "LLM repeatedly generated unrecognized action types");
                             planner.getPlanCache().markFailed(planner.getLastCommand());
@@ -135,6 +136,7 @@ public class TaskReplanner {
                 }
             } catch (Exception e) {
                 task.setStatus(Task.TaskStatus.FAILED);
+                metrics.recordTaskFailed();
                 feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
             } finally {
                 replanning = false;

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.82",
-  "build": "2026-06-05-r82",
+  "version": "1.0.83",
+  "build": "2026-06-05-r83",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -65,6 +65,10 @@
     "r81: PlaceBlockAction findNearbyAir returns bot position instead of occupied targetPos",
     "r81: PlanCache synchronized — find/markFailed/store use lock for thread safety",
     "r82: MineBlockAction dig-down strategy — when pathfinder fails and target is below, breaks blocks to create staircase down to underground ores",
+    "r83: BotMetrics recordTaskStarted/Failed/Completed integrated into task lifecycle",
+    "r83: VeinMiningHelper truncation warning when vein exceeds maxBlocks",
+    "r83: MovementFall fallDistance computed in constructor instead of calculateCost()",
+    "r83: TaskReplanner removed duplicate consecutiveUnknown reset",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
