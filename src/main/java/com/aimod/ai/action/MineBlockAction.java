@@ -6,6 +6,7 @@ import com.aimod.ai.pathing.PathResult;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -28,6 +29,9 @@ public class MineBlockAction extends Action {
 
     private double lastDistSqr;
     private int stuckTicks;
+
+    // Dig down state
+    private int digDownCooldown;
 
     // Pathfinding state
     private List<BlockPos> currentPath;
@@ -187,6 +191,59 @@ public class MineBlockAction extends Action {
         }
     }
 
+    /**
+     * Try to dig down to reach an underground target.
+     * Breaks the block below the bot's feet and lets gravity pull it down.
+     * Returns true if digging was performed or bot is falling.
+     */
+    private boolean tryDigDown(FakePlayer bot) {
+        if (digDownCooldown > 0) {
+            digDownCooldown--;
+            return true;
+        }
+
+        BlockPos feetPos = bot.blockPosition();
+        BlockPos belowFeet = feetPos.below();
+
+        // Safety: don't dig below Y=-64 (void)
+        if (belowFeet.getY() < -64) {
+            DevLog.warn("MINE_DIG_DOWN_VOID", "pos={}", belowFeet.toShortString());
+            return false;
+        }
+
+        ServerLevel level = (ServerLevel) bot.level();
+        BlockState belowState = level.getBlockState(belowFeet);
+
+        // If already air, just fall
+        if (belowState.isAir()) {
+            if (!bot.onGround()) {
+                // Already falling, wait
+                return true;
+            }
+            // Need to move to a position with solid ground below to dig further
+            return false;
+        }
+
+        // Safety: don't break bedrock
+        float hardness = belowState.getDestroySpeed(level, belowFeet);
+        if (hardness < 0) {
+            DevLog.warn("MINE_DIG_DOWN_UNBREAKABLE", "pos={}", belowFeet.toShortString());
+            return false;
+        }
+
+        // Safety: don't dig into liquids
+        if (!level.getFluidState(belowFeet).isEmpty()) {
+            DevLog.warn("MINE_DIG_DOWN_LIQUID", "pos={}", belowFeet.toShortString());
+            return false;
+        }
+
+        // Break the block below
+        level.destroyBlock(belowFeet, true, bot);
+        digDownCooldown = 5; // wait for gravity
+        DevLog.info("MINE_DIG_DOWN", "pos={}, target={}", belowFeet.toShortString(), currentTarget.toShortString());
+        return true;
+    }
+
     private double followPath(FakePlayer bot) {
         double dx = currentTarget.getX() + 0.5 - bot.getX();
         double dy = currentTarget.getY() - bot.getY();
@@ -208,6 +265,13 @@ public class MineBlockAction extends Action {
             BlockPos nextWp = currentPath.get(pathIndex);
             navigateTo(bot, nextWp, 1.0);
             return distSqr;
+        }
+
+        // No path found — try digging down if target is below
+        if (currentPath == null && dy < -2) {
+            if (tryDigDown(bot)) {
+                return distSqr;
+            }
         }
 
         navigateTo(bot, currentTarget, 1.0);

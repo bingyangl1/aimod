@@ -474,3 +474,14 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 5 | `PlanCache.java` | 所有公共方法加 synchronized 保证线程安全 |
 
 *更新日期: 2026-05-30 | 版本: 1.0.81-r81*
+
+### r82: MineBlockAction 挖洞下探
+
+**问题**：Bot 无法到达地下的矿石（铁矿等），反复卡在地表触发 UNSTUCK_ESCALATE。
+
+**修复**：在 `MineBlockAction.followPath()` 中添加 `tryDigDown()` 策略：
+- 当寻路失败且目标在下方 (dy < -2) 时，破坏脚下方块创建阶梯
+- 包含安全检查（虚空 Y<-64、基岩、液体）
+- 每 5 tick 冷却等待重力生效
+
+*更新日期: 2026-06-05 | 版本: 1.0.82-r82*
