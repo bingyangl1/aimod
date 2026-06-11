@@ -559,3 +559,9 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 使用 `ToolSet.getBreakTicks()` 计算精确挖掘时间（含工具速度、效率附魔、急迫/挖掘疲劳、水下惩罚、离地惩罚）
 
 *更新日期: 2026-06-11 | 版本: 1.0.89-r89*
+
+### r90: 测试清理
+
+**说明**：删除了依赖 Minecraft 运行时的测试文件（VeinMiningHelperTest、MovementDigDownTest、MovementStepUpTest）。这些测试无法在单元测试环境中运行，因为依赖 `Block`、`BlockPos` 等 Minecraft 类。
+
+*更新日期: 2026-06-11 | 版本: 1.0.90-r90*
