@@ -291,10 +291,24 @@ public class GatherResourceAction extends Action {
 
     private void breakTarget(FakePlayer bot, BlockState blockState) {
         if (breakStartTick == 0) {
-            breakDurationTicks = Math.max(1, (int) (blockState.getDestroySpeed(bot.level(), currentTarget) * 20));
+            // Select best tool for this block type
+            var toolSet = new com.aimod.ai.pathing.ToolSet(bot);
+            int bestSlot = toolSet.getBestSlot(blockState.getBlock());
+            if (bestSlot >= 0) {
+                if (bestSlot < 9) bot.getInventory().selected = bestSlot;
+                else {
+                    var tmp = bot.getInventory().getItem(0);
+                    bot.getInventory().setItem(0, bot.getInventory().getItem(bestSlot));
+                    bot.getInventory().setItem(bestSlot, tmp);
+                    bot.getInventory().selected = 0;
+                }
+            }
+            // Calculate break time using tool speed
+            double breakTicks = toolSet.getBreakTicks(blockState);
+            breakDurationTicks = breakTicks > 0 ? Math.max(1, (int) breakTicks) : Math.max(1, (int) (blockState.getDestroySpeed(bot.level(), currentTarget) * 20));
             breakStartTick = bot.getServer().getTickCount();
-            DevLog.info("GATHER_BREAKING", "type={}, pos={}, breakDurationTicks={}",
-                    resourceType, currentTarget.toShortString(), breakDurationTicks);
+            DevLog.info("GATHER_BREAKING", "type={}, pos={}, breakDurationTicks={}, toolSlot={}",
+                    resourceType, currentTarget.toShortString(), breakDurationTicks, bestSlot);
         }
 
         bot.swing(net.minecraft.world.InteractionHand.MAIN_HAND);

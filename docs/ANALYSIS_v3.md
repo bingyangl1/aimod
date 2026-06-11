@@ -549,3 +549,13 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 与 `MovementAscend`（对角线上升，dx=1,dz=1）区分
 
 *更新日期: 2026-06-11 | 版本: 1.0.88-r88*
+
+### r89: GatherResourceAction ToolSet 集成
+
+**问题**：`breakTarget()` 使用 `hardness * 20` 计算挖掘时间，不考虑工具速度、附魔、药水效果。
+
+**修复**：
+- 使用 `ToolSet.getBestSlot()` 自动选择最佳工具
+- 使用 `ToolSet.getBreakTicks()` 计算精确挖掘时间（含工具速度、效率附魔、急迫/挖掘疲劳、水下惩罚、离地惩罚）
+
+*更新日期: 2026-06-11 | 版本: 1.0.89-r89*
