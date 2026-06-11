@@ -306,7 +306,12 @@ public class ModConfig {
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
     public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }
-    public static int getCompactTriggerTokens() { return COMPACT_TRIGGER_TOKENS.get(); }
+    public static int getCompactTriggerTokens() {
+        int trigger = COMPACT_TRIGGER_TOKENS.get();
+        int max = MAX_CONTEXT_TOKENS.get();
+        // Ensure trigger is always less than max (prevent misconfiguration)
+        return Math.min(trigger, max - 512);
+    }
     public static int getMaxWorkingMemory() { return MAX_WORKING_MEMORY.get(); }
 
     public static BotMode getBotMode() { return BotMode.fromKey(BOT_MODE.get()); }

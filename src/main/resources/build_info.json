@@ -1,6 +1,6 @@
 {
-  "version": "1.0.83",
-  "build": "2026-06-05-r83",
+  "version": "1.0.84",
+  "build": "2026-06-05-r84",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -69,6 +69,8 @@
     "r83: VeinMiningHelper truncation warning when vein exceeds maxBlocks",
     "r83: MovementFall fallDistance computed in constructor instead of calculateCost()",
     "r83: TaskReplanner removed duplicate consecutiveUnknown reset",
+    "r84: WorldObservation scan frequency reduced from 1s to 3s — reduces server load with multiple bots",
+    "r84: ModConfig compactTriggerTokens capped to maxContextTokens-512 — prevents misconfiguration",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

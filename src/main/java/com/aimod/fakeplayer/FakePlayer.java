@@ -336,8 +336,10 @@ public class FakePlayer extends ServerPlayer {
         if (srv.getTickCount() % 20 == 0) {
             this.connection.resetPosition();
             this.serverLevel().getChunkSource().move(this);
+        }
 
-            // Ingest world observation into memory store (1/sec)
+        // Ingest world observation into memory store (every 3 seconds to reduce scan load)
+        if (srv.getTickCount() % 60 == 0) {
             var obs = com.aimod.ai.memory.WorldObservation.from(this);
             memoryStore.ingest(obs);
         }

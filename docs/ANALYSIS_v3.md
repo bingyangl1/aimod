@@ -499,3 +499,12 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 7 | `TaskReplanner.java` | 移除重复的 `consecutiveUnknown.set(0)` |
 
 *更新日期: 2026-06-05 | 版本: 1.0.83-r83*
+
+### r84: WorldScanner 性能优化 + ModConfig 交叉验证
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `FakePlayer.java` | `WorldObservation.from()` 调用频率从每秒降至每 3 秒 |
+| 2 | `ModConfig.java` | `getCompactTriggerTokens()` 自动限制为 `maxContextTokens - 512` |
+
+*更新日期: 2026-06-05 | 版本: 1.0.84-r84*
