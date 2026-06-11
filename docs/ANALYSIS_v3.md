@@ -538,3 +538,14 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 **修复**：`findPlaceableFace` 返回 `null` 时直接使用 `fallbackSetBlock`，跳过 `useItemOn` 调用。
 
 *更新日期: 2026-06-11 | 版本: 1.0.87-r87*
+
+### r88: MovementStepUp — 修复缺失的移动类型
+
+**问题**：`BotMovement.create()` 缺少 `dy == 1, adx + adz == 1` 的情况（向上一步 + 水平一步）。这种情况会错误地创建 `MovementTraverse`（仅水平移动），导致 bot 无法正确跳上台阶。
+
+**修复**：
+- 新建 `MovementStepUp.java` — 处理 `dy=1, adx+adz=1` 的移动
+- 更新 `BotMovement.create()` 工厂方法添加此分支
+- 与 `MovementAscend`（对角线上升，dx=1,dz=1）区分
+
+*更新日期: 2026-06-11 | 版本: 1.0.88-r88*
