@@ -530,3 +530,11 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 文件路径: `config/aimod/metrics/<uuid>.json`
 
 *更新日期: 2026-06-11 | 版本: 1.0.86-r86*
+
+### r87: PlaceBlockAction 优化
+
+**问题**：当没有固体相邻方块时，`findPlaceableFace` 返回一个朝向 bot 的方向作为 fallback，导致 `useItemOn` 不必要地失败。
+
+**修复**：`findPlaceableFace` 返回 `null` 时直接使用 `fallbackSetBlock`，跳过 `useItemOn` 调用。
+
+*更新日期: 2026-06-11 | 版本: 1.0.87-r87*

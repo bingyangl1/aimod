@@ -217,6 +217,7 @@ public class PlaceBlockAction extends Action {
 
     /**
      * 找到可放置方块的相邻面
+     * Returns null if no solid adjacent block is found (caller should use fallbackSetBlock)
      */
     private Direction findPlaceableFace(FakePlayer bot, BlockPos pos) {
         for (Direction face : Direction.values()) {
@@ -226,13 +227,8 @@ public class PlaceBlockAction extends Action {
                 return face;
             }
         }
-        // Fallback: face toward bot
-        BlockPos botPos = bot.blockPosition();
-        return Direction.getNearest(
-                pos.getX() - botPos.getX(),
-                0,
-                pos.getZ() - botPos.getZ()
-        );
+        // No solid adjacent block found — return null to signal fallback needed
+        return null;
     }
 
     public BlockPos getTargetPos() {
