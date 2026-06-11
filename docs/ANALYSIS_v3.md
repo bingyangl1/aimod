@@ -565,3 +565,11 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 **说明**：删除了依赖 Minecraft 运行时的测试文件（VeinMiningHelperTest、MovementDigDownTest、MovementStepUpTest）。这些测试无法在单元测试环境中运行，因为依赖 `Block`、`BlockPos` 等 Minecraft 类。
 
 *更新日期: 2026-06-11 | 版本: 1.0.90-r90*
+
+### r91: 审计 Medium 修复 — Task.injectAction 大小限制
+
+**问题**：`Task.injectAction()` 无大小限制，反复 replan 时 action 列表可能无限增长。
+
+**修复**：添加 `MAX_ACTIONS = 100` 限制，超出时记录警告并拒绝注入。
+
+*更新日期: 2026-06-11 | 版本: 1.0.91-r91*

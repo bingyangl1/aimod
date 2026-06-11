@@ -63,8 +63,16 @@ public class Task {
         }
     }
 
+    /** Maximum number of actions allowed in a task (prevent unbounded growth). */
+    private static final int MAX_ACTIONS = 100;
+
     /** Inject a new action after the current one (for incremental replanning). */
     public void injectAction(Action action) {
+        if (actions.size() >= MAX_ACTIONS) {
+            com.aimod.util.DevLog.warn("TASK_INJECT_LIMIT", "actions={}, limit={}, rejecting injected action",
+                    actions.size(), MAX_ACTIONS);
+            return;
+        }
         actions.add(currentActionIndex + 1, action);
         // Don't change status — stays IN_PROGRESS
     }

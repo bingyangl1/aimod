@@ -1,6 +1,6 @@
 {
-  "version": "1.0.90",
-  "build": "2026-06-11-r90",
+  "version": "1.0.91",
+  "build": "2026-06-11-r91",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -77,6 +77,7 @@
     "r88: MovementStepUp — new movement type for dy=1,adx+adz=1 (step up + horizontal), fixes missing movement case in BotMovement factory",
     "r89: GatherResourceAction ToolSet integration — auto-select best tool, accurate break time with enchantments/effects",
     "r90: Test cleanup — removed tests that depend on Minecraft runtime (VeinMiningHelperTest, MovementDigDownTest, MovementStepUpTest)",
+    "r91: Task.injectAction() size cap at MAX_ACTIONS=100 — prevents unbounded list growth during repeated replan loops",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
