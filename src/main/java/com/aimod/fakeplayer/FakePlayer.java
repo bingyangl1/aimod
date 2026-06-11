@@ -3,6 +3,7 @@ package com.aimod.fakeplayer;
 import com.aimod.ai.BotAIManager;
 import com.aimod.ai.InventoryUtils;
 import com.aimod.ai.Task;
+import java.nio.file.Path;
 import com.aimod.ai.UndoManager;
 import com.aimod.ai.chain.ChainManager;
 import com.aimod.ai.chain.DangerChain;
@@ -344,6 +345,11 @@ public class FakePlayer extends ServerPlayer {
             memoryStore.ingest(obs);
         }
 
+        // Save metrics periodically (every 5 minutes)
+        if (srv.getTickCount() % 6000 == 0) {
+            saveMetrics();
+        }
+
         // Auto-pickup nearby items
         pickupNearbyItems();
 
@@ -599,6 +605,8 @@ public class FakePlayer extends ServerPlayer {
     public void kill() { kill(Component.literal("Killed")); }
 
     public void kill(@NotNull Component reason) {
+        // Save metrics before disconnecting
+        saveMetrics();
         if (this.getVehicle() instanceof Player) stopRiding();
         for (Entity passenger : this.getIndirectPassengers()) {
             if (passenger instanceof Player) passenger.stopRiding();
@@ -626,6 +634,12 @@ public class FakePlayer extends ServerPlayer {
     // ── Task Restore ─────────────────────────────────────────────────────
 
     private void restorePersistedTask() {
+        // Load persisted metrics
+        Path metricsFile = getMetricsFile();
+        if (metricsFile != null) {
+            aiManager.getMetrics().load(metricsFile);
+        }
+
         Task restored = taskPersistence.restore(this);
         if (restored != null) {
             this.currentTask = restored;
@@ -634,6 +648,23 @@ public class FakePlayer extends ServerPlayer {
             aiManager.executeTask(this.currentTask);
             DevLog.info("TASK_RESTORED", "bot={}, command={}, actions={}",
                     this.getName().getString(), DevLog.compact(restored.getDescription()), restored.getActionCount());
+        }
+    }
+
+    /** Get the metrics file path for this bot. */
+    private Path getMetricsFile() {
+        MinecraftServer srv = getServer();
+        if (srv == null) return null;
+        Path serverDir = srv.getServerDirectory();
+        if (serverDir == null) return null;
+        return serverDir.resolve("config/aimod/metrics/" + getStringUUID() + ".json");
+    }
+
+    /** Save metrics to disk. Called periodically and on bot removal. */
+    public void saveMetrics() {
+        Path metricsFile = getMetricsFile();
+        if (metricsFile != null) {
+            aiManager.getMetrics().save(metricsFile);
         }
     }
 

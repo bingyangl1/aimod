@@ -1,6 +1,6 @@
 {
-  "version": "1.0.85",
-  "build": "2026-06-05-r85",
+  "version": "1.0.86",
+  "build": "2026-06-11-r86",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -72,6 +72,7 @@
     "r84: WorldObservation scan frequency reduced from 1s to 3s — reduces server load with multiple bots",
     "r84: ModConfig compactTriggerTokens capped to maxContextTokens-512 — prevents misconfiguration",
     "r85: DangerChain auto-retry protection — checks hasActiveTask() before re-assigning saved command",
+    "r86: BotMetrics persistence — save/load to JSON file, periodic save every 5 minutes, save on bot kill",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

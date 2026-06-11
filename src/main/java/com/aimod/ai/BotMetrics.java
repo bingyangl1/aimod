@@ -1,13 +1,24 @@
 package com.aimod.ai;
 
+import com.aimod.util.DevLog;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Lightweight metrics collector for bot operations.
  * Thread-safe counters for LLM calls, tasks, actions, and replans.
+ * Supports JSON persistence for cross-restart survival.
  */
 public class BotMetrics {
+
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // LLM call statistics
     private final AtomicInteger llmCalls = new AtomicInteger(0);
@@ -153,5 +164,84 @@ public class BotMetrics {
             current = atomic.get();
             if (value <= current) break;
         } while (!atomic.compareAndSet(current, value));
+    }
+
+    // === Persistence ===
+
+    /** Serializable snapshot for JSON persistence. */
+    public static class MetricsSnapshot {
+        public int llmCalls, llmSuccesses, llmFailures;
+        public long llmTotalMs, llmMaxMs;
+        public int tasksStarted, tasksCompleted, tasksFailed;
+        public int actionsExecuted, actionsSucceeded, actionsFailed;
+        public int replansTriggered, replansSucceeded;
+        public long savedAt;
+    }
+
+    /**
+     * Save metrics to a JSON file.
+     */
+    public void save(Path file) {
+        try {
+            MetricsSnapshot snapshot = toSnapshot();
+            Files.createDirectories(file.getParent());
+            Files.writeString(file, GSON.toJson(snapshot),
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            DevLog.info("METRICS_SAVE", "file={}", file.getFileName());
+        } catch (IOException e) {
+            DevLog.warn("METRICS_SAVE_FAIL", "err={}", e.getMessage());
+        }
+    }
+
+    /**
+     * Load metrics from a JSON file.
+     */
+    public void load(Path file) {
+        if (!Files.exists(file)) return;
+        try {
+            String json = Files.readString(file);
+            MetricsSnapshot snapshot = GSON.fromJson(json, MetricsSnapshot.class);
+            if (snapshot != null) {
+                fromSnapshot(snapshot);
+                DevLog.info("METRICS_LOAD", "file={}, llmCalls={}", file.getFileName(), llmCalls.get());
+            }
+        } catch (Exception e) {
+            DevLog.warn("METRICS_LOAD_FAIL", "err={}", e.getMessage());
+        }
+    }
+
+    private MetricsSnapshot toSnapshot() {
+        MetricsSnapshot s = new MetricsSnapshot();
+        s.llmCalls = llmCalls.get();
+        s.llmSuccesses = llmSuccesses.get();
+        s.llmFailures = llmFailures.get();
+        s.llmTotalMs = llmTotalMs.get();
+        s.llmMaxMs = llmMaxMs.get();
+        s.tasksStarted = tasksStarted.get();
+        s.tasksCompleted = tasksCompleted.get();
+        s.tasksFailed = tasksFailed.get();
+        s.actionsExecuted = actionsExecuted.get();
+        s.actionsSucceeded = actionsSucceeded.get();
+        s.actionsFailed = actionsFailed.get();
+        s.replansTriggered = replansTriggered.get();
+        s.replansSucceeded = replansSucceeded.get();
+        s.savedAt = System.currentTimeMillis();
+        return s;
+    }
+
+    private void fromSnapshot(MetricsSnapshot s) {
+        llmCalls.set(s.llmCalls);
+        llmSuccesses.set(s.llmSuccesses);
+        llmFailures.set(s.llmFailures);
+        llmTotalMs.set(s.llmTotalMs);
+        llmMaxMs.set(s.llmMaxMs);
+        tasksStarted.set(s.tasksStarted);
+        tasksCompleted.set(s.tasksCompleted);
+        tasksFailed.set(s.tasksFailed);
+        actionsExecuted.set(s.actionsExecuted);
+        actionsSucceeded.set(s.actionsSucceeded);
+        actionsFailed.set(s.actionsFailed);
+        replansTriggered.set(s.replansTriggered);
+        replansSucceeded.set(s.replansSucceeded);
     }
 }

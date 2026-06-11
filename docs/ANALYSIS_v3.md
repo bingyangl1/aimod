@@ -516,3 +516,17 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 **修复**：在重新分配前检查 `bot.hasActiveTask()`，如果有则跳过重试。
 
 *更新日期: 2026-06-05 | 版本: 1.0.85-r85*
+
+### r86: BotMetrics 持久化
+
+**功能**：指标数据保存到 JSON 文件，重启后不丢失。
+
+**实现**:
+- `BotMetrics.save(Path)` — 序列化为 JSON 保存
+- `BotMetrics.load(Path)` — 从 JSON 文件加载
+- `FakePlayer.saveMetrics()` — 暴露保存方法
+- 每 5 分钟自动保存（6000 ticks）
+- bot 被 kill 时自动保存
+- 文件路径: `config/aimod/metrics/<uuid>.json`
+
+*更新日期: 2026-06-11 | 版本: 1.0.86-r86*
