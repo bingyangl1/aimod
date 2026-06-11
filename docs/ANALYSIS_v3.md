@@ -508,3 +508,11 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 | 2 | `ModConfig.java` | `getCompactTriggerTokens()` 自动限制为 `maxContextTokens - 512` |
 
 *更新日期: 2026-06-05 | 版本: 1.0.84-r84*
+
+### r85: DangerChain 自动重试保护
+
+**问题**：危险解除后，DangerChain 自动重新分配之前保存的任务，但不检查 bot 是否已经有新任务。
+
+**修复**：在重新分配前检查 `bot.hasActiveTask()`，如果有则跳过重试。
+
+*更新日期: 2026-06-05 | 版本: 1.0.85-r85*

@@ -1,6 +1,7 @@
 package com.aimod.ai.chain;
 
 import com.aimod.fakeplayer.FakePlayer;
+import com.aimod.util.DevLog;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -126,16 +127,20 @@ public class DangerChain extends BehaviorChain {
             bot.getMovementController().stop();
             bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);
 
-            // ---- Auto-retry saved task ----
+            // ---- Auto-retry saved task (only if bot doesn't already have a new task) ----
             if (isSafe && savedTaskCommand != null) {
                 String cmd = savedTaskCommand;
                 savedTaskCommand = null;
-                // Delay 1 second then re-submit
-                var server = bot.getServer();
-                if (server != null) {
-                    server.tell(new net.minecraft.server.TickTask(
-                        server.getTickCount() + 20, () -> bot.assignTask(cmd)
-                    ));
+                // Only re-assign if bot doesn't have an active task already
+                if (!bot.hasActiveTask()) {
+                    var server = bot.getServer();
+                    if (server != null) {
+                        server.tell(new net.minecraft.server.TickTask(
+                            server.getTickCount() + 20, () -> bot.assignTask(cmd)
+                        ));
+                    }
+                } else {
+                    DevLog.info("DANGER_CHAIN_SKIP_RETRY", "bot already has active task, skipping saved command");
                 }
             }
         }
