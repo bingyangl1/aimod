@@ -1,6 +1,6 @@
 {
-  "version": "1.0.91",
-  "build": "2026-06-11-r91",
+  "version": "1.0.92",
+  "build": "2026-06-11-r92",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -78,6 +78,8 @@
     "r89: GatherResourceAction ToolSet integration — auto-select best tool, accurate break time with enchantments/effects",
     "r90: Test cleanup — removed tests that depend on Minecraft runtime (VeinMiningHelperTest, MovementDigDownTest, MovementStepUpTest)",
     "r91: Task.injectAction() size cap at MAX_ACTIONS=100 — prevents unbounded list growth during repeated replan loops",
+    "r92: BreakBlockAction ToolSet integration — auto-selects best tool + accurate break time",
+    "r92: showPath visual improvements — red target marker, progress display, yellow direct line when no path",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

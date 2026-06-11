@@ -266,20 +266,54 @@ public class BotCommandConfig implements SubCommand {
         if (!ctrl.isNavigating()) { source.sendFailure(Component.literal("Bot is not currently navigating")); return 0; }
         var target = ctrl.getNavTarget();
         var executor = ctrl.getPathExecutor();
+        var level = (ServerLevel) bot.level();
+
+        // Show target position with red particles
+        level.sendParticles(
+                new net.minecraft.core.particles.DustParticleOptions(
+                        new org.joml.Vector3f(1.0f, 0.0f, 0.0f), 3.0f),
+                target.getX() + 0.5, target.getY() + 1.0, target.getZ() + 0.5,
+                5, 0.3, 0.3, 0.3, 0);
+
         if (executor != null && !executor.isCompleted()) {
             var path = executor.getPath();
-            var level = (ServerLevel) bot.level();
-            var player = source.getPlayer();
+            // Show path with purple particles
             for (var pos : path) {
                 level.sendParticles(
-                    new net.minecraft.core.particles.DustParticleOptions(
-                        new org.joml.Vector3f(1.0f, 0.0f, 1.0f), 2.0f),
-                    pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                    1, 0, 0, 0, 0);
+                        new net.minecraft.core.particles.DustParticleOptions(
+                                new org.joml.Vector3f(1.0f, 0.0f, 1.0f), 2.0f),
+                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                        1, 0, 0, 0, 0);
             }
-            source.sendSuccess(() -> Component.literal("Showing path: " + path.size() + " nodes to " + target.toShortString()), true);
+            // Show bot's current path progress
+            int progress = executor.getCurrentIndex();
+            int total = path.size();
+            source.sendSuccess(() -> Component.literal(
+                    "§dPath:§r " + total + " nodes → " + target.toShortString() +
+                    "\n§dProgress:§r " + progress + "/" + total +
+                    " (" + (total > 0 ? progress * 100 / total : 0) + "%)"), true);
         } else {
-            source.sendSuccess(() -> Component.literal("Target: " + target.toShortString() + " (no computed path)"), true);
+            // No computed path — show direct line to target with yellow particles
+            var botPos = bot.blockPosition();
+            double dx = target.getX() - botPos.getX();
+            double dy = target.getY() - botPos.getY();
+            double dz = target.getZ() - botPos.getZ();
+            double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            int steps = Math.max(1, (int)(dist / 2));
+            for (int i = 0; i <= steps; i++) {
+                double t = (double) i / steps;
+                level.sendParticles(
+                        new net.minecraft.core.particles.DustParticleOptions(
+                                new org.joml.Vector3f(1.0f, 1.0f, 0.0f), 1.5f),
+                        botPos.getX() + dx * t + 0.5,
+                        botPos.getY() + dy * t + 0.5,
+                        botPos.getZ() + dz * t + 0.5,
+                        1, 0, 0, 0, 0);
+            }
+            source.sendSuccess(() -> Component.literal(
+                    "§eTarget:§r " + target.toShortString() +
+                    "\n§eDistance:§r " + String.format("%.1f", dist) + " blocks" +
+                    "\n§eStatus:§r no computed path (direct line shown)"), true);
         }
         return 1;
     }

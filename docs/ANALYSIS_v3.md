@@ -573,3 +573,17 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 **修复**：添加 `MAX_ACTIONS = 100` 限制，超出时记录警告并拒绝注入。
 
 *更新日期: 2026-06-11 | 版本: 1.0.91-r91*
+
+### r92: BreakBlockAction ToolSet 集成 + 路径可视化改进
+
+**BreakBlockAction ToolSet 集成：**
+- `BreakBlockAction.execute()` 现在使用 `ToolSet.getBestSlot()` 自动选择最佳工具
+- 使用 `ToolSet.getBreakTicks()` 计算精确挖掘时间（含工具速度、附魔、药水效果）
+- 与 `GatherResourceAction.breakTarget()` 保持一致
+
+**showPath 可视化改进：**
+- 目标位置：红色粒子标记
+- 计算路径：紫色粒子 + 进度显示 (x/y, 百分比)
+- 无路径时：黄色直线连接 bot 和目标 + 距离显示
+
+*更新日期: 2026-06-11 | 版本: 1.0.92-r92*

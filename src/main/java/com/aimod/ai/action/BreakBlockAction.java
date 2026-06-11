@@ -51,13 +51,25 @@ public class BreakBlockAction extends Action {
                 return;
             }
 
-            // 计算破坏时间（基于方块硬度）
+            // 计算破坏时间（基于方块硬度 + 工具速度）
             if (!started) {
-                float hardness = blockState.getDestroySpeed(bot.level(), targetPos);
-                breakTime = Math.max(20, (int) (hardness * 20)); // 至少 1 秒
+                // 选择最佳工具
+                var toolSet = new com.aimod.ai.pathing.ToolSet(bot);
+                int bestSlot = toolSet.getBestSlot(blockState.getBlock());
+                if (bestSlot >= 0) {
+                    if (bestSlot < 9) bot.getInventory().selected = bestSlot;
+                    else {
+                        var tmp = bot.getInventory().getItem(0);
+                        bot.getInventory().setItem(0, bot.getInventory().getItem(bestSlot));
+                        bot.getInventory().setItem(bestSlot, tmp);
+                        bot.getInventory().selected = 0;
+                    }
+                }
+                double breakTicks = toolSet.getBreakTicks(blockState);
+                breakTime = breakTicks > 0 ? Math.max(1, (int) breakTicks) : Math.max(20, (int) (blockState.getDestroySpeed(bot.level(), targetPos) * 20));
                 started = true;
-                DevLog.info("BREAK_START", "pos={}, hardness={}, breakTime={}",
-                        targetPos.toShortString(), hardness, breakTime);
+                DevLog.info("BREAK_START", "pos={}, breakTime={}, toolSlot={}",
+                        targetPos.toShortString(), breakTime, bestSlot);
             }
 
             // 使用 FakePlayer 破坏方块
