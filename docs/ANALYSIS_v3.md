@@ -747,3 +747,13 @@ botSkinUrl = "https://example.com/skin.png"
 | 3 | `CraftAction.java` | 输出数量不再乘以 count，使用配方自然产出 |
 
 *更新日期: 2026-06-12 | 版本: 1.1.04-r104*
+
+### r105: Phase 2 审计修复 — Critical 功能修复
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `DangerChain.java` | 桥梁放置 `pos.relative(facing, 0)` → `pos.relative(facing)`（原代码偏移 0 格，始终同一位置） |
+| 2 | `FoodChain.java` | `stop()` 添加 `bot.stopUsingItem()` + 快捷栏恢复，防止被抢占后持续进食 |
+| 3 | `DefenseChain.java` | `SCAN_RADIUS` 和 `RETREAT_HEALTH` 替换为 `ModConfig` 配置调用 |
+
+*更新日期: 2026-06-12 | 版本: 1.1.05-r105*

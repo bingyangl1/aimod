@@ -18,11 +18,13 @@ public class FoodChain extends BehaviorChain {
     private boolean active;
     private int eatTicks;
     private int originalSlot = -1;
+    private FakePlayer lastBot;
 
     @Override public int priority() { return 55; }
 
     @Override
     public boolean shouldActivate(FakePlayer bot) {
+        lastBot = bot;
         int threshold = com.aimod.config.ModConfig.getHungerThreshold();
         if (bot.getFoodData().getFoodLevel() > threshold) return false;
         if (bot.getFoodData().needsFood()) {
@@ -95,8 +97,16 @@ public class FoodChain extends BehaviorChain {
 
     @Override public boolean isActive() { return active; }
     @Override public void stop() {
+        // Stop eating and restore hotbar slot
+        if (lastBot != null) {
+            lastBot.stopUsingItem();
+            if (originalSlot >= 0) {
+                lastBot.getInventory().selected = originalSlot;
+            }
+        }
         active = false;
         eatTicks = 0;
+        originalSlot = -1;
     }
     @Override public String name() { return "Food"; }
 }

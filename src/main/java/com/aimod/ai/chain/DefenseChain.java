@@ -21,8 +21,9 @@ import java.util.List;
  */
 public class DefenseChain extends BehaviorChain {
 
-    private static final double SCAN_RADIUS = 8.0;
-    private static final double RETREAT_HEALTH = 6.0;
+    // Use config values instead of hardcoded constants
+    private static double getScanRadius() { return com.aimod.config.ModConfig.getDefenseScanRadius(); }
+    private static double getRetreatHealth() { return com.aimod.config.ModConfig.getDefenseRetreatHealth(); }
     private static final int OVERWHELM_COUNT = 3;
     private static final double RANGED_RANGE = 10.0;
 
@@ -45,7 +46,7 @@ public class DefenseChain extends BehaviorChain {
     @Override
     public boolean shouldActivate(FakePlayer bot) {
         if (cooldownTicks > 0) { cooldownTicks--; return false; }
-        AABB box = bot.getBoundingBox().inflate(SCAN_RADIUS);
+        AABB box = bot.getBoundingBox().inflate(getScanRadius());
         List<LivingEntity> hostiles = bot.level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e instanceof Monster && e.isAlive() && !e.isDeadOrDying());
 
@@ -53,7 +54,7 @@ public class DefenseChain extends BehaviorChain {
         hostileCount = hostiles.size();
 
         // Find closest hostile
-        double best = SCAN_RADIUS * SCAN_RADIUS;
+        double best = getScanRadius() * getScanRadius();
         for (LivingEntity e : hostiles) {
             double d = bot.distanceToSqr(e);
             if (d < best) { best = d; target = e; }
@@ -126,7 +127,7 @@ public class DefenseChain extends BehaviorChain {
     }
 
     private boolean shouldRetreat(FakePlayer bot) {
-        return bot.getHealth() <= RETREAT_HEALTH || hostileCount >= OVERWHELM_COUNT;
+        return bot.getHealth() <= getRetreatHealth() || hostileCount >= OVERWHELM_COUNT;
     }
 
     private void retreat(FakePlayer bot, double dist) {

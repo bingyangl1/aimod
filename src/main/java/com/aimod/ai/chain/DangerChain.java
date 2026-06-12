@@ -222,9 +222,9 @@ public class DangerChain extends BehaviorChain {
             } else {
                 inv.selected = blockSlot;
             }
-            // Place at feet to pillar up, or at target to bridge
+            // Place at feet to pillar up, or in front to bridge forward
             BlockPos placePos = belowThere.isSolid() || belowThere.getBlock() == Blocks.LAVA
-                    ? pos.relative(facing, 0) // try placing at target
+                    ? pos.relative(facing) // place one block forward to bridge
                     : pos; // pillar at feet
             if (level.getBlockState(placePos).isAir() || level.getBlockState(placePos).getBlock() == Blocks.LAVA) {
                 level.setBlock(placePos,
