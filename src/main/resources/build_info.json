@@ -1,6 +1,6 @@
 {
-  "version": "1.0.99",
-  "build": "2026-06-11-r99",
+  "version": "1.1.00",
+  "build": "2026-06-11-r100",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -89,6 +89,9 @@
     "r97: BotMemoryStore shortTermSummaries uses ArrayDeque — O(1) removeFirst instead of O(n) ArrayList.remove(0)",
     "r98: Dead code cleanup — removed unused MovementParkour, deprecated FakeNetHandler/FakeConnection, duplicate import",
     "r99: Exception handling — 8 silent catch(Exception ignored) blocks now log warnings via DevLog",
+    "r100: LLMResponseParser pre-compiled Pattern constants (was recompiling on every LLM response)",
+    "r100: MovementTraverse water swimming support — bot now swims up/down/horizontal in water",
+    "r100: AutoReplaceTool/AutoReplenish slot range 0-35 → 0-40 (was missing armor/offhand slots)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

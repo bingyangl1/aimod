@@ -28,7 +28,7 @@ public final class AutoReplenish {
         if (held.getMaxStackSize() <= 1) return; // tools, weapons — use AutoReplaceTool
 
         // Find matching items elsewhere in inventory
-        for (int i = 0; i < 36 && held.getCount() < REFILL_TO; i++) {
+        for (int i = 0; i <= 40 && held.getCount() < REFILL_TO; i++) {
             if (i == slot) continue;
             ItemStack stack = inv.getItem(i);
             if (stack.isEmpty()) continue;

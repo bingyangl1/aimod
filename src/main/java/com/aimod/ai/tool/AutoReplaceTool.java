@@ -32,7 +32,7 @@ public final class AutoReplaceTool {
         if (durability > DURABILITY_THRESHOLD) return;
 
         // Find a fresher tool of the same type
-        for (int i = 0; i < 36; i++) {
+        for (int i = 0; i <= 40; i++) {
             if (i == slot) continue;
             ItemStack stack = inv.getItem(i);
             if (stack.isEmpty()) continue;

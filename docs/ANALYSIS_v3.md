@@ -680,3 +680,14 @@ botSkinUrl = "https://example.com/skin.png"
 | `WorldObservation.java` | 5 处 |
 
 *更新日期: 2026-06-11 | 版本: 1.0.99-r99*
+
+### r100: P10 批量修复 — 编译优化 + 水中移动 + 工具槽位
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `LLMResponseParser.java` | `Pattern.compile()` 提取为 `static final` 常量，避免每次 LLM 响应重新编译 |
+| 2 | `MovementTraverse.java` | 增加水中游泳支持 — 检测 `isInWater()` 并应用上下游泳力 |
+| 3 | `AutoReplaceTool.java` | 槽位范围 0-35 → 0-40（检查 armor/offhand 备用工具） |
+| 4 | `AutoReplenish.java` | 槽位范围 0-35 → 0-40（检查 armor/offhand 备用物品） |
+
+*更新日期: 2026-06-11 | 版本: 1.1.00-r100*

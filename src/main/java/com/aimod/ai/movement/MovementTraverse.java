@@ -101,7 +101,13 @@ public class MovementTraverse extends BotMovement {
             double moveZ = (dz / dist) * speed;
             double moveY;
 
-            if (dy > 0.3 && dy <= 1.5 && bot.onGround()) {
+            if (bot.isInWater()) {
+                // Swimming: apply upward force when in water
+                moveY = bot.getDeltaMovement().y;
+                if (dy > 0.3) moveY = 0.3; // swim up
+                else if (dy < -0.3) moveY = -0.3; // swim down
+                else moveY = 0; // horizontal swim
+            } else if (dy > 0.3 && dy <= 1.5 && bot.onGround()) {
                 moveY = 0.42; // step-up jump
             } else if (!bot.onGround()) {
                 moveY = bot.getDeltaMovement().y;

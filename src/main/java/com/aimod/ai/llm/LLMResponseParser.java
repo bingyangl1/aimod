@@ -13,6 +13,10 @@ import java.util.regex.Pattern;
 public final class LLMResponseParser {
     private LLMResponseParser() {}
 
+    // Pre-compiled patterns for performance (avoid recompilation on every call)
+    private static final Pattern ACTIONS_ARRAY_PATTERN = Pattern.compile("\"actions\"\\s*:\\s*(\\[[^\\]]*\\])");
+    private static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("\\{[^}]*\\}");
+
     public static LLMResponse parseResponse(String response) {
         try {
             JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
@@ -76,8 +80,7 @@ public final class LLMResponseParser {
         List<String> actions = new ArrayList<>();
         try {
             // 使用正则表达式查找"actions": [ ... ] 模式
-            Pattern pattern = Pattern.compile("\"actions\"\\s*:\\s*(\\[[^\\]]*\\])");
-            Matcher matcher = pattern.matcher(content);
+            Matcher matcher = ACTIONS_ARRAY_PATTERN.matcher(content);
             if (matcher.find()) {
                 String jsonArrayStr = matcher.group(1);
                 // 尝试解析这个数组
@@ -102,8 +105,7 @@ public final class LLMResponseParser {
         List<String> actions = new ArrayList<>();
         try {
             // 查找所有看起来像独立JSON对象的内容
-            Pattern pattern = Pattern.compile("\\{[^}]*\\}");
-            Matcher matcher = pattern.matcher(content);
+            Matcher matcher = JSON_OBJECT_PATTERN.matcher(content);
             while (matcher.find()) {
                 String potentialAction = matcher.group();
                 // 验证这是否包含action类型字段
