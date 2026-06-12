@@ -189,7 +189,8 @@ public class MovementController {
                         || activeMovement.getStatus() == BotMovement.Status.COMPLETE
                         || activeMovement.getStatus() == BotMovement.Status.FAILED
                         || !activeMovement.getDest().equals(next)) {
-                    activeMovement = BotMovement.create(bot.blockPosition(), next);
+                    activeMovement = BotMovement.create(bot.blockPosition(), next,
+                            bot.level() instanceof ServerLevel sl ? sl : null);
                 }
                 if (activeMovement != null) {
                     boolean done = activeMovement.update(bot);

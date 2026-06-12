@@ -707,3 +707,18 @@ botSkinUrl = "https://example.com/skin.png"
 所有配置可通过 `/ai_bot config <key> <value>` 修改。
 
 *更新日期: 2026-06-11 | 版本: 1.1.01-r101*
+
+### r102: MovementClimb — 梯子/藤蔓攀爬
+
+**功能**：新增 `MovementClimb` 移动类型，支持梯子和藤蔓上的垂直移动。
+
+**触发条件**：
+- `dy >= 1` 或 `dy <= -1`，水平距离 <= 1
+- 源位置或目标位置有可攀爬方块（梯子/藤蔓）
+
+**BotMovement 工厂方法增强**：
+- 新增 `create(src, dest, level)` 重载，接受 ServerLevel 参数
+- 支持水中和攀爬方块检测
+- 原有 `create(src, dest)` 保持向后兼容
+
+*更新日期: 2026-06-11 | 版本: 1.1.02-r102*

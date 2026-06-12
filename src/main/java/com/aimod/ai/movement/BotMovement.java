@@ -3,6 +3,7 @@ package com.aimod.ai.movement;
 import com.aimod.fakeplayer.FakePlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Collections;
 import java.util.Set;
@@ -90,24 +91,41 @@ public abstract class BotMovement {
 
     /**
      * Factory: create the appropriate movement type for src→dest.
+     * Uses position-based dispatch only (no world access).
      */
     public static BotMovement create(BlockPos src, BlockPos dest) {
+        return create(src, dest, null);
+    }
+
+    /**
+     * Factory: create the appropriate movement type for src→dest with world access.
+     * Enables water and climb detection.
+     */
+    public static BotMovement create(BlockPos src, BlockPos dest, net.minecraft.server.level.ServerLevel level) {
         int dx = dest.getX() - src.getX();
         int dy = dest.getY() - src.getY();
         int dz = dest.getZ() - src.getZ();
         int adx = Math.abs(dx), adz = Math.abs(dz);
 
+        // Check for climbable blocks (ladder/vine)
+        if (level != null && Math.abs(dy) >= 1 && adx + adz <= 1) {
+            BlockState srcState = level.getBlockState(src);
+            BlockState destState = level.getBlockState(dest);
+            if (MovementClimb.isClimbable(srcState) || MovementClimb.isClimbable(destState)) {
+                return new MovementClimb(src, dest);
+            }
+        }
+
         if (dy == 1 && adx + adz == 0) return new MovementPillar(src, dest);
         if (dy == 1 && adx + adz == 2) return new MovementAscend(src, dest);
-        if (dy == 1 && adx + adz == 1) return new MovementStepUp(src, dest); // step up + horizontal
+        if (dy == 1 && adx + adz == 1) return new MovementStepUp(src, dest);
         if (dy == -1 && adx + adz == 1) return new MovementDescend(src, dest);
-        if (dy <= -2 && adx + adz == 0) return new MovementDigDown(src, dest); // multi-block dig down
+        if (dy <= -2 && adx + adz == 0) return new MovementDigDown(src, dest);
         if (dy < -1) return new MovementFall(src, dest);
         if (dy == -1 && adx + adz == 0) return new MovementDownward(src, dest);
         if (dy == 0 && adx + adz == 2) return new MovementDiagonal(src, dest);
-        if (dy == 0 && adx + adz == 0) return null; // same block
+        if (dy == 0 && adx + adz == 0) return null;
         if (dy == 0 && adx <= 1 && adz <= 1 && adx + adz == 1) return new MovementTraverse(src, dest);
-        // Default: traverse for simple moves
         return new MovementTraverse(src, dest);
     }
 
