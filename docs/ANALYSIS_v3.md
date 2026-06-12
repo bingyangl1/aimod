@@ -737,3 +737,13 @@ botSkinUrl = "https://example.com/skin.png"
 **Action 类型总数：22 个**
 
 *更新日期: 2026-06-11 | 版本: 1.1.03-r103*
+
+### r104: Phase 1 审计修复 — Critical 线程安全
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `PlanCache.java` | `invalidate()` 和构造函数加 `synchronized(lock)` |
+| 2 | `BotMemoryStore.java` | 所有公共方法加 `synchronized(lock)` 块 |
+| 3 | `CraftAction.java` | 输出数量不再乘以 count，使用配方自然产出 |
+
+*更新日期: 2026-06-12 | 版本: 1.1.04-r104*

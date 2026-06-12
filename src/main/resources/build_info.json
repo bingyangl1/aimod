@@ -1,6 +1,6 @@
 {
-  "version": "1.1.03",
-  "build": "2026-06-11-r103",
+  "version": "1.1.04",
+  "build": "2026-06-12-r104",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -95,6 +95,7 @@
     "r101: New config options — pathfinderTimeoutMs, pathfinderMaxRadius, maxVeinSize, defenseScanRadius, defenseRetreatHealth",
     "r102: MovementClimb — ladder/vine climbing movement type, BotMovement factory world-aware mode",
     "r103: New action types — UseItemAction (eat/use), DropAction (drop items), SneakAction (sneak/crouch), LookAtAction (look at position)",
+    "r104: Phase 1 audit — PlanCache.invalidate() + constructor synchronized, BotMemoryStore all methods synchronized, CraftAction output count fix",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

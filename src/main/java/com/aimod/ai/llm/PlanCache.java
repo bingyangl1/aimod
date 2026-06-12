@@ -44,9 +44,11 @@ public class PlanCache {
         List<CachedPlan> loaded = load();
         this.plans = loaded != null ? loaded : new ArrayList<CachedPlan>();
         // Remove expired entries on load
-        long now = System.currentTimeMillis();
-        boolean changed = plans.removeIf(p -> (now - p.timestamp) > MAX_AGE_MS);
-        if (changed) save();
+        synchronized (lock) {
+            long now = System.currentTimeMillis();
+            boolean changed = plans.removeIf(p -> (now - p.timestamp) > MAX_AGE_MS);
+            if (changed) save();
+        }
     }
 
     /** Try to find a matching cached plan for the given command. */
@@ -93,9 +95,11 @@ public class PlanCache {
     /** Invalidate (remove) all cached plans matching this command. */
     public void invalidate(String command) {
         if (command == null || command.isBlank()) return;
-        String norm = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
-        boolean changed = plans.removeIf(p -> similarity(norm, p.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N")) > 0.8);
-        if (changed) save();
+        synchronized (lock) {
+            String norm = command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N");
+            boolean changed = plans.removeIf(p -> similarity(norm, p.command.toLowerCase(Locale.ROOT).replaceAll("\\d+", "N")) > 0.8);
+            if (changed) save();
+        }
     }
 
     /** Save a successful plan for future reuse. */

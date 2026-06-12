@@ -129,12 +129,14 @@ public class CraftAction extends Action {
                 // Consume only inputs, NOT catalysts
                 InventoryUtils.consumeItems(bot, requiredItems);
 
-                // Create output
+                // Create output — use recipe's natural yield, not multiplied by count
                 ItemStack result = resolvedRecipe.getHolder().value()
                         .getResultItem(bot.level().registryAccess());
                 ItemStack output = result.copy();
-                int totalCount = Math.min(output.getCount() * count, output.getMaxStackSize());
-                output.setCount(totalCount);
+                // Cap to max stack size
+                if (output.getCount() > output.getMaxStackSize()) {
+                    output.setCount(output.getMaxStackSize());
+                }
 
                 boolean added = InventoryUtils.addItem(bot, output);
                 if (added) {

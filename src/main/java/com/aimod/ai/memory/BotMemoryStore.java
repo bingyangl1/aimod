@@ -34,6 +34,7 @@ public final class BotMemoryStore {
     private final Deque<String> shortTermSummaries = new ArrayDeque<>(); // O(1) add/removeFirst
     private final List<ResourceLocation> resourceLocations = new ArrayList<>();
     private final Set<String> exploredChunks = new HashSet<>();
+    private final Object lock = new Object(); // Thread safety for all collections
 
     private final Path dataDir;
     private final int maxWorking;
@@ -61,30 +62,36 @@ public final class BotMemoryStore {
 
     /** Ingest a new observation. Auto-trims if over capacity. */
     public void ingest(WorldObservation obs) {
-        // Skip if identical to previous observation (bot standing still)
-        WorldObservation prev = workingMemory.peekLast();
-        if (prev != null && obs.isDuplicateOf(prev)) {
-            return; // skip duplicate
+        synchronized (lock) {
+            // Skip if identical to previous observation (bot standing still)
+            WorldObservation prev = workingMemory.peekLast();
+            if (prev != null && obs.isDuplicateOf(prev)) {
+                return; // skip duplicate
+            }
+            workingMemory.addLast(obs);
+            while (workingMemory.size() > maxWorking) {
+                workingMemory.removeFirst();
+            }
+            ingestCount++;
         }
-        workingMemory.addLast(obs);
-        while (workingMemory.size() > maxWorking) {
-            workingMemory.removeFirst();
-        }
-        ingestCount++;
     }
 
     /** Return the most recent N observations (newest first). */
     public List<WorldObservation> getRecent(int n) {
-        List<WorldObservation> result = new ArrayList<>();
-        var it = workingMemory.descendingIterator();
-        while (it.hasNext() && result.size() < n) {
-            result.add(it.next());
+        synchronized (lock) {
+            List<WorldObservation> result = new ArrayList<>();
+            var it = workingMemory.descendingIterator();
+            while (it.hasNext() && result.size() < n) {
+                result.add(it.next());
+            }
+            return result;
         }
-        return result;
     }
 
     public int workingMemorySize() {
-        return workingMemory.size();
+        synchronized (lock) {
+            return workingMemory.size();
+        }
     }
 
     // --------------- Tier 2: Short-term Summaries ---------------
@@ -96,28 +103,30 @@ public final class BotMemoryStore {
      * @return estimated tokens freed
      */
     public int compact(int count) {
-        if (workingMemory.size() < count) count = workingMemory.size();
-        if (count < 3) return 0;
+        synchronized (lock) {
+            if (workingMemory.size() < count) count = workingMemory.size();
+            if (count < 3) return 0;
 
-        int tokensFreed = 0;
-        StringBuilder summary = new StringBuilder("Summary of " + count + " ticks: ");
-        for (int i = 0; i < count; i++) {
-            WorldObservation obs = workingMemory.removeFirst();
-            tokensFreed += obs.estimateTokens();
-            if (i == 0) {
-                summary.append(obs.toCompactString());
-            } else if (i == count - 1) {
-                summary.append(" → ").append(obs.toCompactString());
+            int tokensFreed = 0;
+            StringBuilder summary = new StringBuilder("Summary of " + count + " ticks: ");
+            for (int i = 0; i < count; i++) {
+                WorldObservation obs = workingMemory.removeFirst();
+                tokensFreed += obs.estimateTokens();
+                if (i == 0) {
+                    summary.append(obs.toCompactString());
+                } else if (i == count - 1) {
+                    summary.append(" → ").append(obs.toCompactString());
+                }
             }
+            shortTermSummaries.addLast(summary.toString());
+            while (shortTermSummaries.size() > DEFAULT_MAX_SUMMARIES) {
+                shortTermSummaries.removeFirst();
+            }
+            saveSummaries();
+            DevLog.info("MEMORY_COMPACT", "count={}, freed={}, totalSummaries={}",
+                    count, tokensFreed, shortTermSummaries.size());
+            return tokensFreed;
         }
-        shortTermSummaries.addLast(summary.toString());
-        while (shortTermSummaries.size() > DEFAULT_MAX_SUMMARIES) {
-            shortTermSummaries.removeFirst();
-        }
-        saveSummaries();
-        DevLog.info("MEMORY_COMPACT", "count={}, freed={}, totalSummaries={}",
-                count, tokensFreed, shortTermSummaries.size());
-        return tokensFreed;
     }
 
     /** Compact until estimated working-memory tokens drop below target. */
@@ -137,73 +146,89 @@ public final class BotMemoryStore {
 
     /** Get all short-term summaries. */
     public List<String> getShortTermSummaries() {
-        return new ArrayList<>(shortTermSummaries);
+        synchronized (lock) {
+            return new ArrayList<>(shortTermSummaries);
+        }
     }
 
     // --------------- Tier 3: Long-term Knowledge ---------------
 
     /** Remember a resource location for future reference. */
     public void rememberLocation(String blockType, BlockPos pos, String dimension) {
-        // Update existing if same type+position
-        for (var rl : resourceLocations) {
-            if (rl.blockType.equals(blockType) && rl.x == pos.getX()
-                    && rl.y == pos.getY() && rl.z == pos.getZ()
-                    && rl.dimension.equals(dimension)) {
-                rl.lastSeenAt = System.currentTimeMillis();
-                return;
+        synchronized (lock) {
+            // Update existing if same type+position
+            for (var rl : resourceLocations) {
+                if (rl.blockType.equals(blockType) && rl.x == pos.getX()
+                        && rl.y == pos.getY() && rl.z == pos.getZ()
+                        && rl.dimension.equals(dimension)) {
+                    rl.lastSeenAt = System.currentTimeMillis();
+                    return;
+                }
             }
+            resourceLocations.add(new ResourceLocation(blockType, pos.getX(), pos.getY(), pos.getZ(),
+                    dimension, System.currentTimeMillis()));
+            while (resourceLocations.size() > DEFAULT_MAX_RESOURCES) {
+                resourceLocations.remove(0);
+            }
+            saveResources();
         }
-        resourceLocations.add(new ResourceLocation(blockType, pos.getX(), pos.getY(), pos.getZ(),
-                dimension, System.currentTimeMillis()));
-        while (resourceLocations.size() > DEFAULT_MAX_RESOURCES) {
-            resourceLocations.remove(0);
-        }
-        saveResources();
     }
 
     /** Query known resources near a position, ordered by distance. */
     public List<ResourceLocation> queryNearbyResources(BlockPos center, int radius) {
-        List<ResourceLocation> result = new ArrayList<>();
-        for (var rl : resourceLocations) {
-            if (rl.mined) continue;
-            int dx = rl.x - center.getX();
-            int dy = rl.y - center.getY();
-            int dz = rl.z - center.getZ();
-            if (Math.abs(dx) <= radius && Math.abs(dy) <= radius && Math.abs(dz) <= radius) {
-                rl._cachedDist = dx * dx + dy * dy + dz * dz;
-                result.add(rl);
+        synchronized (lock) {
+            List<ResourceLocation> result = new ArrayList<>();
+            for (var rl : resourceLocations) {
+                if (rl.mined) continue;
+                int dx = rl.x - center.getX();
+                int dy = rl.y - center.getY();
+                int dz = rl.z - center.getZ();
+                if (Math.abs(dx) <= radius && Math.abs(dy) <= radius && Math.abs(dz) <= radius) {
+                    rl._cachedDist = dx * dx + dy * dy + dz * dz;
+                    result.add(rl);
+                }
             }
+            result.sort(Comparator.comparingInt(r -> r._cachedDist));
+            return result;
         }
-        result.sort(Comparator.comparingInt(r -> r._cachedDist));
-        return result;
     }
 
     /** Mark a resource as mined. */
     public void markResourceMined(BlockPos pos) {
-        for (var rl : resourceLocations) {
-            if (rl.x == pos.getX() && rl.y == pos.getY() && rl.z == pos.getZ()) {
-                rl.mined = true;
-                return;
+        synchronized (lock) {
+            for (var rl : resourceLocations) {
+                if (rl.x == pos.getX() && rl.y == pos.getY() && rl.z == pos.getZ()) {
+                    rl.mined = true;
+                    return;
+                }
             }
         }
     }
 
-    public int resourceLocationCount() { return resourceLocations.size(); }
+    public int resourceLocationCount() {
+        synchronized (lock) { return resourceLocations.size(); }
+    }
 
     /** Mark a chunk as explored. */
     public void markChunkExplored(int cx, int cz, String dimension) {
-        String key = cx + "," + cz + ":" + dimension;
-        if (exploredChunks.add(key)) {
-            saveChunks();
+        synchronized (lock) {
+            String key = cx + "," + cz + ":" + dimension;
+            if (exploredChunks.add(key)) {
+                saveChunks();
+            }
         }
     }
 
     /** Check if a chunk was explored. */
     public boolean isChunkExplored(int cx, int cz, String dimension) {
-        return exploredChunks.contains(cx + "," + cz + ":" + dimension);
+        synchronized (lock) {
+            return exploredChunks.contains(cx + "," + cz + ":" + dimension);
+        }
     }
 
-    public int exploredChunkCount() { return exploredChunks.size(); }
+    public int exploredChunkCount() {
+        synchronized (lock) { return exploredChunks.size(); }
+    }
 
     // --------------- Bootstrap / Persistence ---------------
 
@@ -224,24 +249,28 @@ public final class BotMemoryStore {
 
     /** Get human-readable stats. */
     public String getStats() {
-        return String.format("Working: %d/%d | Summaries: %d | Resources: %d | Chunks: %d | Total ingested: %d",
-                workingMemory.size(), maxWorking, shortTermSummaries.size(),
-                resourceLocations.size(), exploredChunks.size(), ingestCount);
+        synchronized (lock) {
+            return String.format("Working: %d/%d | Summaries: %d | Resources: %d | Chunks: %d | Total ingested: %d",
+                    workingMemory.size(), maxWorking, shortTermSummaries.size(),
+                    resourceLocations.size(), exploredChunks.size(), ingestCount);
+        }
     }
 
     /** Clear all memory (including persisted). */
     public void clear() {
-        workingMemory.clear();
-        shortTermSummaries.clear();
-        resourceLocations.clear();
-        exploredChunks.clear();
-        ingestCount = 0;
-        try {
-            Files.deleteIfExists(summariesFile);
-            Files.deleteIfExists(resourcesFile);
-            Files.deleteIfExists(chunksFile);
-        } catch (IOException ignored) {}
-        DevLog.info("MEMORY_CLEAR", "all memory cleared");
+        synchronized (lock) {
+            workingMemory.clear();
+            shortTermSummaries.clear();
+            resourceLocations.clear();
+            exploredChunks.clear();
+            ingestCount = 0;
+            try {
+                Files.deleteIfExists(summariesFile);
+                Files.deleteIfExists(resourcesFile);
+                Files.deleteIfExists(chunksFile);
+            } catch (IOException ignored) {}
+            DevLog.info("MEMORY_CLEAR", "all memory cleared");
+        }
     }
 
     // --------------- Internal ---------------
