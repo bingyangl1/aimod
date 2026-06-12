@@ -13,7 +13,6 @@ import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class LLMService {
     private static final String DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions";
@@ -31,9 +30,9 @@ public class LLMService {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
     
-    // Improved health check caching with AtomicReference
-    private static final AtomicReference<HealthCheckResult> HEALTH_CHECK_CACHE = 
-            new AtomicReference<>(new HealthCheckResult("", 0L, false));
+    // Per-model health check caching (thread-safe, no cross-model overwrites)
+    private static final java.util.concurrent.ConcurrentHashMap<String, HealthCheckResult> HEALTH_CHECK_CACHE =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     private String apiUrl;
     private String apiKey;
@@ -204,35 +203,7 @@ public class LLMService {
     }
 
     private boolean isModelAvailable() {
-        if (!modelHealthCheck) {
-            DevLog.info("LLM_HEALTH_SKIP", "reason=disabled");
-            return true;
-        }
-
-        String healthKey = apiUrl + "|" + model;
-        long now = System.currentTimeMillis();
-        HealthCheckResult cached = HEALTH_CHECK_CACHE.get();
-        if (cached.isOk && healthKey.equals(cached.key) &&
-                healthCheckIntervalMs > 0 && now - cached.checkedAtMs < healthCheckIntervalMs) {
-            DevLog.info("LLM_HEALTH_CACHE", "status=ok, ageMs={}, intervalMs={}",
-                    now - cached.checkedAtMs, healthCheckIntervalMs);
-            return true;
-        }
-
-        DevLog.info("LLM_HEALTH_START", "url={}, model={}, maxTokens={}, timeoutMs={}",
-                apiUrl, model, HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
-        try {
-            long healthStartMs = System.currentTimeMillis();
-            callLLMApiDirect("ping", HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs);
-            long healthElapsedMs = System.currentTimeMillis() - healthStartMs;
-            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, true));
-            DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", healthElapsedMs);
-            return true;
-        } catch (Exception e) {
-            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, false));
-            DevLog.warn("LLM_HEALTH_FAIL", "error={}", e.getMessage());
-            return false;
-        }
+        return isModelAvailable(this.model);
     }
 
     /** Thread-safe health check for a specific model. */
@@ -244,8 +215,8 @@ public class LLMService {
 
         String healthKey = apiUrl + "|" + modelToCheck;
         long now = System.currentTimeMillis();
-        HealthCheckResult cached = HEALTH_CHECK_CACHE.get();
-        if (cached.isOk && healthKey.equals(cached.key) &&
+        HealthCheckResult cached = HEALTH_CHECK_CACHE.get(healthKey);
+        if (cached != null && cached.isOk &&
                 healthCheckIntervalMs > 0 && now - cached.checkedAtMs < healthCheckIntervalMs) {
             DevLog.info("LLM_HEALTH_CACHE", "status=ok, ageMs={}, intervalMs={}",
                     now - cached.checkedAtMs, healthCheckIntervalMs);
@@ -258,11 +229,11 @@ public class LLMService {
             long healthStartMs = System.currentTimeMillis();
             callLLMApiDirectWithModel("ping", HEALTH_CHECK_MAX_TOKENS, healthCheckTimeoutMs, modelToCheck);
             long healthElapsedMs = System.currentTimeMillis() - healthStartMs;
-            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, true));
+            HEALTH_CHECK_CACHE.put(healthKey, new HealthCheckResult(healthKey, now, true));
             DevLog.info("LLM_HEALTH_OK", "elapsedMs={}", healthElapsedMs);
             return true;
         } catch (Exception e) {
-            HEALTH_CHECK_CACHE.set(new HealthCheckResult(healthKey, now, false));
+            HEALTH_CHECK_CACHE.put(healthKey, new HealthCheckResult(healthKey, now, false));
             DevLog.warn("LLM_HEALTH_FAIL", "error={}", e.getMessage());
             return false;
         }

@@ -37,16 +37,16 @@ class LLMServiceImprovementTest {
         @Test
         @DisplayName("LLMService uses AtomicReference for health check cache")
         void usesAtomicReferenceForCache() throws Exception {
-            // Verify that LLMService has the expected private fields for caching
+            // Verify that LLMService uses ConcurrentHashMap for per-model health check caching
             var fields = LLMService.class.getDeclaredFields();
-            boolean hasAtomicRef = false;
+            boolean hasConcurrentMap = false;
             for (var field : fields) {
-                if (field.getType().getName().contains("AtomicReference")) {
-                    hasAtomicRef = true;
+                if (field.getType().getName().contains("ConcurrentHashMap")) {
+                    hasConcurrentMap = true;
                     break;
                 }
             }
-            assertTrue(hasAtomicRef, "LLMService should use AtomicReference for health check cache");
+            assertTrue(hasConcurrentMap, "LLMService should use ConcurrentHashMap for per-model health check cache");
         }
 
         @Test

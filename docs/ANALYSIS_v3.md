@@ -587,3 +587,14 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 无路径时：黄色直线连接 bot 和目标 + 距离显示
 
 *更新日期: 2026-06-11 | 版本: 1.0.92-r92*
+
+### r93: LLMService 健康检查缓存竞态修复
+
+**问题**：`HEALTH_CHECK_CACHE` 是单个 `AtomicReference<HealthCheckResult>`，被所有模型共享。两个线程同时检查不同模型时，后写入的会覆盖前一个的结果。
+
+**修复**：
+- `HEALTH_CHECK_CACHE` 从 `AtomicReference` 改为 `ConcurrentHashMap<String, HealthCheckResult>`
+- Key 为 `apiUrl + "|" + model`，每个模型独立缓存
+- 合并两个 `isModelAvailable()` 方法为一个
+
+*更新日期: 2026-06-11 | 版本: 1.0.93-r93*

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.92",
-  "build": "2026-06-11-r92",
+  "version": "1.0.93",
+  "build": "2026-06-11-r93",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -80,6 +80,7 @@
     "r91: Task.injectAction() size cap at MAX_ACTIONS=100 — prevents unbounded list growth during repeated replan loops",
     "r92: BreakBlockAction ToolSet integration — auto-selects best tool + accurate break time",
     "r92: showPath visual improvements — red target marker, progress display, yellow direct line when no path",
+    "r93: LLMService health check cache race fix — ConcurrentHashMap per-model instead of single AtomicReference",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
