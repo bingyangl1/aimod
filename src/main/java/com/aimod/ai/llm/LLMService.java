@@ -456,6 +456,23 @@ public class LLMService {
                 .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                 .build();
 
+        boolean isStreaming = requestBody.has("stream") && requestBody.get("stream").getAsBoolean();
+
+        if (isStreaming) {
+            // Stream response: read line by line to avoid loading entire body into memory
+            HttpResponse<java.io.InputStream> streamResponse = HTTP_CLIENT.send(request,
+                    HttpResponse.BodyHandlers.ofInputStream());
+            int responseCode = streamResponse.statusCode();
+            DevLog.info("LLM_RESPONSE_CODE", "code={}, elapsedMs={}, streaming=true", responseCode, elapsedMs(startedAt));
+            if (responseCode != 200) {
+                String errorBody = new String(streamResponse.body().readAllBytes(), StandardCharsets.UTF_8);
+                DevLog.warn("LLM_ERROR_RESPONSE", "code={}, body={}", responseCode, DevLog.compact(errorBody));
+                throw new IOException("API returned status " + responseCode + ": " + errorBody);
+            }
+            return readSSEStreamFromInputStream(streamResponse.body(), startedAt);
+        }
+
+        // Non-streaming: read entire response as string
         HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         int responseCode = response.statusCode();
         String responseBody = response.body();
@@ -465,10 +482,6 @@ public class LLMService {
         if (responseCode != 200) {
             DevLog.warn("LLM_ERROR_RESPONSE", "code={}, body={}", responseCode, DevLog.compact(responseBody));
             throw new IOException("API returned status " + responseCode + ": " + responseBody);
-        }
-
-        if (requestBody.has("stream") && requestBody.get("stream").getAsBoolean()) {
-            return readSSEStream(responseBody, startedAt);
         }
 
         DevLog.info("LLM_HTTP_RESPONSE", "elapsedMs={}, body={}", elapsedMs(startedAt), DevLog.compact(responseBody));
@@ -505,6 +518,49 @@ public class LLMService {
             // Return the original response body as fallback
             DevLog.info("LLM_HTTP_RESPONSE", "elapsedMs={}, body={}", elapsedMs(startedAt), DevLog.compact(responseBody));
             return responseBody;
+        }
+
+        DevLog.info("LLM_STREAM_DONE", "elapsedMs={}, content={}", elapsedMs(startedAt), DevLog.compact(content.toString()));
+        JsonObject message = new JsonObject();
+        message.addProperty("content", content.toString());
+        JsonObject choice = new JsonObject();
+        choice.add("message", message);
+        JsonArray choices = new JsonArray();
+        choices.add(choice);
+        JsonObject response = new JsonObject();
+        response.add("choices", choices);
+        return response.toString();
+    }
+
+    /**
+     * Stream SSE response from an InputStream, parsing chunks as they arrive.
+     * Avoids loading the entire response body into memory.
+     */
+    private String readSSEStreamFromInputStream(java.io.InputStream inputStream, long startedAt) {
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("data: ")) {
+                    String data = line.substring(6).trim();
+                    if (data.equals("[DONE]")) {
+                        break;
+                    }
+                    try {
+                        JsonObject chunk = JsonParser.parseString(data).getAsJsonObject();
+                        appendStreamingChoice(chunk, content);
+                    } catch (Exception e) {
+                        DevLog.warn("LLM_STREAM_PARSE_ERROR", "data={}", DevLog.compact(data));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            DevLog.warn("LLM_STREAM_READ_ERROR", "{}", e.getMessage());
+        }
+
+        if (content.length() == 0) {
+            DevLog.warn("LLM_STREAM_EMPTY", "stream returned no content");
+            return "{\"choices\":[]}";
         }
 
         DevLog.info("LLM_STREAM_DONE", "elapsedMs={}, content={}", elapsedMs(startedAt), DevLog.compact(content.toString()));

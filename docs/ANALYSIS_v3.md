@@ -598,3 +598,14 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 合并两个 `isModelAvailable()` 方法为一个
 
 *更新日期: 2026-06-11 | 版本: 1.0.93-r93*
+
+### r94: SSE 流式响应修复
+
+**问题**：SSE 流式响应使用 `BodyHandlers.ofString()` 读取整个响应体到内存，无实际流式效果。
+
+**修复**：
+- 当 `streamResponses=true` 时，使用 `BodyHandlers.ofInputStream()` 流式读取
+- 新增 `readSSEStreamFromInputStream()` 方法，逐行读取 InputStream
+- 保持 `readSSEStream(String)` 用于回退场景
+
+*更新日期: 2026-06-11 | 版本: 1.0.94-r94*
