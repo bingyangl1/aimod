@@ -651,3 +651,17 @@ botSkinUrl = "https://example.com/skin.png"
 - `remove(0)` 从 O(n) 改为 O(1) `removeFirst()`
 
 *更新日期: 2026-06-11 | 版本: 1.0.97-r97*
+
+### r98: Dead code 清理
+
+**删除文件:**
+| 文件 | 原因 |
+|------|------|
+| `MovementParkour.java` | 从未被 `BotMovement.create()` 实例化，完全未使用 |
+| `FakeNetHandler.java` | 已废弃，被 `FakePlayerNetHandler` 替代 |
+| `FakeConnection.java` | 已废弃，被 `FakeClientConnection` 替代 |
+
+**其他清理:**
+- 移除 `FakePlayer.java` 中重复的 `Component` import
+
+*更新日期: 2026-06-11 | 版本: 1.0.98-r98*
