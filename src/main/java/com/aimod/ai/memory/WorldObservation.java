@@ -42,12 +42,12 @@ public final class WorldObservation {
         BlockPos pos = bot.blockPosition();
 
         float health = 0;
-        try { health = bot.getHealth(); } catch (Exception ignored) {}
+        try { health = bot.getHealth(); } catch (Exception e) { com.aimod.util.DevLog.warn("WORLD_OBS_HEALTH", "err={}", e.getMessage()); }
         float food = 0;
         try {
             var fd = bot.getFoodData();
             if (fd != null) food = fd.getFoodLevel();
-        } catch (Exception ignored) {}
+        } catch (Exception e) { com.aimod.util.DevLog.warn("WORLD_OBS_FOOD", "err={}", e.getMessage()); }
 
         String biome = "";
         try {
@@ -55,7 +55,7 @@ public final class WorldObservation {
             biome = holder.unwrapKey()
                     .map(k -> k.location().toString())
                     .orElse("unknown");
-        } catch (Exception ignored) {}
+        } catch (Exception e) { com.aimod.util.DevLog.warn("WORLD_OBS_BIOME", "err={}", e.getMessage()); }
 
         long dayTime = bot.level().getDayTime() % 24000;
         String tod = dayTime < 12000 ? "day" : "night";
@@ -75,7 +75,7 @@ public final class WorldObservation {
             for (var e : entities) {
                 threats.add(e.getType().toShortString() + "@" + e.blockPosition().toShortString());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { com.aimod.util.DevLog.warn("WORLD_OBS_THREATS", "err={}", e.getMessage()); }
 
         // Snapshot inventory
         Map<String, Integer> inv = new LinkedHashMap<>();
@@ -89,7 +89,7 @@ public final class WorldObservation {
                     inv.merge(key, stack.getCount(), Integer::sum);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) { com.aimod.util.DevLog.warn("WORLD_OBS_INVENTORY", "err={}", e.getMessage()); }
 
         return new WorldObservation(pos, health, food, biome, tod, blockCounts, threats, inv,
                 System.currentTimeMillis());

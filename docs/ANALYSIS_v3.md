@@ -665,3 +665,18 @@ botSkinUrl = "https://example.com/skin.png"
 - 移除 `FakePlayer.java` 中重复的 `Component` import
 
 *更新日期: 2026-06-11 | 版本: 1.0.98-r98*
+
+### r99: 异常处理改进
+
+**问题**：8 处 `catch (Exception ignored) {}` 静默吞掉异常，不利于调试。
+
+**修复**：所有静默 catch 块改为 `catch (Exception e) { DevLog.warn(..., e.getMessage()); }`，确保异常信息可追踪。
+
+**修改文件:**
+| 文件 | 修改数量 |
+|------|----------|
+| `BotInfo.java` | 1 处 |
+| `FakePlayerManager.java` | 2 处 |
+| `WorldObservation.java` | 5 处 |
+
+*更新日期: 2026-06-11 | 版本: 1.0.99-r99*

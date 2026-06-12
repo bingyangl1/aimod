@@ -72,7 +72,7 @@ public final class BotInfo {
                     var tag = net.minecraft.nbt.TagParser.parseTag(nbt);
                     stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                             net.minecraft.world.item.component.CustomData.of(tag));
-                } catch (Exception ignored) {}
+                } catch (Exception e) { com.aimod.util.DevLog.warn("BOT_INFO_NBT_PARSE", "err={}", e.getMessage()); }
             }
             return stack;
         }

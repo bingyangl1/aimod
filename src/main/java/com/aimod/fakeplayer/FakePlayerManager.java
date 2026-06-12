@@ -209,14 +209,14 @@ public class FakePlayerManager {
                         net.minecraft.core.registries.Registries.DIMENSION, dimKey);
                 ServerLevel dimLevel = server.getLevel(levelKey);
                 if (dimLevel != null) level = dimLevel;
-            } catch (Exception ignored) {}
+            } catch (Exception e) { DevLog.warn("BOT_LOAD_DIM_PARSE", "err={}", e.getMessage()); }
         }
 
         Vec3 pos = new Vec3(info.pos.x, info.pos.y, info.pos.z);
         GameType gamemode = GameType.valueOf(info.gamemode);
 
         UUID persistentUUID = null;
-        try { persistentUUID = UUID.fromString(info.uuid); } catch (Exception ignored) {}
+        try { persistentUUID = UUID.fromString(info.uuid); } catch (Exception e) { DevLog.warn("BOT_LOAD_UUID_PARSE", "uuid={}, err={}", info.uuid, e.getMessage()); }
 
         FakePlayer player = FakePlayer.createAndRegister(server, level, info.name, pos, gamemode, null, persistentUUID);
         if (player == null) return null;

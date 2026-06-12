@@ -1,6 +1,6 @@
 {
-  "version": "1.0.98",
-  "build": "2026-06-11-r98",
+  "version": "1.0.99",
+  "build": "2026-06-11-r99",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -88,6 +88,7 @@
     "r97: WorldObservation single-pass block scan — countNearbyBatched scans volume once for all 19 block types (was 19 separate scans)",
     "r97: BotMemoryStore shortTermSummaries uses ArrayDeque — O(1) removeFirst instead of O(n) ArrayList.remove(0)",
     "r98: Dead code cleanup — removed unused MovementParkour, deprecated FakeNetHandler/FakeConnection, duplicate import",
+    "r99: Exception handling — 8 silent catch(Exception ignored) blocks now log warnings via DevLog",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
