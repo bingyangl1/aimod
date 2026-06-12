@@ -188,6 +188,31 @@ public class ModConfig {
                      "Default: true")
             .define("enableUnstuckChain", true);
 
+    public static final ModConfigSpec.ConfigValue<Integer> PATHFINDER_TIMEOUT_MS = BUILDER
+            .comment("A* pathfinding timeout in milliseconds",
+                     "Higher values allow longer paths but may block longer")
+            .defineInRange("pathfinderTimeoutMs", 2000, 500, 10000);
+
+    public static final ModConfigSpec.ConfigValue<Integer> PATHFINDER_MAX_RADIUS = BUILDER
+            .comment("Maximum A* pathfinding search radius in blocks",
+                     "Higher values find longer paths but use more CPU")
+            .defineInRange("pathfinderMaxRadius", 20, 5, 64);
+
+    public static final ModConfigSpec.ConfigValue<Integer> MAX_VEIN_SIZE = BUILDER
+            .comment("Maximum number of blocks in a single vein mine operation",
+                     "Prevents accidentally mining too many connected blocks")
+            .defineInRange("maxVeinSize", 64, 1, 256);
+
+    public static final ModConfigSpec.ConfigValue<Integer> DEFENSE_SCAN_RADIUS = BUILDER
+            .comment("Radius (blocks) to scan for hostile mobs for defense chain",
+                     "Larger values detect threats earlier but use more CPU")
+            .defineInRange("defenseScanRadius", 8, 3, 32);
+
+    public static final ModConfigSpec.ConfigValue<Integer> DEFENSE_RETREAT_HEALTH = BUILDER
+            .comment("Health level below which bot retreats from combat",
+                     "Bot will run away when health drops below this value")
+            .defineInRange("defenseRetreatHealth", 6, 1, 20);
+
     public static final ModConfigSpec.ConfigValue<Integer> HUNGER_THRESHOLD = BUILDER
             .comment("Food level below which the bot auto-eats")
             .defineInRange("hungerThreshold", 14, 0, 20);
@@ -303,6 +328,11 @@ public class ModConfig {
     public static boolean getEnableDefenseChain() { return ENABLE_DEFENSE_CHAIN.get(); }
     public static boolean getEnableFoodChain() { return ENABLE_FOOD_CHAIN.get(); }
     public static boolean getEnableUnstuckChain() { return ENABLE_UNSTUCK_CHAIN.get(); }
+    public static int getPathfinderTimeoutMs() { return PATHFINDER_TIMEOUT_MS.get(); }
+    public static int getPathfinderMaxRadius() { return PATHFINDER_MAX_RADIUS.get(); }
+    public static int getMaxVeinSize() { return MAX_VEIN_SIZE.get(); }
+    public static int getDefenseScanRadius() { return DEFENSE_SCAN_RADIUS.get(); }
+    public static int getDefenseRetreatHealth() { return DEFENSE_RETREAT_HEALTH.get(); }
     public static int getHungerThreshold() { return HUNGER_THRESHOLD.get(); }
     public static double getMovementSpeed() { return MOVEMENT_SPEED.get(); }
     public static int getMaxContextTokens() { return MAX_CONTEXT_TOKENS.get(); }
@@ -332,4 +362,9 @@ public class ModConfig {
     public static void setEnableFoodChain(boolean v) { ENABLE_FOOD_CHAIN.set(v); }
     public static void setEnableUnstuckChain(boolean v) { ENABLE_UNSTUCK_CHAIN.set(v); }
     public static void setCheapModelName(String v) { CHEAP_MODEL_NAME.set(v); }
+    public static void setPathfinderTimeoutMs(int v) { PATHFINDER_TIMEOUT_MS.set(v); }
+    public static void setPathfinderMaxRadius(int v) { PATHFINDER_MAX_RADIUS.set(v); }
+    public static void setMaxVeinSize(int v) { MAX_VEIN_SIZE.set(v); }
+    public static void setDefenseScanRadius(int v) { DEFENSE_SCAN_RADIUS.set(v); }
+    public static void setDefenseRetreatHealth(int v) { DEFENSE_RETREAT_HEALTH.set(v); }
 }

@@ -691,3 +691,19 @@ botSkinUrl = "https://example.com/skin.png"
 | 4 | `AutoReplenish.java` | 槽位范围 0-35 → 0-40（检查 armor/offhand 备用物品） |
 
 *更新日期: 2026-06-11 | 版本: 1.1.00-r100*
+
+### r101: 更多可配置参数
+
+**新增配置选项:**
+
+| 配置项 | 默认值 | 范围 | 说明 |
+|--------|--------|------|------|
+| `pathfinderTimeoutMs` | 2000 | 500-10000 | A* 寻路超时时间 |
+| `pathfinderMaxRadius` | 20 | 5-64 | 最大寻路搜索半径 |
+| `maxVeinSize` | 64 | 1-256 | 单次连锁采集最大方块数 |
+| `defenseScanRadius` | 8 | 3-32 | 防御链扫描半径 |
+| `defenseRetreatHealth` | 6 | 1-20 | 撤退生命值阈值 |
+
+所有配置可通过 `/ai_bot config <key> <value>` 修改。
+
+*更新日期: 2026-06-11 | 版本: 1.1.01-r101*

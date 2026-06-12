@@ -1,6 +1,6 @@
 {
-  "version": "1.1.00",
-  "build": "2026-06-11-r100",
+  "version": "1.1.01",
+  "build": "2026-06-11-r101",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -92,6 +92,7 @@
     "r100: LLMResponseParser pre-compiled Pattern constants (was recompiling on every LLM response)",
     "r100: MovementTraverse water swimming support — bot now swims up/down/horizontal in water",
     "r100: AutoReplaceTool/AutoReplenish slot range 0-35 → 0-40 (was missing armor/offhand slots)",
+    "r101: New config options — pathfinderTimeoutMs, pathfinderMaxRadius, maxVeinSize, defenseScanRadius, defenseRetreatHealth",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

@@ -25,7 +25,9 @@ public class BotCommandConfig implements SubCommand {
     private static final List<String> CONFIG_KEYS = List.of(
             "scanRadius", "hungerThreshold", "movementSpeed",
             "veinMine", "autoReplenish", "autoReplaceTool", "autoFish", "maxBots",
-            "showTaskAboveHead", "cheapModelName"
+            "showTaskAboveHead", "cheapModelName",
+            "pathfinderTimeoutMs", "pathfinderMaxRadius", "maxVeinSize",
+            "defenseScanRadius", "defenseRetreatHealth"
     );
 
     @Override
@@ -99,6 +101,11 @@ public class BotCommandConfig implements SubCommand {
         sb.append("maxBots: ").append(com.aimod.config.ModConfig.getMaxBots()).append(" (1-50)\n");
         sb.append("showTaskAboveHead: ").append(com.aimod.config.ModConfig.getShowTaskAboveHead()).append("\n");
         sb.append("cheapModelName: ").append(com.aimod.config.ModConfig.getCheapModelName()).append(" (replan model)\n");
+        sb.append("pathfinderTimeoutMs: ").append(com.aimod.config.ModConfig.getPathfinderTimeoutMs()).append(" (500-10000)\n");
+        sb.append("pathfinderMaxRadius: ").append(com.aimod.config.ModConfig.getPathfinderMaxRadius()).append(" (5-64)\n");
+        sb.append("maxVeinSize: ").append(com.aimod.config.ModConfig.getMaxVeinSize()).append(" (1-256)\n");
+        sb.append("defenseScanRadius: ").append(com.aimod.config.ModConfig.getDefenseScanRadius()).append(" (3-32)\n");
+        sb.append("defenseRetreatHealth: ").append(com.aimod.config.ModConfig.getDefenseRetreatHealth()).append(" (1-20)\n");
         sb.append("\n§7用法: /ai_bot config <key> [value]§r");
         src.sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
@@ -149,6 +156,11 @@ public class BotCommandConfig implements SubCommand {
             case "maxBots" -> String.valueOf(com.aimod.config.ModConfig.getMaxBots());
             case "showTaskAboveHead" -> String.valueOf(com.aimod.config.ModConfig.getShowTaskAboveHead());
             case "cheapModelName" -> com.aimod.config.ModConfig.getCheapModelName();
+            case "pathfinderTimeoutMs" -> String.valueOf(com.aimod.config.ModConfig.getPathfinderTimeoutMs());
+            case "pathfinderMaxRadius" -> String.valueOf(com.aimod.config.ModConfig.getPathfinderMaxRadius());
+            case "maxVeinSize" -> String.valueOf(com.aimod.config.ModConfig.getMaxVeinSize());
+            case "defenseScanRadius" -> String.valueOf(com.aimod.config.ModConfig.getDefenseScanRadius());
+            case "defenseRetreatHealth" -> String.valueOf(com.aimod.config.ModConfig.getDefenseRetreatHealth());
             default -> null;
         };
     }
@@ -165,6 +177,11 @@ public class BotCommandConfig implements SubCommand {
             case "maxBots" -> { com.aimod.config.ModConfig.setMaxBots(Integer.parseInt(valStr)); yield true; }
             case "showTaskAboveHead" -> { com.aimod.config.ModConfig.setShowTaskAboveHead(Boolean.parseBoolean(valStr)); yield true; }
             case "cheapModelName" -> { com.aimod.config.ModConfig.setCheapModelName(valStr); yield true; }
+            case "pathfinderTimeoutMs" -> { com.aimod.config.ModConfig.setPathfinderTimeoutMs(Integer.parseInt(valStr)); yield true; }
+            case "pathfinderMaxRadius" -> { com.aimod.config.ModConfig.setPathfinderMaxRadius(Integer.parseInt(valStr)); yield true; }
+            case "maxVeinSize" -> { com.aimod.config.ModConfig.setMaxVeinSize(Integer.parseInt(valStr)); yield true; }
+            case "defenseScanRadius" -> { com.aimod.config.ModConfig.setDefenseScanRadius(Integer.parseInt(valStr)); yield true; }
+            case "defenseRetreatHealth" -> { com.aimod.config.ModConfig.setDefenseRetreatHealth(Integer.parseInt(valStr)); yield true; }
             default -> false;
         };
     }
