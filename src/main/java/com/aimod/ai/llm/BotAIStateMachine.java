@@ -51,17 +51,17 @@ public class BotAIStateMachine {
     public synchronized void fail() { transition(State.FAILED); }
     public synchronized void reset() { transition(State.IDLE); actionsDone = 0; taskDescription = null; currentActionDesc = null; }
 
-    // ---- queries ----
-    public State getCurrent() { return current; }
-    public State getPrevious() { return previous; }
-    public boolean isActive() { return current != State.IDLE && current != State.COMPLETED && current != State.FAILED; }
-    public boolean canAcceptTask() { return current == State.IDLE || current == State.COMPLETED || current == State.FAILED; }
-    public int getActionsDone() { return actionsDone; }
-    public int getActionsTotal() { return actionsTotal; }
-    public String getTaskDescription() { return taskDescription; }
+    // ---- queries (synchronized for thread safety) ----
+    public synchronized State getCurrent() { return current; }
+    public synchronized State getPrevious() { return previous; }
+    public synchronized boolean isActive() { return current != State.IDLE && current != State.COMPLETED && current != State.FAILED; }
+    public synchronized boolean canAcceptTask() { return current == State.IDLE || current == State.COMPLETED || current == State.FAILED; }
+    public synchronized int getActionsDone() { return actionsDone; }
+    public synchronized int getActionsTotal() { return actionsTotal; }
+    public synchronized String getTaskDescription() { return taskDescription; }
     public synchronized void setCurrentActionDesc(String desc) { this.currentActionDesc = desc; }
     public synchronized void setTaskInfo(String desc, int total) { this.taskDescription = desc; this.actionsTotal = total; }
-    public String getCurrentActionDesc() { return currentActionDesc; }
-    public long getStateElapsedMs() { return System.currentTimeMillis() - stateEnteredAt; }
-    public float getProgress() { return actionsTotal > 0 ? (float) actionsDone / actionsTotal : 0f; }
+    public synchronized String getCurrentActionDesc() { return currentActionDesc; }
+    public synchronized long getStateElapsedMs() { return System.currentTimeMillis() - stateEnteredAt; }
+    public synchronized float getProgress() { return actionsTotal > 0 ? (float) actionsDone / actionsTotal : 0f; }
 }

@@ -530,6 +530,9 @@ public class FakePlayer extends ServerPlayer {
      * Cancel the current task, stopping all bot activity.
      */
     public void cancelTask() {
+        // Cancel any running replan before modifying task state
+        aiManager.cancelReplan();
+
         if (this.currentTask != null) {
             String desc = this.currentTask.getDescription();
             this.currentTask.setStatus(Task.TaskStatus.FAILED);

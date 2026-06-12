@@ -26,6 +26,7 @@ public class TaskReplanner {
     private final BotMetrics metrics;
 
     private volatile boolean replanning = false;
+    private volatile boolean cancelled = false; // Set by cancelTask() to abort background replan
     private final java.util.concurrent.atomic.AtomicInteger incrReplanCount = new java.util.concurrent.atomic.AtomicInteger(0);
     private static final int MAX_INCR_REPLAN = 5;
     private final java.util.concurrent.atomic.AtomicInteger consecutiveUnknown = new java.util.concurrent.atomic.AtomicInteger(0);
@@ -45,10 +46,20 @@ public class TaskReplanner {
     public boolean hasReplanned() { return incrReplanCount.get() > 0; }
 
     /**
+     * Cancel any running replan. Called by FakePlayer.cancelTask().
+     * Sets a flag that the background thread checks before applying results.
+     */
+    public void cancel() {
+        cancelled = true;
+        replanning = false;
+    }
+
+    /**
      * Incremental replan: ask LLM for next action after a failure.
      */
     public void incrementalReplan(Task task, String failedActionDesc, String ownerName) {
         this.lastOwnerName = ownerName;
+        this.cancelled = false; // Reset cancelled flag for new replan
         if (replanning) return;
         if (incrReplanCount.get() >= MAX_INCR_REPLAN) {
             task.setStatus(Task.TaskStatus.FAILED);
@@ -87,60 +98,99 @@ public class TaskReplanner {
                 LLMResponse resp = planner.getLlmService().sendPromptWithModel(ctx, cheapModel);
                 long llmElapsed = System.currentTimeMillis() - llmStart;
                 metrics.recordLlmCall(resp.isSuccess(), llmElapsed);
-                if (resp.isSuccess()) {
-                    var acts = planner.convertResponseToActions(resp, lastOwnerName);
-                    if (!acts.isEmpty()) {
-                        var next = acts.get(0);
-                        consecutiveUnknown.set(0);
-                        if (next.getDescription().equals(failedActionDesc)) {
-                            task.advanceToNextAction();
-                            incrReplanCount.set(0);
-                            metrics.recordReplanSucceeded();
-                            stateMachine.startExecuting();
-                        } else {
-                            task.injectAction(next);
-                            task.advanceToNextAction();
-                            incrReplanCount.set(0);
-                            metrics.recordReplanSucceeded();
-                            DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
-                            stateMachine.startExecuting();
-                        }
-                    } else {
-                        consecutiveUnknown.incrementAndGet();
-                        String rawContent = resp.getRawResponse();
-                        if (rawContent != null && !rawContent.isBlank()) {
-                            String truncated = rawContent.length() > 100 ? rawContent.substring(0, 100) + "..." : rawContent;
-                            recentReplanAttempts.add("BAD FORMAT: " + truncated);
-                            synchronized (recentReplanAttempts) {
-                                while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+
+                // Check if task was cancelled while LLM was processing
+                if (cancelled) {
+                    replanning = false;
+                    bot.getMovementController().getUnstuckDetector().setPaused(false);
+                    return;
+                }
+
+                // Post all Task mutations to main thread to avoid concurrent modification
+                var server = bot.level().getServer();
+                if (server == null) {
+                    replanning = false;
+                    return;
+                }
+
+                server.execute(() -> {
+                    // Double-check cancellation after posting to main thread
+                    if (cancelled) {
+                        replanning = false;
+                        bot.getMovementController().getUnstuckDetector().setPaused(false);
+                        return;
+                    }
+                    try {
+                        if (resp.isSuccess()) {
+                            var acts = planner.convertResponseToActions(resp, lastOwnerName);
+                            if (!acts.isEmpty()) {
+                                var next = acts.get(0);
+                                consecutiveUnknown.set(0);
+                                if (next.getDescription().equals(failedActionDesc)) {
+                                    task.advanceToNextAction();
+                                    incrReplanCount.set(0);
+                                    metrics.recordReplanSucceeded();
+                                    stateMachine.startExecuting();
+                                } else {
+                                    task.injectAction(next);
+                                    task.advanceToNextAction();
+                                    incrReplanCount.set(0);
+                                    metrics.recordReplanSucceeded();
+                                    DevLog.info("REPLAN_INCR", "injected={}", next.getDescription());
+                                    stateMachine.startExecuting();
+                                }
+                            } else {
+                                consecutiveUnknown.incrementAndGet();
+                                String rawContent = resp.getRawResponse();
+                                if (rawContent != null && !rawContent.isBlank()) {
+                                    String truncated = rawContent.length() > 100 ? rawContent.substring(0, 100) + "..." : rawContent;
+                                    synchronized (recentReplanAttempts) {
+                                        recentReplanAttempts.add("BAD FORMAT: " + truncated);
+                                        while (recentReplanAttempts.size() > 10) recentReplanAttempts.remove(0);
+                                    }
+                                }
+                                DevLog.warn("REPLAN_UNKNOWN_CONSEQ", "count={}, failedAction={}",
+                                        consecutiveUnknown.get(), failedActionDesc);
+                                if (consecutiveUnknown.get() >= 3) {
+                                    task.setStatus(Task.TaskStatus.FAILED);
+                                    metrics.recordTaskFailed();
+                                    feedback.reportTaskFailed(task.getDescription(),
+                                            "LLM repeatedly generated unrecognized action types");
+                                    planner.getPlanCache().markFailed(planner.getLastCommand());
+                                    incrReplanCount.set(0);
+                                    consecutiveUnknown.set(0);
+                                } else if (consecutiveUnknown.get() >= 2) {
+                                    task.advanceToNextAction();
+                                    incrReplanCount.set(0);
+                                    consecutiveUnknown.set(0);
+                                    stateMachine.startExecuting();
+                                    DevLog.info("REPLAN_SKIP_UNKNOWN", "advanced past stuck action");
+                                }
                             }
                         }
-                        DevLog.warn("REPLAN_UNKNOWN_CONSEQ", "count={}, failedAction={}",
-                                consecutiveUnknown.get(), failedActionDesc);
-                        if (consecutiveUnknown.get() >= 3) {
-                            task.setStatus(Task.TaskStatus.FAILED);
-                            metrics.recordTaskFailed();
-                            feedback.reportTaskFailed(task.getDescription(),
-                                    "LLM repeatedly generated unrecognized action types");
-                            planner.getPlanCache().markFailed(planner.getLastCommand());
-                            incrReplanCount.set(0);
-                            consecutiveUnknown.set(0);
-                        } else if (consecutiveUnknown.get() >= 2) {
-                            task.advanceToNextAction();
-                            incrReplanCount.set(0);
-                            consecutiveUnknown.set(0);
-                            stateMachine.startExecuting();
-                            DevLog.info("REPLAN_SKIP_UNKNOWN", "advanced past stuck action");
-                        }
+                    } catch (Exception e) {
+                        task.setStatus(Task.TaskStatus.FAILED);
+                        metrics.recordTaskFailed();
+                        feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
+                    } finally {
+                        replanning = false;
+                        bot.getMovementController().getUnstuckDetector().setPaused(false);
                     }
-                }
+                });
             } catch (Exception e) {
-                task.setStatus(Task.TaskStatus.FAILED);
-                metrics.recordTaskFailed();
-                feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
-            } finally {
-                replanning = false;
-                bot.getMovementController().getUnstuckDetector().setPaused(false);
+                // LLM call failed — post failure to main thread
+                var server2 = bot.level().getServer();
+                if (server2 != null) {
+                    server2.execute(() -> {
+                        task.setStatus(Task.TaskStatus.FAILED);
+                        metrics.recordTaskFailed();
+                        feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
+                        replanning = false;
+                        bot.getMovementController().getUnstuckDetector().setPaused(false);
+                    });
+                } else {
+                    replanning = false;
+                }
             }
         }, "AIMod-Incr-" + bot.getStringUUID().substring(0, 8));
         t.setDaemon(true);
@@ -217,6 +267,7 @@ public class TaskReplanner {
      * Reset replan counters (called when task completes or is cancelled).
      */
     public void reset() {
+        cancelled = false;
         incrReplanCount.set(0);
         consecutiveUnknown.set(0);
         recentReplanAttempts.clear();

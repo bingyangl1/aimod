@@ -757,3 +757,15 @@ botSkinUrl = "https://example.com/skin.png"
 | 3 | `DefenseChain.java` | `SCAN_RADIUS` 和 `RETREAT_HEALTH` 替换为 `ModConfig` 配置调用 |
 
 *更新日期: 2026-06-12 | 版本: 1.1.05-r105*
+
+### r106: Phase 3 审计修复 — High 线程安全
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `TaskReplanner.java` | 后台线程 Task 修改改为 `server.execute()` 回调到主线程 |
+| 2 | `BotAIStateMachine.java` | 所有 getter 方法加 `synchronized` |
+| 3 | `TaskReplanner.java` | 添加 `cancelled` 标志，后台线程检查后跳过状态机转换 |
+| 4 | `BotAIManager.java` | 添加 `cancelReplan()` 方法 |
+| 5 | `FakePlayer.java` | `cancelTask()` 先调用 `cancelReplan()` 再修改状态 |
+
+*更新日期: 2026-06-12 | 版本: 1.1.06-r106*

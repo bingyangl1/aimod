@@ -77,4 +77,11 @@ public class BotAIManager {
     public List<Action> convertCachedToActions(List<String> actionJsons, String ownerName) {
         return planner.convertCachedToActions(actionJsons, ownerName);
     }
+
+    /**
+     * Cancel any running replan. Called by FakePlayer.cancelTask().
+     */
+    public void cancelReplan() {
+        replanner.cancel();
+    }
 }
