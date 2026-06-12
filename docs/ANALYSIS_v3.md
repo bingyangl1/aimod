@@ -722,3 +722,18 @@ botSkinUrl = "https://example.com/skin.png"
 - 原有 `create(src, dest)` 保持向后兼容
 
 *更新日期: 2026-06-11 | 版本: 1.1.02-r102*
+
+### r103: 新增 Action 类型
+
+**新增 4 个 Action 类型:**
+
+| Action | JSON 格式 | 功能 |
+|--------|----------|------|
+| `UseItemAction` | `{"type":"use_item","item_id":"minecraft:bread"}` | 使用物品（吃食物、喝药水、使用弓等） |
+| `DropAction` | `{"type":"drop","item_id":"minecraft:dirt","count":1}` | 丢弃物品 |
+| `SneakAction` | `{"type":"sneak","sneak":true}` | 潜行/蹲下（边缘搭桥、防止掉落） |
+| `LookAtAction` | `{"type":"look_at","x":0,"y":64,"z":0}` | 看向指定位置（瞄准、交互） |
+
+**Action 类型总数：22 个**
+
+*更新日期: 2026-06-11 | 版本: 1.1.03-r103*

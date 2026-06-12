@@ -50,7 +50,7 @@ public class TaskPlanner {
     private static final Set<String> KNOWN_ACTION_TYPES = Set.of(
             "move_to", "break_block", "place_block", "attack", "craft", "follow",
             "give_item", "require_items", "say", "wait", "mine", "gather", "interact", "equip",
-            "vein_mine"
+            "vein_mine", "use_item", "drop", "sneak", "look_at"
     );
 
     /** Cached actions for deferred planCache.store on success */
@@ -323,6 +323,17 @@ public class TaskPlanner {
                 case "equip" -> new EquipItemAction(
                         getString(obj, "item_id", ""),
                         parseSlot(getString(obj, "slot", "")));
+                case "use_item" -> new UseItemAction(
+                        getString(obj, "item_id", getString(obj, "item", "")));
+                case "drop" -> new DropAction(
+                        getString(obj, "item_id", getString(obj, "item", "")),
+                        getInt(obj, "count", 1));
+                case "sneak" -> new SneakAction(
+                        getBoolean(obj, "sneak", true));
+                case "look_at" -> new LookAtAction(
+                        getDouble(obj, "x", 0),
+                        getDouble(obj, "y", 0),
+                        getDouble(obj, "z", 0));
                 default -> {
                     DevLog.warn("PLAN_ACTION_UNKNOWN", "type={}, json={}", type, DevLog.compact(obj.toString()));
                     yield null;
@@ -428,6 +439,13 @@ public class TaskPlanner {
             return object.get(key).getAsString();
         }
         return fallback;
+    }
+
+    private boolean getBoolean(JsonObject obj, String key, boolean defaultValue) {
+        if (obj.has(key) && !obj.get(key).isJsonNull()) {
+            try { return obj.get(key).getAsBoolean(); } catch (Exception e) { return defaultValue; }
+        }
+        return defaultValue;
     }
 
     private BlockItem getBlockItemFromString(String blockId) {
