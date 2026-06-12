@@ -1,6 +1,6 @@
 {
-  "version": "1.0.95",
-  "build": "2026-06-11-r95",
+  "version": "1.0.96",
+  "build": "2026-06-11-r96",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -83,6 +83,8 @@
     "r93: LLMService health check cache race fix — ConcurrentHashMap per-model instead of single AtomicReference",
     "r94: SSE streaming response uses InputStream — reads line by line instead of loading entire body into memory",
     "r95: Bot skin system — BotSkinManager applies botSkinUrl config to GameProfile textures property",
+    "r96: FakePlayerManager uses ModConfig.getMaxBots() instead of hardcoded MAX_FAKE_PLAYERS=10",
+    "r96: GatherResourceAction uses parent setFailReason() — fixes field shadowing that made getFailReason() always return null",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

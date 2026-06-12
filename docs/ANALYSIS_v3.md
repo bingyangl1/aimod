@@ -628,3 +628,13 @@ botSkinUrl = "https://example.com/skin.png"
 ```
 
 *更新日期: 2026-06-11 | 版本: 1.0.95-r95*
+
+### r96: 配置 Bug 修复 + 字段遮蔽修复
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `FakePlayerManager.java` | 使用 `ModConfig.getMaxBots()` 替代硬编码 `MAX_FAKE_PLAYERS=10` |
+| 2 | `GatherResourceAction.java` | 移除遮蔽父类的 `failReason` 字段，使用 `setFailReason()` |
+| 3 | `TaskPlanner.java` | 简化 `getActionFailReason()` — 移除 GatherResourceAction 特殊处理 |
+
+*更新日期: 2026-06-11 | 版本: 1.0.96-r96*

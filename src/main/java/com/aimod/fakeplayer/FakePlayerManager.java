@@ -25,8 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class FakePlayerManager {
 
-    private static final int MAX_FAKE_PLAYERS = 10;
-
     private final MinecraftServer server;
     private final Map<UUID, FakePlayer> activePlayers = new ConcurrentHashMap<>();
     /** Dual mode: tracks the Mob wrapper alongside each FakePlayer. */
@@ -47,8 +45,8 @@ public class FakePlayerManager {
      */
     @Nullable
     public FakePlayer createFakePlayer(String name, ServerLevel level, Vec3 pos, GameType gamemode, BotMode mode) {
-        if (activePlayers.size() >= MAX_FAKE_PLAYERS) {
-            DevLog.warn("FAKE_PLAYER_LIMIT", "Max fake players reached: {}", MAX_FAKE_PLAYERS);
+        if (activePlayers.size() >= ModConfig.getMaxBots()) {
+            DevLog.warn("FAKE_PLAYER_LIMIT", "Max fake players reached: {}", ModConfig.getMaxBots());
             return null;
         }
 
@@ -167,7 +165,7 @@ public class FakePlayerManager {
     }
 
     public boolean canCreateMore() {
-        return activePlayers.size() < MAX_FAKE_PLAYERS;
+        return activePlayers.size() < ModConfig.getMaxBots();
     }
 
     /**
@@ -198,8 +196,8 @@ public class FakePlayerManager {
         if (opt.isEmpty()) return null;
 
         BotInfo info = opt.get();
-        if (activePlayers.size() >= MAX_FAKE_PLAYERS) {
-            DevLog.warn("BOT_LOAD_LIMIT", "Max fake players reached: {}", MAX_FAKE_PLAYERS);
+        if (activePlayers.size() >= ModConfig.getMaxBots()) {
+            DevLog.warn("BOT_LOAD_LIMIT", "Max fake players reached: {}", ModConfig.getMaxBots());
             return null;
         }
 

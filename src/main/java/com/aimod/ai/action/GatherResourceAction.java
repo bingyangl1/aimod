@@ -50,7 +50,7 @@ public class GatherResourceAction extends Action {
     private final java.util.Set<BlockPos> failedTargets = new java.util.HashSet<>();
     private int consecutiveUnreachable;
     private static final int MAX_CONSECUTIVE_UNREACHABLE = 5;
-    public String failReason; // set on failure for player feedback
+    // Note: failReason is inherited from Action base class via setFailReason()
     private com.aimod.ai.pathing.PathExecutor cachedPathExecutor;
     private BlockPos cachedPathGoal;
     private int pathFailCooldown = 0;
@@ -114,7 +114,7 @@ public class GatherResourceAction extends Action {
 
         // Global skip limit — prevent infinite loop cycling through unreachable targets
         if (totalTargetsSkipped >= MAX_TARGETS_SKIPPED) {
-            failReason = "连续" + totalTargetsSkipped + "个目标无法到达，放弃采集";
+            setFailReason("连续" + totalTargetsSkipped + "个目标无法到达，放弃采集");
             DevLog.warn("GATHER_MAX_TARGETS_SKIPPED", "type={}, skipped={}", resourceType, totalTargetsSkipped);
             status = ActionStatus.FAILED;
             return;
@@ -141,7 +141,7 @@ public class GatherResourceAction extends Action {
                 }
                 DevLog.warn("GATHER_NO_RESOURCE", "type={}, radius={}, retries={}",
                         resourceType, searchRadius, noResourceRetries);
-                failReason = "在" + searchRadius + "格内找不到" + resourceType;
+                setFailReason("在" + searchRadius + "格内找不到" + resourceType);
                 status = ActionStatus.FAILED;
                 return;
             }
@@ -274,7 +274,7 @@ public class GatherResourceAction extends Action {
             DevLog.warn("GATHER_UNREACHABLE", "type={}, target={}, consecutive={}, totalSkipped={}",
                     resourceType, currentTarget.toShortString(), consecutiveUnreachable, totalTargetsSkipped);
             if (consecutiveUnreachable >= MAX_CONSECUTIVE_UNREACHABLE) {
-                failReason = "连续" + MAX_CONSECUTIVE_UNREACHABLE + "个目标无法到达，可能需要工具或洞穴入口";
+                setFailReason("连续" + MAX_CONSECUTIVE_UNREACHABLE + "个目标无法到达，可能需要工具或洞穴入口");
                 status = ActionStatus.FAILED;
                 return;
             }
@@ -649,7 +649,7 @@ public class GatherResourceAction extends Action {
         if (waterEscapeTicks > MAX_WATER_ESCAPE_TICKS) {
             DevLog.warn("GATHER_WATER_ESCAPE_TIMEOUT", "ticks={}", waterEscapeTicks);
             status = ActionStatus.FAILED;
-            failReason = "溺水：无法找到干燥陆地";
+            setFailReason("溺水：无法找到干燥陆地");
             return;
         }
 
