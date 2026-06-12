@@ -31,7 +31,7 @@ public final class BotMemoryStore {
     private static final int DEFAULT_MAX_RESOURCES = 500;
 
     private final Deque<WorldObservation> workingMemory = new ArrayDeque<>();
-    private final List<String> shortTermSummaries = new ArrayList<>();
+    private final Deque<String> shortTermSummaries = new ArrayDeque<>(); // O(1) add/removeFirst
     private final List<ResourceLocation> resourceLocations = new ArrayList<>();
     private final Set<String> exploredChunks = new HashSet<>();
 
@@ -110,9 +110,9 @@ public final class BotMemoryStore {
                 summary.append(" → ").append(obs.toCompactString());
             }
         }
-        shortTermSummaries.add(summary.toString());
+        shortTermSummaries.addLast(summary.toString());
         while (shortTermSummaries.size() > DEFAULT_MAX_SUMMARIES) {
-            shortTermSummaries.remove(0);
+            shortTermSummaries.removeFirst();
         }
         saveSummaries();
         DevLog.info("MEMORY_COMPACT", "count={}, freed={}, totalSummaries={}",
@@ -137,7 +137,7 @@ public final class BotMemoryStore {
 
     /** Get all short-term summaries. */
     public List<String> getShortTermSummaries() {
-        return Collections.unmodifiableList(shortTermSummaries);
+        return new ArrayList<>(shortTermSummaries);
     }
 
     // --------------- Tier 3: Long-term Knowledge ---------------

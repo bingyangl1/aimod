@@ -638,3 +638,16 @@ botSkinUrl = "https://example.com/skin.png"
 | 3 | `TaskPlanner.java` | 简化 `getActionFailReason()` — 移除 GatherResourceAction 特殊处理 |
 
 *更新日期: 2026-06-11 | 版本: 1.0.96-r96*
+
+### r97: 性能优化 — WorldObservation 单次扫描 + BotMemoryStore O(1) 摘要删除
+
+**WorldObservation 单次扫描：**
+- 原来扫描 19 种方块 x 32^3 体积 = 65 万次方块查找（每种方块单独扫描）
+- 新增 `countNearbyBatched()` — 单次遍历体积，同时计数所有 19 种方块
+- 性能提升约 19 倍
+
+**BotMemoryStore O(1) 摘要删除：**
+- `shortTermSummaries` 从 `ArrayList` 改为 `ArrayDeque`
+- `remove(0)` 从 O(n) 改为 O(1) `removeFirst()`
+
+*更新日期: 2026-06-11 | 版本: 1.0.97-r97*

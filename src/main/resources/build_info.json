@@ -1,6 +1,6 @@
 {
-  "version": "1.0.96",
-  "build": "2026-06-11-r96",
+  "version": "1.0.97",
+  "build": "2026-06-11-r97",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -85,6 +85,8 @@
     "r95: Bot skin system — BotSkinManager applies botSkinUrl config to GameProfile textures property",
     "r96: FakePlayerManager uses ModConfig.getMaxBots() instead of hardcoded MAX_FAKE_PLAYERS=10",
     "r96: GatherResourceAction uses parent setFailReason() — fixes field shadowing that made getFailReason() always return null",
+    "r97: WorldObservation single-pass block scan — countNearbyBatched scans volume once for all 19 block types (was 19 separate scans)",
+    "r97: BotMemoryStore shortTermSummaries uses ArrayDeque — O(1) removeFirst instead of O(n) ArrayList.remove(0)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

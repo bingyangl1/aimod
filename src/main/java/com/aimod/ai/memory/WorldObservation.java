@@ -60,21 +60,8 @@ public final class WorldObservation {
         long dayTime = bot.level().getDayTime() % 24000;
         String tod = dayTime < 12000 ? "day" : "night";
 
-        // Scan nearby blocks of interest
-        Map<String, Integer> blockCounts = new LinkedHashMap<>();
-        String[] interesting = {
-                "minecraft:coal_ore", "minecraft:iron_ore", "minecraft:gold_ore",
-                "minecraft:diamond_ore", "minecraft:emerald_ore", "minecraft:redstone_ore",
-                "minecraft:lapis_ore", "minecraft:copper_ore",
-                "minecraft:crafting_table", "minecraft:furnace", "minecraft:chest",
-                "minecraft:oak_log", "minecraft:birch_log", "minecraft:spruce_log",
-                "minecraft:stone", "minecraft:cobblestone", "minecraft:dirt",
-                "minecraft:water", "minecraft:lava"
-        };
-        for (String blockId : interesting) {
-            int count = countNearby(bot, blockId, 16);
-            if (count > 0) blockCounts.put(blockId, count);
-        }
+        // Scan nearby blocks of interest — single-pass for all block types
+        Map<String, Integer> blockCounts = countNearbyBatched(bot, 16);
 
         // Scan threats (hostile mobs)
         List<String> threats = new ArrayList<>();
@@ -201,21 +188,64 @@ public final class WorldObservation {
         return Math.max(1, toContextBlock(Integer.MAX_VALUE).length() * 10 / 35);
     }
 
-    private static int countNearby(FakePlayer bot, String blockId, int radius) {
+    /**
+     * Single-pass scan for all interesting block types.
+     * Scans the volume once and counts all block types simultaneously.
+     * Much faster than calling countNearby() 20 times.
+     */
+    private static Map<String, Integer> countNearbyBatched(FakePlayer bot, int radius) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
         try {
-            var rl = net.minecraft.resources.ResourceLocation.tryParse(blockId);
-            if (rl == null) return 0;
-            var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(rl);
-            if (block == net.minecraft.world.level.block.Blocks.AIR) return 0;
+            // Pre-resolve block types to check
+            String[] interesting = {
+                    "minecraft:coal_ore", "minecraft:iron_ore", "minecraft:gold_ore",
+                    "minecraft:diamond_ore", "minecraft:emerald_ore", "minecraft:redstone_ore",
+                    "minecraft:lapis_ore", "minecraft:copper_ore",
+                    "minecraft:crafting_table", "minecraft:furnace", "minecraft:chest",
+                    "minecraft:oak_log", "minecraft:birch_log", "minecraft:spruce_log",
+                    "minecraft:stone", "minecraft:cobblestone", "minecraft:dirt",
+                    "minecraft:water", "minecraft:lava"
+            };
+
+            // Build a set of blocks to check
+            Map<net.minecraft.world.level.block.Block, String> blockToId = new java.util.HashMap<>();
+            for (String blockId : interesting) {
+                var rl = net.minecraft.resources.ResourceLocation.tryParse(blockId);
+                if (rl == null) continue;
+                var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(rl);
+                if (block != net.minecraft.world.level.block.Blocks.AIR) {
+                    blockToId.put(block, blockId);
+                }
+            }
+
+            // Single pass through the volume
             BlockPos bp = bot.blockPosition();
-            int count = 0;
+            int[] counters = new int[interesting.length];
+            String[] orderedIds = blockToId.values().toArray(new String[0]);
+            var blockArray = blockToId.keySet().toArray(new net.minecraft.world.level.block.Block[0]);
+
             for (BlockPos p : BlockPos.betweenClosed(
                     bp.offset(-radius, -radius, -radius),
                     bp.offset(radius, radius, radius))) {
-                if (bot.level().getBlockState(p).is(block)) count++;
-                if (count > 999) break;
+                var state = bot.level().getBlockState(p);
+                var block = state.getBlock();
+                for (int i = 0; i < blockArray.length; i++) {
+                    if (block == blockArray[i]) {
+                        counters[i]++;
+                        break;
+                    }
+                }
             }
-            return count;
-        } catch (Exception e) { return 0; }
+
+            // Build result map
+            for (int i = 0; i < orderedIds.length; i++) {
+                if (counters[i] > 0) {
+                    counts.put(orderedIds[i], counters[i]);
+                }
+            }
+        } catch (Exception e) {
+            // Return empty map on error
+        }
+        return counts;
     }
 }
