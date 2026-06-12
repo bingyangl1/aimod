@@ -609,3 +609,22 @@ BotCommand.java (1257行) 拆分为 8 个文件:
 - 保持 `readSSEStream(String)` 用于回退场景
 
 *更新日期: 2026-06-11 | 版本: 1.0.94-r94*
+
+### r95: Bot 皮肤系统
+
+**功能**：Bot 皮肤系统实现，`botSkinUrl` 配置现在生效。
+
+**实现**：
+- 新建 `BotSkinManager.java` — 皮肤下载和应用
+- `applySkinFromUrl()` — 从直接 PNG URL 应用皮肤
+- `applySkinFromUsername()` — 从 Mojang 用户名查找并应用皮肤
+- `applyConfiguredSkin()` — 读取 `botSkinUrl` 配置
+- 集成到 `FakePlayer.createAndRegister()` — 创建时自动应用皮肤
+
+**使用方式**：
+```
+[aimod-common.toml]
+botSkinUrl = "https://example.com/skin.png"
+```
+
+*更新日期: 2026-06-11 | 版本: 1.0.95-r95*

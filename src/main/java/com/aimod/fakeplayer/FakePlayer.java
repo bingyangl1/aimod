@@ -164,6 +164,9 @@ public class FakePlayer extends ServerPlayer {
             profile = new GameProfile(botUUID, name);
         }
 
+        // Apply configured skin to the profile
+        BotSkinManager.applyConfiguredSkin(profile);
+
         FakePlayer instance = new FakePlayer(server, level, profile, ClientInformation.createDefault());
 
         // Set spawn position
