@@ -237,14 +237,17 @@ public class TaskReplanner {
         replanning = true;
         Thread replanThread = new Thread(() -> {
             try {
-                Task newTask = planner.parseCommand(replanCommand, null, stateMachine);
+                Task newTask = planner.parseCommand(replanCommand, lastOwnerName, stateMachine);
                 if (newTask != null && newTask.getActionCount() > 0) {
                     if (bot.level().getServer() != null) {
                         bot.level().getServer().execute(() -> {
                             replanning = false;
+                            reset(); // Reset counters for new task
                             DevLog.info("REPLAN_TASK_ASSIGNED", "actionCount={}", newTask.getActionCount());
                             feedback.reportTaskStart(replanCommand);
                             bot.setCurrentTask(newTask);
+                            stateMachine.setTaskInfo(newTask.getDescription(), newTask.getActionCount());
+                            stateMachine.startExecuting();
                             // Note: executeTask is called by the caller (BotAIManager)
                         });
                     } else {

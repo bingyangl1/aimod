@@ -612,52 +612,8 @@ public class LLMService {
     }
 
     private LLMResponse parseResponse(String response) {
-        try {
-            JsonObject jsonResponse = JsonParser.parseString(response).getAsJsonObject();
-            JsonArray choices = jsonResponse.getAsJsonArray("choices");
-            if (choices != null && choices.size() > 0) {
-                JsonObject firstChoice = choices.get(0).getAsJsonObject();
-                JsonObject message = firstChoice.getAsJsonObject("message");
-                String content = message.get("content").getAsString();
-                DevLog.info("LLM_RESPONSE", "content={}", DevLog.compact(content));
-                
-                LLMResponse llmResponse = LLMResponse.success(content);
-                // 解析内容中的动作
-                List<String> actions = parseActionsFromContent(content);
-                llmResponse.setActions(actions);
-                DevLog.info("LLM_ACTIONS", "count={}, actions={}", actions.size(), DevLog.compact(actions.toString()));
-                return llmResponse;
-            }
-        } catch (Exception e) {
-            DevLog.warn("LLM_PARSE_ERROR", "failed to parse provider response: {}", e.getMessage());
-        }
-        return LLMResponse.failure("Failed to parse LLM response");
-    }
-
-    private List<String> parseActionsFromContent(String content) {
-        List<String> actions = new ArrayList<>();
-        try {
-            if (content.contains("{") && content.contains("}")) {
-                int start = content.indexOf("{");
-                int end = content.lastIndexOf("}") + 1;
-                String jsonStr = content.substring(start, end);
-                JsonObject json = JsonParser.parseString(jsonStr).getAsJsonObject();
-                // Case 1: {"actions": [...]} — full plan
-                if (json.has("actions")) {
-                    JsonArray actionsArray = json.getAsJsonArray("actions");
-                    for (int i = 0; i < actionsArray.size(); i++) {
-                        actions.add(actionsArray.get(i).toString());
-                    }
-                }
-                // Case 2: {"type":"gather",...} — single action (incremental replan)
-                else if (json.has("type") || json.has("action")) {
-                    actions.add(jsonStr);
-                }
-            }
-        } catch (Exception e) {
-            DevLog.warn("LLM_ACTION_PARSE_ERROR", "failed to parse actions from content: {}", e.getMessage());
-        }
-        return actions;
+        // Delegate to LLMResponseParser for consistent parsing logic
+        return LLMResponseParser.parseResponse(response);
     }
 
     private long elapsedMs(long startedAt) {

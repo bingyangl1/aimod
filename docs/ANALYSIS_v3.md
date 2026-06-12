@@ -769,3 +769,13 @@ botSkinUrl = "https://example.com/skin.png"
 | 5 | `FakePlayer.java` | `cancelTask()` 先调用 `cancelReplan()` 再修改状态 |
 
 *更新日期: 2026-06-12 | 版本: 1.1.06-r106*
+
+### r107: Phase 4 审计修复 — High 功能修复
+
+| # | 文件 | 修复内容 |
+|---|------|----------|
+| 1 | `TaskReplanner.java` | deficit replan 重置 `incrReplanCount`，传递 `lastOwnerName`，设置状态机 |
+| 2 | `LLMService.java` | `parseResponse()` 委托给 `LLMResponseParser`，移除重复代码 |
+| 3 | `MovementDigDown.java` | `getToolSpeed()` 跳过耐久度 <10 的工具 |
+
+*更新日期: 2026-06-12 | 版本: 1.1.07-r107*
