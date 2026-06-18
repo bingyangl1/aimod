@@ -1,6 +1,6 @@
 {
-  "version": "1.1.07",
-  "build": "2026-06-12-r107",
+  "version": "1.1.08",
+  "build": "2026-06-12-r108",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -99,6 +99,7 @@
     "r105: Phase 2 audit — DangerChain bridge placement fix (relative(facing,0) → relative(facing)), FoodChain.stop() restores inventory, DefenseChain uses config values",
     "r106: Phase 3 audit — TaskReplanner posts Task mutations to main thread, BotAIStateMachine getters synchronized, cancelTask() cancels replan",
     "r107: Phase 4 audit — deficit replan resets counters + passes ownerName, LLMService.parseResponse delegates to LLMResponseParser, MovementDigDown tool durability check",
+    "r108: Phase 5 audit — MovementPillar stuckTicks reset on place/jump, PlaceBlockAction re-reads stack after inventory swap, PlayerDefenseChain retreat calls bot.move()",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

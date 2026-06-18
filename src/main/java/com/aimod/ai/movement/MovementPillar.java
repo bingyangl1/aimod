@@ -83,6 +83,7 @@ public class MovementPillar extends BotMovement {
             level.setBlock(belowDest, placeState, 3);
             throwaway.shrink(1);
             cooldown = PLACE_COOLDOWN;
+            stuckTicks = 0; // progress made, reset stuck counter
             return false;
         }
 
@@ -91,6 +92,7 @@ public class MovementPillar extends BotMovement {
             bot.setDeltaMovement(bot.getDeltaMovement().x, 0.42, bot.getDeltaMovement().z);
             bot.setOnGround(false);
             cooldown = 5;
+            stuckTicks = 0; // jumped, reset stuck counter
         }
 
         // Check if reached

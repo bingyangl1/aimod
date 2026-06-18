@@ -105,6 +105,8 @@ public class PlaceBlockAction extends Action {
         int slot = findBlockSlot(bot);
         if (slot < 0) return false;
         bot.getInventory().selected = slot;
+        // Re-read mainHandItem after findBlockSlot (it may have swapped inventory contents)
+        stack = bot.getMainHandItem();
 
         // Build a BlockHitResult: click the face of the solid neighbor block
         // face = direction FROM pos TO the solid block (e.g. DOWN if block below is solid)
