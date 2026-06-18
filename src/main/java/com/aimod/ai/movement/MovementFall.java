@@ -141,6 +141,12 @@ public class MovementFall extends BotMovement {
         double moveZ = distH > 0.05 ? (dz / distH) * speed : 0;
         double moveY = bot.getDeltaMovement().y;
 
+        // On landing: zero horizontal velocity to prevent sliding
+        if (bot.onGround() && distH < 0.5) {
+            moveX = 0;
+            moveZ = 0;
+        }
+
         // Apply gravity if not on ground
         if (!bot.onGround()) {
             moveY = Math.max(moveY - 0.08, -0.5);

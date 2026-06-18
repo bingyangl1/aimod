@@ -545,6 +545,13 @@ public class GatherResourceAction extends Action {
             return false;
         }
 
+        // Safety: max dig depth 20 blocks below bot start position
+        int maxDigDepth = 20;
+        if (currentTarget.getY() < feetPos.getY() - maxDigDepth) {
+            DevLog.warn("GATHER_DIG_DOWN_TOO_DEEP", "targetY={}, botY={}, maxDepth={}", currentTarget.getY(), feetPos.getY(), maxDigDepth);
+            return false;
+        }
+
         ServerLevel level = (ServerLevel) bot.level();
         BlockState belowState = level.getBlockState(belowFeet);
 

@@ -32,6 +32,8 @@ public class NameTagFormatter {
             String stepDesc = sm.getCurrentActionDesc();
             if (stepDesc != null && !stepDesc.isBlank()) {
                 String truncatedStep = stepDesc.length() > 16 ? stepDesc.substring(0, 16) + "…" : stepDesc;
+                // Escape % to prevent String.format misinterpretation
+                truncatedStep = truncatedStep.replace("%", "%%");
                 statusLine.append(Component.literal(
                         String.format("[%d/%d %s]", sm.getActionsDone() + 1, sm.getActionsTotal(), truncatedStep))
                         .withStyle(ChatFormatting.AQUA));

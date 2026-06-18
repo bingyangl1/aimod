@@ -55,16 +55,16 @@
 | 15 | `PlayerDefenseChain.java` | retreat 未调用 `bot.move()` | 小 | ✅ 添加 bot.move(SELF, delta) |
 | 16 | `GatherResourceAction.java` | Pillar 在 bot 脚下放置方块 | 小 | ✅ 代码已正确，无需修复 |
 
-## Phase 6: Medium 修复
+## Phase 6: Medium 修复 ✅
 
-| # | 文件 | 问题 | 工作量 |
-|---|------|------|--------|
-| 17 | `GatherResourceAction.java` | `tryDigDown` 无深度限制 | 小 |
-| 18 | `VeinMiningHelper.java` | 无硬度检查 | 小 |
-| 19 | `MovementFall.java` | 残余速度问题 | 小 |
-| 20 | `FakePlayer.java` | 死亡状态无检查 | 小 |
-| 21 | `NameTagFormatter.java` | `%` 格式化问题 | 小 |
-| 22 | `FakePlayer.java` | `pickupNearbyItems` 无节流 | 小 |
+| # | 文件 | 问题 | 工作量 | 状态 |
+|---|------|------|--------|------|
+| 17 | `GatherResourceAction.java` | `tryDigDown` 无深度限制 | 小 | ✅ 添加 maxDigDepth=20 限制 |
+| 18 | `VeinMiningHelper.java` | 无硬度检查 | 小 | ✅ VeinScanner 已按方块类型匹配，无需修复 |
+| 19 | `MovementFall.java` | 残余速度问题 | 小 | ✅ 落地后归零水平速度 |
+| 20 | `FakePlayer.java` | 死亡状态无检查 | 小 | ✅ tick 中添加 isDeadOrDying 检查 |
+| 21 | `NameTagFormatter.java` | `%` 格式化问题 | 小 | ✅ 转义 stepDesc 中的 % 字符 |
+| 22 | `FakePlayer.java` | `pickupNearbyItems` 无节流 | 小 | ✅ 每 20 tick 扫描一次 |
 
 ---
 

@@ -80,6 +80,7 @@ public class FakePlayer extends ServerPlayer {
     // ── Idle tracking ────────────────────────────────────────────────────
     private int idleTicks;
     private int displayNameTickCounter;
+    private int pickupTickCounter;
     private net.minecraft.network.chat.Component lastCustomName;
 
     // ── Undo ─────────────────────────────────────────────────────────────
@@ -268,6 +269,11 @@ public class FakePlayer extends ServerPlayer {
             DevLog.warn("FAKE_PLAYER_TICK_EXCEPTION", "err={}", e.getMessage());
         }
 
+        // Skip AI logic if bot is dead or dying
+        if (this.isDeadOrDying()) {
+            return;
+        }
+
         // Periodically sync name tag (task status) to clients via entity metadata
         if (++displayNameTickCounter >= 20) {
             displayNameTickCounter = 0;
@@ -352,8 +358,11 @@ public class FakePlayer extends ServerPlayer {
             saveMetrics();
         }
 
-        // Auto-pickup nearby items
-        pickupNearbyItems();
+        // Auto-pickup nearby items (throttled to every 20 ticks / 1 second)
+        if (++pickupTickCounter >= 20) {
+            pickupTickCounter = 0;
+            pickupNearbyItems();
+        }
 
         // Auto-tool maintenance
         if (com.aimod.config.ModConfig.getAutoReplenish()) AutoReplenish.tick(this);
