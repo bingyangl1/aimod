@@ -25,8 +25,8 @@ public class ObstacleBreaker {
      * @return true if breaking is in progress or complete
      */
     public boolean tryBreakObstacle(FakePlayer bot, BlockPos gatherTarget) {
+        if (!(bot.level() instanceof ServerLevel level)) return false;
         BlockPos botPos = bot.blockPosition();
-        ServerLevel level = (ServerLevel) bot.level();
 
         // Check all 6 adjacent directions + bot's own position
         BlockPos[] candidates = {

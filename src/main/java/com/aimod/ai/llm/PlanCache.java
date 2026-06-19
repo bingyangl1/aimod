@@ -134,7 +134,7 @@ public class PlanCache {
      */
     public static double similarity(String rawA, String rawB) {
         if (rawA == null || rawB == null) return 0.0;
-        if (rawA.isEmpty() && rawB.isEmpty()) return 0.0;
+        if (rawA.isEmpty() && rawB.isEmpty()) return 1.0;
         if (rawA.equals(rawB)) return 1.0;
         if (rawA.isEmpty() || rawB.isEmpty()) return 0.0;
 
@@ -260,7 +260,9 @@ public class PlanCache {
     private void save() {
         try {
             Files.createDirectories(cacheFile.getParent());
-            Files.writeString(cacheFile, GSON.toJson(plans), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            java.nio.file.Path tmpFile = cacheFile.resolveSibling(cacheFile.getFileName() + ".tmp");
+            Files.writeString(tmpFile, GSON.toJson(plans), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.move(tmpFile, cacheFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) { DevLog.warn("PLAN_CACHE_SAVE_FAIL", e.getMessage()); }
     }
 }

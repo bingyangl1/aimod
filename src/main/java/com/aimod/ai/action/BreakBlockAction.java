@@ -72,30 +72,17 @@ public class BreakBlockAction extends Action {
                         targetPos.toShortString(), breakTime, bestSlot);
             }
 
-            // 使用 FakePlayer 破坏方块
-            FakePlayer fakePlayer = bot;
-            if (fakePlayer != null) {
-                // 面向方块
-                fakePlayer.lookAt(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
+            // 面向方块
+            bot.lookAt(targetPos.getX() + 0.5, targetPos.getY() + 0.5, targetPos.getZ() + 0.5);
 
-                // 模拟挖掘进度
-                breakProgress++;
+            // 模拟挖掘进度
+            breakProgress++;
 
-                // 每 tick 更新挖掘进度
-                if (breakProgress >= breakTime) {
-                    // 使用 FakePlayer 破坏方块
-                    bot.level().destroyBlock(targetPos, true, fakePlayer);
-                    status = ActionStatus.COMPLETED;
-                    DevLog.info("BREAK_COMPLETE", "pos={}", targetPos.toShortString());
-                }
-            } else {
-                // 没有 FakePlayer，直接破坏
-                breakProgress++;
-                if (breakProgress >= breakTime) {
-                    bot.level().destroyBlock(targetPos, true, bot);
-                    status = ActionStatus.COMPLETED;
-                    DevLog.info("BREAK_COMPLETE_NO_FAKE", "pos={}", targetPos.toShortString());
-                }
+            // 每 tick 更新挖掘进度
+            if (breakProgress >= breakTime) {
+                bot.level().destroyBlock(targetPos, true, bot);
+                status = ActionStatus.COMPLETED;
+                DevLog.info("BREAK_COMPLETE", "pos={}", targetPos.toShortString());
             }
         }
     }

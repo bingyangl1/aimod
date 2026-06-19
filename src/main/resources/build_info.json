@@ -1,6 +1,6 @@
 {
-  "version": "1.1.12",
-  "build": "2026-06-18-r112",
+  "version": "1.1.13",
+  "build": "2026-06-18-r113",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -134,6 +134,17 @@
     "r112: P2 audit — RecipeIndex: build into temp maps + volatile swap (prevents concurrent read seeing empty state)",
     "r112: P2 audit — MaterialSubstitute: check available slots before consuming logs (prevents item loss)",
     "r112: P2 audit — MineBlockAction/GatherResourceAction: pathfinder timeout 2s→500ms for sync calls",
+    "r113: P3 audit — Remove redundant null checks in AttackAction/InteractBlockAction/BreakBlockAction/VeinMineAction",
+    "r113: P3 audit — Chain stop() cleanup: DangerChain clears escapeTarget/mlgDeployed, FoodChain clears lastBot, PlayerDefenseChain clears hostilePlayer/activeTicks",
+    "r113: P3 audit — Unsafe ServerLevel casts: add instanceof checks in ObstacleBreaker/MineBlockAction/GatherResourceAction",
+    "r113: P3 audit — Remove dead code: LLMService.readSSEStream(String) unused method",
+    "r113: P3 audit — SayAction: add canExecute guard in execute() for blank messages",
+    "r113: P3 audit — UseItemAction: fail if item not found in inventory (prevents using wrong item)",
+    "r113: P3 audit — PlanCache: empty string similarity 0.0→1.0 (semantically identical)",
+    "r113: P3 audit — PlanCache: atomic file write via temp+rename (prevents corruption on crash)",
+    "r113: P3 audit — AutoReplenish: respect getMaxStackSize() (was hardcoded to 32)",
+    "r113: P3 audit — CraftAction: recipeIndexBuilt volatile for cross-thread visibility",
+    "r113: P3 audit — BotPersistence: log directory creation failure instead of silently ignoring",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

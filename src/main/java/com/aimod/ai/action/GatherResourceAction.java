@@ -315,7 +315,7 @@ public class GatherResourceAction extends Action {
 
         int currentTick = bot.getServer().getTickCount();
         if (currentTick - breakStartTick >= breakDurationTicks) {
-            ServerLevel level = (ServerLevel) bot.level();
+            if (!(bot.level() instanceof ServerLevel level)) return;
             Block targetBlock = blockState.getBlock();
 
             if (com.aimod.config.ModConfig.getVeinMine()) {
@@ -552,7 +552,7 @@ public class GatherResourceAction extends Action {
             return false;
         }
 
-        ServerLevel level = (ServerLevel) bot.level();
+        if (!(bot.level() instanceof ServerLevel level)) return false;
         BlockState belowState = level.getBlockState(belowFeet);
 
         // If already air, just fall
@@ -589,7 +589,7 @@ public class GatherResourceAction extends Action {
 
     private boolean mineNearbyGround(FakePlayer bot) {
         BlockPos botPos = bot.blockPosition();
-        ServerLevel level = (ServerLevel) bot.level();
+        if (!(bot.level() instanceof ServerLevel level)) return false;
         BlockPos[] candidates = {
             botPos.offset(1, -1, 0),
             botPos.offset(-1, -1, 0),

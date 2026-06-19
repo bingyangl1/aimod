@@ -490,50 +490,6 @@ public class LLMService {
         return responseBody;
     }
 
-    private String readSSEStream(String responseBody, long startedAt) {
-        // Process SSE format from the response body
-        BufferedReader reader = new BufferedReader(new StringReader(responseBody));
-        StringBuilder content = new StringBuilder();
-
-        String line;
-        try {
-            while ((line = reader.readLine()) != null) {
-                if (line.startsWith("data: ")) {
-                    String data = line.substring(6).trim();
-                    if (data.equals("[DONE]")) {
-                        break;
-                    }
-                    try {
-                        JsonObject chunk = JsonParser.parseString(data).getAsJsonObject();
-                        appendStreamingChoice(chunk, content);
-                    } catch (Exception e) {
-                        DevLog.warn("LLM_STREAM_PARSE_ERROR", "data={}", DevLog.compact(data));
-                    }
-                }
-            }
-        } catch (IOException e) {
-            DevLog.warn("LLM_STREAM_READ_ERROR", "{}", e.getMessage());
-        }
-
-        if (content.length() == 0) {
-            DevLog.warn("LLM_STREAM_EMPTY", "stream returned no content");
-            // Return the original response body as fallback
-            DevLog.info("LLM_HTTP_RESPONSE", "elapsedMs={}, body={}", elapsedMs(startedAt), DevLog.compact(responseBody));
-            return responseBody;
-        }
-
-        DevLog.info("LLM_STREAM_DONE", "elapsedMs={}, content={}", elapsedMs(startedAt), DevLog.compact(content.toString()));
-        JsonObject message = new JsonObject();
-        message.addProperty("content", content.toString());
-        JsonObject choice = new JsonObject();
-        choice.add("message", message);
-        JsonArray choices = new JsonArray();
-        choices.add(choice);
-        JsonObject response = new JsonObject();
-        response.add("choices", choices);
-        return response.toString();
-    }
-
     /**
      * Stream SSE response from an InputStream, parsing chunks as they arrive.
      * Avoids loading the entire response body into memory.

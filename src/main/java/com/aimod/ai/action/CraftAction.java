@@ -31,7 +31,7 @@ public class CraftAction extends Action {
     private int craftProgress;
     private int craftedCount;
     private RecipeIndex.IndexedRecipe resolvedRecipe;
-    private boolean recipeIndexBuilt = false;
+    private volatile boolean recipeIndexBuilt = false;
 
     public CraftAction(String itemId, int count) {
         super("Craft " + count + " " + itemId);

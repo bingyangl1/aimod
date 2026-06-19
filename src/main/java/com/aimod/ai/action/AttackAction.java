@@ -72,41 +72,22 @@ public class AttackAction extends Action {
             // 计算距离
             double distance = bot.distanceTo(targetEntity);
 
-            // 使用 FakePlayer 攻击
-            FakePlayer fakePlayer = bot;
-            if (fakePlayer != null) {
-                // 面向目标
-                fakePlayer.lookAtEntity(targetEntity);
+            // 面向目标
+            bot.lookAtEntity(targetEntity);
 
-                // 如果距离太远，移动到目标附近
-                if (distance > ATTACK_RANGE) {
-                    moveToward(bot, targetEntity);
-                    return;
-                }
-
-                // 攻击目标
-                fakePlayer.attackEntity(targetEntity);
-                attackCount++;
-                attackCooldown = 10; // 0.5 秒冷却
-
-                DevLog.info("ATTACK_HIT", "target={}, attacks={}, distance={}",
-                        targetEntity.getName().getString(), attackCount, String.format("%.1f", distance));
-            } else {
-                // 没有 FakePlayer，使用原始攻击
-                bot.lookAt(targetEntity.getX(), targetEntity.getY() + targetEntity.getBbHeight() / 2, targetEntity.getZ());
-
-                if (distance > ATTACK_RANGE) {
-                    moveToward(bot, targetEntity);
-                    return;
-                }
-
-                bot.doHurtTarget(targetEntity);
-                attackCount++;
-                attackCooldown = 10;
-
-                DevLog.info("ATTACK_HIT_NO_FAKE", "target={}, attacks={}",
-                        targetEntity.getName().getString(), attackCount);
+            // 如果距离太远，移动到目标附近
+            if (distance > ATTACK_RANGE) {
+                moveToward(bot, targetEntity);
+                return;
             }
+
+            // 攻击目标
+            bot.attackEntity(targetEntity);
+            attackCount++;
+            attackCooldown = 10; // 0.5 秒冷却
+
+            DevLog.info("ATTACK_HIT", "target={}, attacks={}, distance={}",
+                    targetEntity.getName().getString(), attackCount, String.format("%.1f", distance));
         }
     }
 

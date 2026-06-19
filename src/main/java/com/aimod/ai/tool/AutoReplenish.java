@@ -12,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 public final class AutoReplenish {
     private AutoReplenish() {}
 
-    private static final int REFILL_TO = 32;   // refill to half stack
     private static final int REFILL_AT = 4;    // trigger at 4 or fewer
 
     /**
@@ -27,14 +26,16 @@ public final class AutoReplenish {
         if (held.getCount() > REFILL_AT) return;
         if (held.getMaxStackSize() <= 1) return; // tools, weapons — use AutoReplaceTool
 
+        int refillTo = Math.min(32, held.getMaxStackSize());
+
         // Find matching items elsewhere in inventory
-        for (int i = 0; i <= 40 && held.getCount() < REFILL_TO; i++) {
+        for (int i = 0; i <= 40 && held.getCount() < refillTo; i++) {
             if (i == slot) continue;
             ItemStack stack = inv.getItem(i);
             if (stack.isEmpty()) continue;
             if (!ItemStack.isSameItemSameComponents(stack, held)) continue;
 
-            int take = Math.min(stack.getCount(), REFILL_TO - held.getCount());
+            int take = Math.min(stack.getCount(), refillTo - held.getCount());
             stack.shrink(take);
             held.grow(take);
             if (stack.isEmpty()) inv.setItem(i, ItemStack.EMPTY);

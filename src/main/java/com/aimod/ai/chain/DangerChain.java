@@ -259,7 +259,10 @@ public class DangerChain extends BehaviorChain {
 
     @Override public boolean isActive() { return active; }
     @Override public void stop() {
-        active = false; escapeTicks = 0;
+        active = false;
+        escapeTicks = 0;
+        escapeTarget = null;
+        mlgDeployed = false;
         cooldownTicks = COOLDOWN;
     }
     @Override public String name() { return "Danger"; }

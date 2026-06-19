@@ -107,6 +107,7 @@ public class FoodChain extends BehaviorChain {
         active = false;
         eatTicks = 0;
         originalSlot = -1;
+        lastBot = null;
     }
     @Override public String name() { return "Food"; }
 }

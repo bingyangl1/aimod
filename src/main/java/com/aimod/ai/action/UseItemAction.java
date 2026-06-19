@@ -44,6 +44,7 @@ public class UseItemAction extends Action {
         if (status == ActionStatus.PENDING) {
             // Find and equip the item
             var inventory = bot.getInventory();
+            boolean found = false;
             for (int i = 0; i <= 40; i++) {
                 ItemStack stack = inventory.getItem(i);
                 if (!stack.isEmpty()) {
@@ -59,9 +60,15 @@ public class UseItemAction extends Action {
                             inventory.setItem(hotbarSlot, stack);
                             inventory.setItem(i, hotbarItem);
                         }
+                        found = true;
                         break;
                     }
                 }
+            }
+            if (!found) {
+                status = ActionStatus.FAILED;
+                DevLog.warn("USE_ITEM_NOT_FOUND", "item={}", itemId);
+                return;
             }
             status = ActionStatus.IN_PROGRESS;
             useTicks = 0;

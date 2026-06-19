@@ -211,7 +211,7 @@ public class MineBlockAction extends Action {
             return false;
         }
 
-        ServerLevel level = (ServerLevel) bot.level();
+        if (!(bot.level() instanceof ServerLevel level)) return false;
         BlockState belowState = level.getBlockState(belowFeet);
 
         // If already air, just fall

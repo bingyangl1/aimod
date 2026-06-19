@@ -128,9 +128,7 @@ public class VeinMineAction extends Action {
             }
 
             stopNavigation(bot);
-            // Break the block
-            FakePlayer fp = bot;
-            if (fp != null) fp.lookAt(currentTarget.getX() + 0.5, currentTarget.getY() + 0.5, currentTarget.getZ() + 0.5);
+            bot.lookAt(currentTarget.getX() + 0.5, currentTarget.getY() + 0.5, currentTarget.getZ() + 0.5);
 
             if (breakProgress == 0) {
                 float hardness = blockState.getDestroySpeed(bot.level(), currentTarget);

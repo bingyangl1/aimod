@@ -28,7 +28,7 @@ public final class BotPersistence {
 
     public BotPersistence(Path serverDir) {
         this.botsDir = serverDir.resolve(BOTS_DIR);
-        try { Files.createDirectories(botsDir); } catch (IOException ignored) {}
+        try { Files.createDirectories(botsDir); } catch (IOException e) { DevLog.warn("BOT_PERSIST_DIR_FAIL", "path={}, err={}", botsDir, e.getMessage()); }
     }
 
     public BotPersistence(MinecraftServer server) {

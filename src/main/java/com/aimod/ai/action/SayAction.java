@@ -21,6 +21,10 @@ public class SayAction extends Action {
         if (status != ActionStatus.PENDING) {
             return;
         }
+        if (!canExecute(bot)) {
+            status = ActionStatus.FAILED;
+            return;
+        }
         if (bot.level().getServer() != null) {
             bot.level().getServer().getPlayerList().broadcastSystemMessage(
                     Component.literal("[AI Bot] " + message),

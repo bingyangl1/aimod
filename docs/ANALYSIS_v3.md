@@ -840,3 +840,28 @@ botSkinUrl = "https://example.com/skin.png"
 | 16 | `GatherResourceAction.java` | 同步寻路超时 2s→500ms | 性能 |
 
 *更新日期: 2026-06-18 | 版本: 1.1.12-r112*
+
+### r113: P3 审计修复 — Low 级别问题（12 项）
+
+| # | 文件 | 修复内容 | 类别 |
+|---|------|----------|------|
+| 1 | `AttackAction.java` | 移除冗余 null 检查和死代码分支 | 代码质量 |
+| 2 | `InteractBlockAction.java` | 同上 | 代码质量 |
+| 3 | `BreakBlockAction.java` | 同上 | 代码质量 |
+| 4 | `VeinMineAction.java` | 同上 | 代码质量 |
+| 5 | `DangerChain.java` | stop() 清除 escapeTarget/mlgDeployed | 状态泄漏 |
+| 6 | `FoodChain.java` | stop() 清除 lastBot | 状态泄漏 |
+| 7 | `PlayerDefenseChain.java` | stop() 清除 hostilePlayer/activeTicks | 状态泄漏 |
+| 8 | `ObstacleBreaker.java` | instanceof 检查替代不安全类型转换 | 防御性编程 |
+| 9 | `MineBlockAction.java` | 同上 | 防御性编程 |
+| 10 | `GatherResourceAction.java` | 同上（3 处） | 防御性编程 |
+| 11 | `LLMService.java` | 删除未使用的 readSSEStream(String) 方法 | 死代码 |
+| 12 | `SayAction.java` | execute() 添加 canExecute 检查 | 边界条件 |
+| 13 | `UseItemAction.java` | 物品未找到时设为 FAILED | 边界条件 |
+| 14 | `PlanCache.java` | 空字符串相似度 0.0→1.0 | 逻辑修正 |
+| 15 | `PlanCache.java` | 原子文件写入（临时文件+重命名） | 数据安全 |
+| 16 | `AutoReplenish.java` | 尊重 getMaxStackSize()（之前硬编码 32） | 边界条件 |
+| 17 | `CraftAction.java` | recipeIndexBuilt 加 volatile | 线程安全 |
+| 18 | `BotPersistence.java` | 目录创建失败添加日志 | 错误处理 |
+
+*更新日期: 2026-06-18 | 版本: 1.1.13-r113*

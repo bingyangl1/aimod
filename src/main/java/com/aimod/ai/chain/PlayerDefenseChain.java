@@ -95,6 +95,8 @@ public class PlayerDefenseChain extends BehaviorChain {
     @Override
     public void stop() {
         active = false;
+        hostilePlayer = null;
+        activeTicks = 0;
         if (lastBot != null) {
             restoreShield(lastBot);
         }

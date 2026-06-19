@@ -22,9 +22,9 @@ class PlanCacheSimilarityTest {
     }
 
     @Test
-    @DisplayName("both empty returns 0")
+    @DisplayName("both empty returns 1.0 (identical)")
     void bothEmpty() {
-        assertEquals(0.0, PlanCache.similarity("", ""), 0.001);
+        assertEquals(1.0, PlanCache.similarity("", ""), 0.001);
     }
 
     @Test

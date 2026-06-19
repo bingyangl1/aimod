@@ -86,21 +86,14 @@ public class InteractBlockAction extends Action {
                 return;
             }
 
-            FakePlayer fakePlayer = bot;
-            if (fakePlayer != null) {
-                fakePlayer.lookAt(
-                        targetPos.getX() + 0.5,
-                        targetPos.getY() + 0.5,
-                        targetPos.getZ() + 0.5);
-                fakePlayer.interactWithBlock(targetPos, InteractionHand.MAIN_HAND);
-                fakePlayer.useItem(InteractionHand.MAIN_HAND);
-                DevLog.info("INTERACT_DONE", "type={}, pos={}", interactType, targetPos.toShortString());
-                status = ActionStatus.COMPLETED;
-            } else {
-                // 没有 FakePlayer，标记失败
-                DevLog.warn("INTERACT_FAIL_NO_FAKE", "type={}, pos={}", interactType, targetPos.toShortString());
-                status = ActionStatus.FAILED;
-            }
+            bot.lookAt(
+                    targetPos.getX() + 0.5,
+                    targetPos.getY() + 0.5,
+                    targetPos.getZ() + 0.5);
+            bot.interactWithBlock(targetPos, InteractionHand.MAIN_HAND);
+            bot.useItem(InteractionHand.MAIN_HAND);
+            DevLog.info("INTERACT_DONE", "type={}, pos={}", interactType, targetPos.toShortString());
+            status = ActionStatus.COMPLETED;
         }
     }
 
