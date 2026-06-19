@@ -86,9 +86,12 @@ public class TaskReplanner {
         String ctx = com.aimod.ai.memory.ContextAssembler.assemble(
                 bot.getMemoryStore(), task, replanTokens, recentReplanAttempts)
                 + "\nFailed action: " + failedActionDesc
+                + "\nCRITICAL: Do NOT repeat any action from 'Recent Failed Attempts'. Try a DIFFERENT approach."
+                + "\nIf all approaches exhausted, use: {\"type\":\"say\",\"message\":\"无法完成任务\"}"
                 + "\nTip: logs -> 4 planks in 2x2 grid. Use exact log type."
                 + "\nRespond with ONE JSON action using these type names: "
-                + "move_to, break_block, place_block, mine, gather, craft, give_item, interact, equip, attack, follow, say, wait.";
+                + "move_to, break_block, place_block, mine, gather, craft, give_item, interact, equip, attack, follow, say, wait."
+                + "\nFor break_block/move_to/place_block: x, y, z are REQUIRED fields.";
 
         Thread t = new Thread(() -> {
             try {
@@ -123,6 +126,12 @@ public class TaskReplanner {
                     try {
                         if (resp.isSuccess()) {
                             var acts = planner.convertResponseToActions(resp, lastOwnerName);
+                            // 过滤掉已失败的 action
+                            synchronized (recentReplanAttempts) {
+                                acts.removeIf(a -> recentReplanAttempts.stream()
+                                        .anyMatch(attempt -> a.getDescription().equals(attempt)
+                                                || a.getDescription().contains(attempt)));
+                            }
                             if (!acts.isEmpty()) {
                                 var next = acts.get(0);
                                 consecutiveUnknown.set(0);

@@ -2,6 +2,7 @@ package com.aimod.ai.chain;
 
 import com.aimod.ai.movement.UnstuckDetector;
 import com.aimod.fakeplayer.FakePlayer;
+import com.aimod.util.DevLog;
 
 /**
  * Global stuck detection and recovery chain.
@@ -44,7 +45,12 @@ public class UnstuckChain extends BehaviorChain {
             if (currentStrategy == UnstuckDetector.RecoveryStrategy.SKIP) {
                 bot.getMovementController().stop();
                 bot.getAiManager().getFeedback().sendToOwnerTranslatable("feedback.task.stuck.warning");
-                // 不取消任务，让任务通过自然失败路径处理
+                // 标记当前 action 失败，触发 replan
+                var task = bot.getCurrentTask();
+                if (task != null && task.getCurrentAction() != null) {
+                    task.getCurrentAction().setStatus(com.aimod.ai.action.Action.ActionStatus.FAILED);
+                    DevLog.info("UNSTUCK_SKIP_FAIL", "action={} marked FAILED", task.getCurrentAction().getDescription());
+                }
             }
             active = false;
             detector.reset();

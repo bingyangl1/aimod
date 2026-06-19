@@ -262,10 +262,10 @@ public class LLMService {
         prompt.append("- follow: {\"type\": \"follow\", \"player\": \"player_name\"}\n\n");
 
         prompt.append("### Block Operations\n");
-        prompt.append("- break_block: {\"type\": \"break_block\", \"x\": int, \"y\": int, \"z\": int}\n");
-        prompt.append("- place_block: {\"type\": \"place_block\", \"x\": int, \"y\": int, \"z\": int, \"block_id\": \"minecraft:stone\"}\n");
-        prompt.append("- mine: {\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 1, \"radius\": 32}\n");
-        prompt.append("- gather: {\"type\": \"gather\", \"resource_type\": \"WOOD\", \"count\": 16, \"radius\": 32}\n");
+        prompt.append("- break_block: {\"type\": \"break_block\", \"x\": int, \"y\": int, \"z\": int}  [x,y,z are REQUIRED]\n");
+        prompt.append("- place_block: {\"type\": \"place_block\", \"x\": int, \"y\": int, \"z\": int, \"block_id\": \"minecraft:stone\"}  [x,y,z are REQUIRED]\n");
+        prompt.append("- mine: {\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 1, \"radius\": 32}  [radius max 128]\n");
+        prompt.append("- gather: {\"type\": \"gather\", \"resource_type\": \"WOOD\", \"count\": 16, \"radius\": 32}  [radius max 128]\n");
         prompt.append("  Resource types: WOOD, STONE, DIRT, SAND, COBBLESTONE\n\n");
 
         prompt.append("### Crafting & Inventory\n");

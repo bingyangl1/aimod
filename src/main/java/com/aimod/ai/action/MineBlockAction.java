@@ -41,11 +41,13 @@ public class MineBlockAction extends Action {
         this(blockId, count, 32);
     }
 
+    private static final int MAX_SEARCH_RADIUS = 128;
+
     public MineBlockAction(String blockId, int count, int searchRadius) {
         super("Mine " + count + " " + blockId);
         this.blockId = blockId;
         this.count = Math.max(1, count);
-        this.searchRadius = searchRadius;
+        this.searchRadius = Math.min(searchRadius, MAX_SEARCH_RADIUS);
         this.minedCount = 0;
         this.breakProgress = 0;
         this.breakTime = 0;

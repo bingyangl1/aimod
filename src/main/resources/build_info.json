@@ -1,6 +1,6 @@
 {
-  "version": "1.1.13",
-  "build": "2026-06-18-r113",
+  "version": "1.1.14",
+  "build": "2026-06-19-r114",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -145,6 +145,13 @@
     "r113: P3 audit — AutoReplenish: respect getMaxStackSize() (was hardcoded to 32)",
     "r113: P3 audit — CraftAction: recipeIndexBuilt volatile for cross-thread visibility",
     "r113: P3 audit — BotPersistence: log directory creation failure instead of silently ignoring",
+    "r114: Architecture iteration — TaskPlanner: reject break_block/move_to/place_block with missing x/y/z coordinates",
+    "r114: Architecture iteration — TaskReplanner: filter LLM-returned actions against recentReplanAttempts (prevents duplicate failures)",
+    "r114: Architecture iteration — TaskReplanner: stronger replan prompt with CRITICAL constraint and coordinate requirement",
+    "r114: Architecture iteration — MineBlockAction: cap searchRadius to 128 (was unlimited, caused 63s server lag)",
+    "r114: Architecture iteration — LLM prompt: add [x,y,z are REQUIRED] and [radius max 128] annotations",
+    "r114: Architecture iteration — DangerChain: escape fail cooldown (3 failures → 10s cooldown instead of infinite retry)",
+    "r114: Architecture iteration — UnstuckChain SKIP: mark current action as FAILED to trigger replan (was infinite loop)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

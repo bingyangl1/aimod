@@ -266,12 +266,28 @@ public class TaskPlanner {
 
         try {
             return switch (type) {
-                case "move_to" -> new MoveToAction(new BlockPos(
-                        getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)),
-                        getDouble(obj, "speed", 1.0));
-                case "break_block" -> new BreakBlockAction(new BlockPos(
-                        getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)));
+                case "move_to" -> {
+                    if (!obj.has("x") || !obj.has("y") || !obj.has("z")) {
+                        DevLog.warn("ACTION_MISSING_COORDS", "type=move_to, rejected");
+                        yield null;
+                    }
+                    yield new MoveToAction(new BlockPos(
+                            getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)),
+                            getDouble(obj, "speed", 1.0));
+                }
+                case "break_block" -> {
+                    if (!obj.has("x") || !obj.has("y") || !obj.has("z")) {
+                        DevLog.warn("ACTION_MISSING_COORDS", "type=break_block, rejected");
+                        yield null;
+                    }
+                    yield new BreakBlockAction(new BlockPos(
+                            getInt(obj, "x", 0), getInt(obj, "y", 0), getInt(obj, "z", 0)));
+                }
                 case "place_block" -> {
+                    if (!obj.has("x") || !obj.has("y") || !obj.has("z")) {
+                        DevLog.warn("ACTION_MISSING_COORDS", "type=place_block, rejected");
+                        yield null;
+                    }
                     String blockId = getString(obj, "block_id",
                             getString(obj, "block", getString(obj, "item", "minecraft:stone")));
                     BlockItem bi = getBlockItemFromString(blockId);

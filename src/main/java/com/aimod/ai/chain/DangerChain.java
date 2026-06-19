@@ -29,6 +29,7 @@ public class DangerChain extends BehaviorChain {
     private BlockPos lastDangerPos;
     private String savedTaskCommand; // for auto-retry after danger clears
     private BlockPos escapeTarget;
+    private int escapeFailCount;
     private boolean mlgDeployed;
 
     private static final int COOLDOWN = 60;
@@ -104,9 +105,21 @@ public class DangerChain extends BehaviorChain {
         if (escapeTarget != null) {
             // Use MovementController's A* pathfinding
             bot.getMovementController().navigateTo(escapeTarget);
+            // 检测逃生是否卡住
+            if (bot.getMovementController().isStuck()) {
+                escapeFailCount++;
+                if (escapeFailCount >= 3) {
+                    DevLog.warn("DANGER_ESCAPE_FAILED", "3 consecutive failures, extending cooldown");
+                    cooldownTicks = 200; // 10 秒冷却
+                    active = false;
+                    return;
+                }
+                escapeTarget = findSafeEscapeTarget(bot); // 尝试新目标
+            }
         } else {
             // ---- No path: try bridging ----
             tryBridgeOut(bot);
+            escapeFailCount++;
         }
 
         // ---- Check if safe ----
@@ -123,6 +136,7 @@ public class DangerChain extends BehaviorChain {
 
         if (isSafe || timedOut) {
             active = false;
+            escapeFailCount = 0;
             cooldownTicks = COOLDOWN;
             bot.getMovementController().stop();
             bot.setDeltaMovement(0, bot.getDeltaMovement().y, 0);
@@ -263,6 +277,7 @@ public class DangerChain extends BehaviorChain {
         escapeTicks = 0;
         escapeTarget = null;
         mlgDeployed = false;
+        escapeFailCount = 0;
         cooldownTicks = COOLDOWN;
     }
     @Override public String name() { return "Danger"; }
