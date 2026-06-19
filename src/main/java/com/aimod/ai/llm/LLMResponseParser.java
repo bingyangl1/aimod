@@ -22,7 +22,11 @@ public final class LLMResponseParser {
             JsonArray choices = jsonResponse.getAsJsonArray("choices");
             if (choices != null && choices.size() > 0) {
                 JsonObject firstChoice = choices.get(0).getAsJsonObject();
-                JsonObject message = firstChoice.getAsJsonObject("message");
+                JsonObject message = firstChoice.has("message") && firstChoice.get("message").isJsonObject()
+                        ? firstChoice.getAsJsonObject("message") : null;
+                if (message == null || !message.has("content") || message.get("content").isJsonNull()) {
+                    return LLMResponse.failure("Missing message/content in response");
+                }
                 String content = message.get("content").getAsString();
                 DevLog.info("LLM_RESPONSE", "content={}", DevLog.compact(content));
                 LLMResponse llmResponse = LLMResponse.success(content);

@@ -26,11 +26,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class RecipeIndex {
 
-    private final Map<Item, List<IndexedRecipe>> byOutput = new ConcurrentHashMap<>();
-    private final Map<Item, List<IndexedRecipe>> byInput = new ConcurrentHashMap<>();
-    private final Map<Object, List<IndexedRecipe>> byOutputUid = new ConcurrentHashMap<>();
-    private final Map<Object, List<IndexedRecipe>> byInputUid = new ConcurrentHashMap<>();
-    private boolean built = false;
+    private volatile Map<Item, List<IndexedRecipe>> byOutput = new ConcurrentHashMap<>();
+    private volatile Map<Item, List<IndexedRecipe>> byInput = new ConcurrentHashMap<>();
+    private volatile Map<Object, List<IndexedRecipe>> byOutputUid = new ConcurrentHashMap<>();
+    private volatile Map<Object, List<IndexedRecipe>> byInputUid = new ConcurrentHashMap<>();
+    private volatile boolean built = false;
 
     private static final RecipeIndex INSTANCE = new RecipeIndex();
 
@@ -45,10 +45,11 @@ public final class RecipeIndex {
      * Call once when the server starts or recipes reload.
      */
     public void build(ServerLevel level) {
-        byOutput.clear();
-        byInput.clear();
-        byOutputUid.clear();
-        byInputUid.clear();
+        // Build into temporary maps for atomic swap
+        Map<Item, List<IndexedRecipe>> newByOutput = new ConcurrentHashMap<>();
+        Map<Item, List<IndexedRecipe>> newByInput = new ConcurrentHashMap<>();
+        Map<Object, List<IndexedRecipe>> newByOutputUid = new ConcurrentHashMap<>();
+        Map<Object, List<IndexedRecipe>> newByInputUid = new ConcurrentHashMap<>();
 
         RecipeManager manager = level.getRecipeManager();
         int count = 0;
@@ -91,26 +92,26 @@ public final class RecipeIndex {
                     outputItem, result.getCount()
             );
 
-            // Index by output Item (backward compatible)
-            byOutput.computeIfAbsent(outputItem, k -> new ArrayList<>()).add(indexed);
-
-            // Index by output UID (NBT-aware, RECIPE context)
+            newByOutput.computeIfAbsent(outputItem, k -> new ArrayList<>()).add(indexed);
             Object outputUid = ItemUid.compute(result, ItemUid.Context.RECIPE);
-            byOutputUid.computeIfAbsent(outputUid, k -> new ArrayList<>()).add(indexed);
+            newByOutputUid.computeIfAbsent(outputUid, k -> new ArrayList<>()).add(indexed);
 
-            // Index by each input item and UID
             for (IngredientEntry entry : consumedInputs) {
                 for (Item item : entry.getMatchingItems()) {
-                    byInput.computeIfAbsent(item, k -> new ArrayList<>()).add(indexed);
-                    // RECIPE context: broad match for recipe lookup
+                    newByInput.computeIfAbsent(item, k -> new ArrayList<>()).add(indexed);
                     Object uid = ItemUid.compute(new ItemStack(item), ItemUid.Context.RECIPE);
-                    byInputUid.computeIfAbsent(uid, k -> new ArrayList<>()).add(indexed);
+                    newByInputUid.computeIfAbsent(uid, k -> new ArrayList<>()).add(indexed);
                 }
             }
 
             count++;
         }
 
+        // Atomic swap
+        this.byOutput = newByOutput;
+        this.byInput = newByInput;
+        this.byOutputUid = newByOutputUid;
+        this.byInputUid = newByInputUid;
         built = true;
         DevLog.info("RECIPE_INDEX_BUILT", "recipes={}, outputs={}, inputs={}, uidOutputs={}, uidInputs={}",
                 count, byOutput.size(), byInput.size(), byOutputUid.size(), byInputUid.size());

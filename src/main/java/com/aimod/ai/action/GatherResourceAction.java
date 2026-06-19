@@ -363,7 +363,7 @@ public class GatherResourceAction extends Action {
         }
 
         BlockPos botPos = bot.blockPosition();
-        Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, goal);
+        Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, goal, 500, 20);
         PathResult result = pathfinder.findPath();
 
         if (result.isFound() && result.getLength() >= 2) {

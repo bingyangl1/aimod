@@ -178,7 +178,7 @@ public class MineBlockAction extends Action {
 
         DevLog.info("MINE_PATH_COMPUTE", "from={}, to={}", botPos.toShortString(), approachPos.toShortString());
 
-        Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, approachPos);
+        Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, approachPos, 500, 20);
         PathResult result = pathfinder.findPath();
 
         if (result.isFound() && result.getLength() >= 2) {

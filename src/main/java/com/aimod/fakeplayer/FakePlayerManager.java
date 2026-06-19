@@ -3,6 +3,7 @@ package com.aimod.fakeplayer;
 import com.aimod.config.BotMode;
 import com.aimod.config.ModConfig;
 import com.aimod.entity.AIBotEntity;
+import com.aimod.ai.tool.AutoFish;
 import com.aimod.entity.ModEntities;
 import com.aimod.util.DevLog;
 import net.minecraft.server.MinecraftServer;
@@ -105,6 +106,8 @@ public class FakePlayerManager {
      */
     public void removeFakePlayer(FakePlayer player) {
         if (player == null) return;
+        player.cancelTask();
+        AutoFish.remove(player);
         activePlayers.remove(player.getUUID());
         // Dual mode: remove Mob wrapper
         AIBotEntity mob = botEntities.remove(player.getUUID());
@@ -117,11 +120,15 @@ public class FakePlayerManager {
      * Remove all FakePlayers (and their Mob wrappers in Dual mode).
      */
     public void removeAll() {
-        for (AIBotEntity mob : botEntities.values()) {
+        for (FakePlayer player : new java.util.ArrayList<>(activePlayers.values())) {
+            player.cancelTask();
+            AutoFish.remove(player);
+        }
+        for (AIBotEntity mob : new java.util.ArrayList<>(botEntities.values())) {
             mob.remove(Entity.RemovalReason.DISCARDED);
         }
         botEntities.clear();
-        for (FakePlayer player : activePlayers.values()) {
+        for (FakePlayer player : new java.util.ArrayList<>(activePlayers.values())) {
             player.kill();
         }
         activePlayers.clear();

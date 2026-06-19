@@ -52,7 +52,6 @@ public class MaterialTree {
         int stillNeed = Math.max(0, need.getCount() - available);
 
         if (stillNeed <= 0) {
-            visited.remove(item);
             return new MaterialNode(need, null, List.of()); // already have enough
         }
 
@@ -60,7 +59,6 @@ public class MaterialTree {
         RecipeIndex.IndexedRecipe recipe = RecipeIndex.getInstance()
                 .findBestRecipe(item, inventory);
         if (recipe == null) {
-            visited.remove(item);
             return new MaterialNode(new ItemStack(item, stillNeed), null, List.of()); // raw material
         }
 
@@ -77,7 +75,6 @@ public class MaterialTree {
             children.add(resolve(new ItemStack(inputItem, inputCount), inventory, visited, depth - 1));
         }
 
-        visited.remove(item);
         return new MaterialNode(new ItemStack(item, stillNeed), recipe, children);
     }
 

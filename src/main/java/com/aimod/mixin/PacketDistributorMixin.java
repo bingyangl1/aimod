@@ -1,6 +1,7 @@
 package com.aimod.mixin;
 
 import com.aimod.fakeplayer.FakePlayer;
+import com.aimod.util.DevLog;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -27,6 +28,8 @@ public abstract class PacketDistributorMixin {
         CallbackInfo ci
     ) {
         if (player instanceof FakePlayer) {
+            DevLog.info("PACKET_BLOCKED", "type={}, player={}",
+                    payload.type().id(), player.getName().getString());
             ci.cancel();
         }
     }

@@ -25,7 +25,7 @@ public class TaskReplanner {
     private final com.aimod.ai.llm.BotAIStateMachine stateMachine;
     private final BotMetrics metrics;
 
-    private volatile boolean replanning = false;
+    private final java.util.concurrent.atomic.AtomicBoolean replanning = new java.util.concurrent.atomic.AtomicBoolean(false);
     private volatile boolean cancelled = false; // Set by cancelTask() to abort background replan
     private final java.util.concurrent.atomic.AtomicInteger incrReplanCount = new java.util.concurrent.atomic.AtomicInteger(0);
     private static final int MAX_INCR_REPLAN = 5;
@@ -42,7 +42,7 @@ public class TaskReplanner {
         this.metrics = metrics;
     }
 
-    public boolean isReplanning() { return replanning; }
+    public boolean isReplanning() { return replanning.get(); }
     public boolean hasReplanned() { return incrReplanCount.get() > 0; }
 
     /**
@@ -51,7 +51,7 @@ public class TaskReplanner {
      */
     public void cancel() {
         cancelled = true;
-        replanning = false;
+        replanning.set(false);
     }
 
     /**
@@ -60,7 +60,7 @@ public class TaskReplanner {
     public void incrementalReplan(Task task, String failedActionDesc, String ownerName) {
         this.lastOwnerName = ownerName;
         this.cancelled = false; // Reset cancelled flag for new replan
-        if (replanning) return;
+        if (!replanning.compareAndSet(false, true)) return;
         if (incrReplanCount.get() >= MAX_INCR_REPLAN) {
             task.setStatus(Task.TaskStatus.FAILED);
             metrics.recordTaskFailed();
@@ -72,7 +72,6 @@ public class TaskReplanner {
             return;
         }
         incrReplanCount.incrementAndGet();
-        replanning = true;
         metrics.recordReplanTriggered();
         bot.getMovementController().getUnstuckDetector().setPaused(true);
 
@@ -102,7 +101,7 @@ public class TaskReplanner {
 
                 // Check if task was cancelled while LLM was processing
                 if (cancelled) {
-                    replanning = false;
+                    replanning.set(false);
                     bot.getMovementController().getUnstuckDetector().setPaused(false);
                     return;
                 }
@@ -110,14 +109,14 @@ public class TaskReplanner {
                 // Post all Task mutations to main thread to avoid concurrent modification
                 var server = bot.level().getServer();
                 if (server == null) {
-                    replanning = false;
+                    replanning.set(false);
                     return;
                 }
 
                 server.execute(() -> {
                     // Double-check cancellation after posting to main thread
                     if (cancelled) {
-                        replanning = false;
+                        replanning.set(false);
                         bot.getMovementController().getUnstuckDetector().setPaused(false);
                         return;
                     }
@@ -175,7 +174,7 @@ public class TaskReplanner {
                         feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
                         stateMachine.reset();
                     } finally {
-                        replanning = false;
+                        replanning.set(false);
                         bot.getMovementController().getUnstuckDetector().setPaused(false);
                     }
                 });
@@ -187,11 +186,11 @@ public class TaskReplanner {
                         task.setStatus(Task.TaskStatus.FAILED);
                         metrics.recordTaskFailed();
                         feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
-                        replanning = false;
+                        replanning.set(false);
                         bot.getMovementController().getUnstuckDetector().setPaused(false);
                     });
                 } else {
-                    replanning = false;
+                    replanning.set(false);
                 }
             }
         }, "AIMod-Incr-" + bot.getStringUUID().substring(0, 8));
@@ -203,7 +202,7 @@ public class TaskReplanner {
      * Check task for GiveItemAction deficits and trigger replan if needed.
      */
     public void checkDeficitsAndReplan(Task task) {
-        if (replanning) return;
+        if (!replanning.compareAndSet(false, true)) return;
 
         Map<String, Integer> deficits = new LinkedHashMap<>();
         String targetPlayer = null;
@@ -236,14 +235,13 @@ public class TaskReplanner {
         String replanCommand = cmd.toString();
         DevLog.info("REPLAN_SCHEDULED", "command={}", DevLog.compact(replanCommand));
 
-        replanning = true;
         Thread replanThread = new Thread(() -> {
             try {
                 Task newTask = planner.parseCommand(replanCommand, lastOwnerName, stateMachine);
                 if (newTask != null && newTask.getActionCount() > 0) {
                     if (bot.level().getServer() != null) {
                         bot.level().getServer().execute(() -> {
-                            replanning = false;
+                            replanning.set(false);
                             reset(); // Reset counters for new task
                             DevLog.info("REPLAN_TASK_ASSIGNED", "actionCount={}", newTask.getActionCount());
                             feedback.reportTaskStart(replanCommand);
@@ -253,15 +251,15 @@ public class TaskReplanner {
                             // Note: executeTask is called by the caller (BotAIManager)
                         });
                     } else {
-                        replanning = false;
+                        replanning.set(false);
                     }
                 } else {
-                    replanning = false;
+                    replanning.set(false);
                     stateMachine.reset();
                     DevLog.warn("REPLAN_NO_ACTIONS", "LLM returned no actions for replanning");
                 }
             } catch (Exception e) {
-                replanning = false;
+                replanning.set(false);
                 DevLog.error("REPLAN_FAILED", "replanning exception", e);
             }
         }, "AIMod-Replan-" + bot.getStringUUID().substring(0, 8));

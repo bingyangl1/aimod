@@ -817,3 +817,26 @@ botSkinUrl = "https://example.com/skin.png"
 | 13 | `SequencePlanner.java` | 移除工作台前置检查 | Medium |
 
 *更新日期: 2026-06-18 | 版本: 1.1.11-r111*
+
+### r112: P2 审计修复 — Medium 级问题（17 项）
+
+| # | 文件 | 修复内容 | 类别 |
+|---|------|----------|------|
+| 1 | `ChunkCache.java` | lastChunk/lastChunkKey 加 volatile | 线程安全 |
+| 2 | `LLMResponseParser.java` | message/content null 检查 | LLM 健壮性 |
+| 3 | `CommandParser.java` | 模糊匹配阈值 3→5 | 本地规划 |
+| 4 | `LLMService.java` | 流式错误路径关闭 InputStream | 资源管理 |
+| 5 | `LLMService.java` | SSE 内容 1MB 大小限制 | 资源管理 |
+| 6 | `PacketDistributorMixin.java` | 添加日志记录被阻止的数据包类型 | Mixin 安全 |
+| 7 | `MaterialTree.java` | 不再从 visited 移除已处理项 | 合成逻辑 |
+| 8 | `FakePlayerManager.java` | removeFakePlayer 先 cancelTask + AutoFish.remove | 资源管理 |
+| 9 | `FakePlayerManager.java` | removeAll 先取消任务再 kill | 资源管理 |
+| 10 | `TaskReplanner.java` | volatile boolean → AtomicBoolean + CAS | 线程安全 |
+| 11 | `BotSkinManager.java` | synchronized(profile) 线程安全写入 | 线程安全 |
+| 12 | `ChunkCache.java` | prune() 锁外排序 | 性能 |
+| 13 | `RecipeIndex.java` | 临时 map 构建 + volatile 原子交换 | 线程安全 |
+| 14 | `MaterialSubstitute.java` | 消耗前检查空位 | 合成逻辑 |
+| 15 | `MineBlockAction.java` | 同步寻路超时 2s→500ms | 性能 |
+| 16 | `GatherResourceAction.java` | 同步寻路超时 2s→500ms | 性能 |
+
+*更新日期: 2026-06-18 | 版本: 1.1.12-r112*

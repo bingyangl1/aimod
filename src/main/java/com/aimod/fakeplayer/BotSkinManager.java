@@ -104,7 +104,9 @@ public class BotSkinManager {
                     String value = properties.get(0).getAsJsonObject().get("value").getAsString();
                     String signature = properties.get(0).getAsJsonObject().has("signature")
                             ? properties.get(0).getAsJsonObject().get("signature").getAsString() : "";
-                    profile.getProperties().put("textures", new Property("textures", value, signature));
+                    synchronized (profile) {
+                        profile.getProperties().put("textures", new Property("textures", value, signature));
+                    }
                     DevLog.info("BOT_SKIN_USERNAME_APPLIED", "profile={}, username={}", profile.getName(), username);
                 }
             } catch (Exception e) {

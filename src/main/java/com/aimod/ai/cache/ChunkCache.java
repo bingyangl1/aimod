@@ -47,8 +47,8 @@ public class ChunkCache {
     private volatile boolean running = true;
 
     // Spatial-locality cache: last-hit chunk
-    private CachedChunkData lastChunk;
-    private long lastChunkKey = Long.MIN_VALUE;
+    private volatile CachedChunkData lastChunk;
+    private volatile long lastChunkKey = Long.MIN_VALUE;
 
     public ChunkCache(ServerLevel level) {
         this.level = level;
@@ -161,20 +161,23 @@ public class ChunkCache {
      * Get approximate bot position for pruning (use chunk with most blocks).
      */
     public void prune(Vec3 playerPos) {
+        // Copy entries under lock, sort outside lock
+        java.util.List<Long2ObjectMap.Entry<CachedChunkData>> entries;
         synchronized (chunks) {
             if (chunks.size() <= MAX_CHUNKS) return;
+            entries = new ArrayList<>(chunks.long2ObjectEntrySet());
+        }
 
-            int px = (int) playerPos.x;
-            int pz = (int) playerPos.z;
+        int px = (int) playerPos.x;
+        int pz = (int) playerPos.z;
+        entries.sort(Comparator.comparingDouble(e -> {
+            int cx = CachedChunkData.chunkKeyToX(e.getLongKey()) * 16 + 8;
+            int cz = CachedChunkData.chunkKeyToZ(e.getLongKey()) * 16 + 8;
+            return ((cx - px) * (cx - px) + (cz - pz) * (cz - pz));
+        }));
 
-            var entries = new ArrayList<>(chunks.long2ObjectEntrySet());
-            entries.sort(Comparator.comparingDouble(e -> {
-                int cx = CachedChunkData.chunkKeyToX(e.getLongKey()) * 16 + 8;
-                int cz = CachedChunkData.chunkKeyToZ(e.getLongKey()) * 16 + 8;
-                return ((cx - px) * (cx - px) + (cz - pz) * (cz - pz));
-            }));
-
-            // Remove furthest chunks to reach target size
+        // Remove furthest chunks under lock
+        synchronized (chunks) {
             for (int i = PRUNE_TARGET; i < entries.size(); i++) {
                 chunks.remove(entries.get(i).getLongKey());
             }

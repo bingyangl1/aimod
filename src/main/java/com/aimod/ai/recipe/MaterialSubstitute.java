@@ -129,8 +129,18 @@ public final class MaterialSubstitute {
                         Item plank = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(namespace + ":" + plankKey));
                         if (plank != null && plank != Items.AIR) {
                             int logs = stack.getCount();
+                            int planksTotal = logs * entry.getValue().yieldCount;
+                            // 检查是否有足够空间放置木板
+                            int slotsNeeded = (planksTotal + 63) / 64;
+                            int availableSlots = 0;
+                            for (int j = 0; j < inv.size(); j++) {
+                                var dst = inv.get(j);
+                                if (dst.isEmpty()) availableSlots++;
+                                else if (dst.getItem() == plank && dst.getCount() < 64) availableSlots++;
+                            }
+                            if (availableSlots < slotsNeeded) continue; // 空间不足，跳过
                             stack.setCount(0); // consume all logs
-                            int planks = logs * entry.getValue().yieldCount;
+                            int planks = planksTotal;
                             // Add planks to inventory
                             for (int j = 0; j < inv.size(); j++) {
                                 var dst = inv.get(j);

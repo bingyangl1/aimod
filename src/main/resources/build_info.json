@@ -1,6 +1,6 @@
 {
-  "version": "1.1.11",
-  "build": "2026-06-18-r111",
+  "version": "1.1.12",
+  "build": "2026-06-18-r112",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -121,6 +121,19 @@
     "r111: P1 audit — BotCommandConfig.toggleFeature: actually persist the toggled value (was display-only)",
     "r111: P1 audit — ModConfig setters: clamp values to defineInRange bounds (was bypassing NeoForge range validation)",
     "r111: P1 audit — SequencePlanner: remove crafting table prerequisite for pickaxe (placeWorkbench handles it)",
+    "r112: P2 audit — ChunkCache: volatile lastChunk/lastChunkKey for cross-thread visibility",
+    "r112: P2 audit — LLMResponseParser: null check on message/content fields (prevents NPE on malformed responses)",
+    "r112: P2 audit — CommandParser: raise fuzzy match threshold from 3 to 5 (reduces false positives)",
+    "r112: P2 audit — LLMService: close InputStream in streaming error path + 1MB limit on SSE content",
+    "r112: P2 audit — PacketDistributorMixin: add logging for blocked packet types",
+    "r112: P2 audit — MaterialTree: stop removing items from visited set (prevents diamond dependency blowup)",
+    "r112: P2 audit — FakePlayerManager: cancelTask + AutoFish.remove before kill (prevents orphaned threads)",
+    "r112: P2 audit — TaskReplanner: AtomicBoolean.compareAndSet for replanning flag (prevents duplicate replan threads)",
+    "r112: P2 audit — BotSkinManager: synchronized(profile) for thread-safe skin application",
+    "r112: P2 audit — ChunkCache: sort entries outside synchronized block in prune() (reduces lock contention)",
+    "r112: P2 audit — RecipeIndex: build into temp maps + volatile swap (prevents concurrent read seeing empty state)",
+    "r112: P2 audit — MaterialSubstitute: check available slots before consuming logs (prevents item loss)",
+    "r112: P2 audit — MineBlockAction/GatherResourceAction: pathfinder timeout 2s→500ms for sync calls",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

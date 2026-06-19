@@ -102,7 +102,7 @@ public final class CommandParser {
             int score = matchScore(item, q);
             if (score > bestScore) { bestScore = score; bestMatch = item; }
         }
-        return bestScore >= 3 ? bestMatch : null;
+        return bestScore >= 5 ? bestMatch : null;
     }
 
     /** Score how well an item matches a query. */

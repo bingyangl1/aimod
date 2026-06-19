@@ -465,9 +465,11 @@ public class LLMService {
             int responseCode = streamResponse.statusCode();
             DevLog.info("LLM_RESPONSE_CODE", "code={}, elapsedMs={}, streaming=true", responseCode, elapsedMs(startedAt));
             if (responseCode != 200) {
-                String errorBody = new String(streamResponse.body().readAllBytes(), StandardCharsets.UTF_8);
-                DevLog.warn("LLM_ERROR_RESPONSE", "code={}, body={}", responseCode, DevLog.compact(errorBody));
-                throw new IOException("API returned status " + responseCode + ": " + errorBody);
+                try (var errorStream = streamResponse.body()) {
+                    String errorBody = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8);
+                    DevLog.warn("LLM_ERROR_RESPONSE", "code={}, body={}", responseCode, DevLog.compact(errorBody));
+                    throw new IOException("API returned status " + responseCode + ": " + errorBody);
+                }
             }
             return readSSEStreamFromInputStream(streamResponse.body(), startedAt);
         }
@@ -536,6 +538,8 @@ public class LLMService {
      * Stream SSE response from an InputStream, parsing chunks as they arrive.
      * Avoids loading the entire response body into memory.
      */
+    private static final int MAX_STREAM_CONTENT_CHARS = 1_000_000; // 1MB
+
     private String readSSEStreamFromInputStream(java.io.InputStream inputStream, long startedAt) {
         StringBuilder content = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
@@ -551,6 +555,10 @@ public class LLMService {
                         appendStreamingChoice(chunk, content);
                     } catch (Exception e) {
                         DevLog.warn("LLM_STREAM_PARSE_ERROR", "data={}", DevLog.compact(data));
+                    }
+                    if (content.length() > MAX_STREAM_CONTENT_CHARS) {
+                        DevLog.warn("LLM_STREAM_TOO_LARGE", "size={}", content.length());
+                        break;
                     }
                 }
             }
