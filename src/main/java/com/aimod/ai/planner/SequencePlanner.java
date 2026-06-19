@@ -75,7 +75,7 @@ public final class SequencePlanner {
         if (maxPickTier > 0 && !hasPickaxe(bot, inv, maxPickTier)) {
             // Try to craft a pickaxe first
             Item pickaxe = getPickaxeForTier(maxPickTier);
-            if (pickaxe != null && inv.countItem(Items.CRAFTING_TABLE) > 0) {
+            if (pickaxe != null) {
                 // Recursively plan the pickaxe craft (shallow - just the pickaxe)
                 MaterialTree pickTree = new MaterialTree(pickaxe, 1);
                 pickTree.build(inv, 4);

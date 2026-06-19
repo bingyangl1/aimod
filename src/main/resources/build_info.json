@@ -1,6 +1,6 @@
 {
-  "version": "1.1.10",
-  "build": "2026-06-18-r110",
+  "version": "1.1.11",
+  "build": "2026-06-18-r111",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -108,6 +108,19 @@
     "r110: P0 audit — DefenseChain: removed double movement in melee/retreat/shield (setDeltaMovement + move = 2x speed)",
     "r110: P0 audit — PlayerDefenseChain: removed double movement in retreat (same pattern as DefenseChain)",
     "r110: P0 audit — FakePlayer.assignTask: state machine reset in catch block (was stuck in PLANNING on LLM exception)",
+    "r111: P1 audit — CraftAction: loop crafting to produce count items (was only crafting 1 batch)",
+    "r111: P1 audit — BotMovement factory: return null for unrecognized movements (was creating impossible Traverse)",
+    "r111: P1 audit — MovementTraverse PREPPING: verify bridge placement success before transitioning to RUNNING",
+    "r111: P1 audit — MovementDigDown: add overshoot check for air-gap falls (bot was falling past destination Y)",
+    "r111: P1 audit — FakePlayer.assignDirectTask: call cancelReplan() before assigning new task",
+    "r111: P1 audit — TaskReplanner: state machine reset in 3 failure paths (max retries, server.execute catch, no actions)",
+    "r111: P1 audit — MovementController.hasArrived: add distance check (was returning true on navigation failure)",
+    "r111: P1 audit — ChainManager.stopAll: clear lastActiveChain (was stale after stopAll)",
+    "r111: P1 audit — UnstuckChain SKIP: stop navigation only, don't cancel task (was conflicting with DangerChain retry)",
+    "r111: P1 audit — FollowAction: move navigation logic from isComplete() to execute() (was violating method contract)",
+    "r111: P1 audit — BotCommandConfig.toggleFeature: actually persist the toggled value (was display-only)",
+    "r111: P1 audit — ModConfig setters: clamp values to defineInRange bounds (was bypassing NeoForge range validation)",
+    "r111: P1 audit — SequencePlanner: remove crafting table prerequisite for pickaxe (placeWorkbench handles it)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

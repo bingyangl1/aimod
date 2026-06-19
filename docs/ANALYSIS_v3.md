@@ -797,3 +797,23 @@ botSkinUrl = "https://example.com/skin.png"
 完整审计报告: `docs/CODE_AUDIT_V2.md`
 
 *更新日期: 2026-06-18 | 版本: 1.1.10-r110*
+
+### r111: P1 审计修复 — High/Medium 级问题（14 项）
+
+| # | 文件 | 修复内容 | 严重度 |
+|---|------|----------|--------|
+| 1 | `CraftAction.java` | 添加 count 循环：按配方产出循环合成直到达到目标数量 | High |
+| 2 | `BotMovement.java` | 工厂回退返回 null（之前创建不可能完成的 MovementTraverse） | High |
+| 3 | `MovementTraverse.java` | PREPPING 验证方块放置成功，失败则 FAILED | High |
+| 4 | `MovementDigDown.java` | 空气层下落添加过冲检查（之前会穿过目标深度） | High |
+| 5 | `FakePlayer.java` | assignDirectTask 添加 cancelReplan() | High |
+| 6 | `TaskReplanner.java` | 3 处失败路径添加 stateMachine.reset() | High |
+| 7 | `MovementController.java` | hasArrived() 添加距离检查 | Medium |
+| 8 | `ChainManager.java` | stopAll() 清除 lastActiveChain | Medium |
+| 9 | `UnstuckChain.java` | SKIP 改为只停止导航，不取消任务 | Medium |
+| 10 | `FollowAction.java` | 导航逻辑从 isComplete() 移到 execute() | Medium |
+| 11 | `BotCommandConfig.java` | toggleFeature 添加 setter 调用 | Medium |
+| 12 | `ModConfig.java` | setter 添加范围限制 | Medium |
+| 13 | `SequencePlanner.java` | 移除工作台前置检查 | Medium |
+
+*更新日期: 2026-06-18 | 版本: 1.1.11-r111*

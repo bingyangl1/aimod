@@ -347,14 +347,14 @@ public class ModConfig {
     public static BotMode getBotMode() { return BotMode.fromKey(BOT_MODE.get()); }
 
     // -- Runtime setters (for /ai_bot config command) --
-    public static void setDefaultScanRadius(int v) { DEFAULT_SCAN_RADIUS.set(v); }
-    public static void setHungerThreshold(int v) { HUNGER_THRESHOLD.set(v); }
-    public static void setMovementSpeed(double v) { MOVEMENT_SPEED.set(v); }
+    public static void setDefaultScanRadius(int v) { DEFAULT_SCAN_RADIUS.set(Math.max(8, Math.min(128, v))); }
+    public static void setHungerThreshold(int v) { HUNGER_THRESHOLD.set(Math.max(0, Math.min(20, v))); }
+    public static void setMovementSpeed(double v) { MOVEMENT_SPEED.set(Math.max(0.1, Math.min(1.0, v))); }
     public static void setVeinMine(boolean v) { VEIN_MINE.set(v); }
     public static void setAutoReplenish(boolean v) { AUTO_REPLENISH.set(v); }
     public static void setAutoReplaceTool(boolean v) { AUTO_REPLACE_TOOL.set(v); }
     public static void setAutoFish(boolean v) { AUTO_FISH.set(v); }
-    public static void setMaxBots(int v) { MAX_BOTS.set(v); }
+    public static void setMaxBots(int v) { MAX_BOTS.set(Math.max(1, Math.min(50, v))); }
     public static void setShowTaskAboveHead(boolean v) { SHOW_TASK_ABOVE_HEAD.set(v); }
     public static void setEnablePvpDefense(boolean v) { ENABLE_PVP_DEFENSE.set(v); }
     public static void setEnableDangerChain(boolean v) { ENABLE_DANGER_CHAIN.set(v); }

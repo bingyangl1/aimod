@@ -29,6 +29,7 @@ public class CraftAction extends Action {
     private final String itemId;
     private final int count;
     private int craftProgress;
+    private int craftedCount;
     private RecipeIndex.IndexedRecipe resolvedRecipe;
     private boolean recipeIndexBuilt = false;
 
@@ -129,9 +130,10 @@ public class CraftAction extends Action {
                 // Consume only inputs, NOT catalysts
                 InventoryUtils.consumeItems(bot, requiredItems);
 
-                // Create output — use recipe's natural yield, not multiplied by count
+                // Create output — use recipe's natural yield
                 ItemStack result = resolvedRecipe.getHolder().value()
                         .getResultItem(bot.level().registryAccess());
+                int recipeYield = result.getCount();
                 ItemStack output = result.copy();
                 // Cap to max stack size
                 if (output.getCount() > output.getMaxStackSize()) {
@@ -139,13 +141,21 @@ public class CraftAction extends Action {
                 }
 
                 boolean added = InventoryUtils.addItem(bot, output);
-                if (added) {
-                    status = ActionStatus.COMPLETED;
-                    DevLog.info("CRAFT_DONE", "item={}, count={}, category={}",
-                            itemId, count, resolvedRecipe.getCategory());
-                } else {
+                if (!added) {
                     status = ActionStatus.FAILED;
                     DevLog.warn("CRAFT_FAIL_INVENTORY_FULL", "item={}", itemId);
+                    return;
+                }
+
+                craftedCount += recipeYield;
+                if (craftedCount >= count) {
+                    status = ActionStatus.COMPLETED;
+                    DevLog.info("CRAFT_DONE", "item={}, requested={}, crafted={}, category={}",
+                            itemId, count, craftedCount, resolvedRecipe.getCategory());
+                } else {
+                    // 还需要更多，重置进度继续下一批
+                    craftProgress = 0;
+                    DevLog.info("CRAFT_BATCH", "item={}, crafted={}/{}", itemId, craftedCount, count);
                 }
             }
         }

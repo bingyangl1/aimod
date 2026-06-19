@@ -161,13 +161,17 @@ public class MovementDigDown extends BotMovement {
 
         // If already air, we might be at the target
         if (breakState.isAir()) {
-            // Check if we need to go deeper
-            if (bot.getY() > dest.getY() + 0.5) {
-                // Fall into the air gap
-                double moveY = Math.max(bot.getDeltaMovement().y - 0.08, -0.5);
-                bot.setDeltaMovement(0, moveY, 0);
-                bot.move(MoverType.SELF, bot.getDeltaMovement());
+            // Check if we've reached or passed the destination
+            if (bot.getY() <= dest.getY() + 0.5) {
+                bot.setPos(bot.getX(), dest.getY(), bot.getZ());
+                bot.setDeltaMovement(0, 0, 0);
+                status = Status.COMPLETE;
+                return true;
             }
+            // Fall into the air gap
+            double moveY = Math.max(bot.getDeltaMovement().y - 0.08, -0.5);
+            bot.setDeltaMovement(0, moveY, 0);
+            bot.move(MoverType.SELF, bot.getDeltaMovement());
             return false;
         }
 

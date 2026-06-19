@@ -64,6 +64,11 @@ public class MovementTraverse extends BotMovement {
                     level.setBlock(floorBelowDest, bi.getBlock().defaultBlockState(), 3);
                     throwaway.shrink(1);
                 }
+                // 验证放置是否成功
+                if (!MoveCost.canWalkOn(level, floorBelowDest, level.getBlockState(floorBelowDest))) {
+                    status = Status.FAILED;
+                    return true;
+                }
             }
             status = Status.RUNNING;
             return false;

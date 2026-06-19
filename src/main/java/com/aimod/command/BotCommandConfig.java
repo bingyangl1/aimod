@@ -75,6 +75,12 @@ public class BotCommandConfig implements SubCommand {
             case "veinMine" -> !com.aimod.config.ModConfig.getVeinMine();
             default -> { ctx.getSource().sendFailure(Component.literal("Unknown: " + feature)); yield false; }
         };
+        switch (feature) {
+            case "autoFish" -> com.aimod.config.ModConfig.setAutoFish(newVal);
+            case "autoReplenish" -> com.aimod.config.ModConfig.setAutoReplenish(newVal);
+            case "autoReplace" -> com.aimod.config.ModConfig.setAutoReplaceTool(newVal);
+            case "veinMine" -> com.aimod.config.ModConfig.setVeinMine(newVal);
+        }
         ctx.getSource().sendSuccess(() -> Component.literal(feature + " = " + newVal), true);
         return 1;
     }

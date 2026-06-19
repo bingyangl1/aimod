@@ -31,6 +31,35 @@ public class FollowAction extends Action {
                 status = ActionStatus.FAILED;
             }
         }
+
+        if (status == ActionStatus.IN_PROGRESS) {
+            if (targetPlayer == null || !targetPlayer.isAlive()) {
+                stopNavigation(bot);
+                status = ActionStatus.COMPLETED;
+                return;
+            }
+
+            double dist = bot.distanceTo(targetPlayer);
+            if (dist <= FOLLOW_DISTANCE) {
+                stopNavigation(bot);
+                return; // 距离够近，保持跟随但不移动
+            }
+
+            // 定期重新计算路径
+            var playerBlockPos = targetPlayer.blockPosition();
+            boolean playerMoved = lastPlayerPos == null || !playerBlockPos.equals(lastPlayerPos);
+            boolean needsUpdate = pathUpdateTimer <= 0 || (playerMoved && pathUpdateTimer < PATH_UPDATE_INTERVAL - 5);
+
+            if (needsUpdate) {
+                var towardsBot = bot.position().subtract(targetPlayer.position()).normalize();
+                var targetPos = targetPlayer.position().add(towardsBot.scale(FOLLOW_DISTANCE));
+                navigateWithPathfinding(bot, new net.minecraft.core.BlockPos(
+                        (int)targetPos.x, (int)targetPos.y, (int)targetPos.z));
+                lastPlayerPos = playerBlockPos;
+                pathUpdateTimer = PATH_UPDATE_INTERVAL;
+            }
+            pathUpdateTimer--;
+        }
     }
 
     private static final double FOLLOW_DISTANCE = 2.5;
@@ -40,34 +69,6 @@ public class FollowAction extends Action {
 
     @Override
     public boolean isComplete(FakePlayer bot) {
-        if (status == ActionStatus.IN_PROGRESS) {
-            if (targetPlayer == null || !targetPlayer.isAlive()) {
-                stopNavigation(bot);
-                status = ActionStatus.COMPLETED;
-            } else {
-                double dist = bot.distanceTo(targetPlayer);
-                if (dist <= FOLLOW_DISTANCE) {
-                    stopNavigation(bot);
-                    return false; // stay, keep following
-                }
-
-                // Recalculate path periodically or when player moved significantly
-                var playerBlockPos = targetPlayer.blockPosition();
-                boolean playerMoved = lastPlayerPos == null || !playerBlockPos.equals(lastPlayerPos);
-                boolean needsUpdate = pathUpdateTimer <= 0 || (playerMoved && pathUpdateTimer < PATH_UPDATE_INTERVAL - 5);
-
-                if (needsUpdate) {
-                    // Calculate target 2 blocks away from player in bot's direction
-                    var towardsBot = bot.position().subtract(targetPlayer.position()).normalize();
-                    var targetPos = targetPlayer.position().add(towardsBot.scale(FOLLOW_DISTANCE));
-                    navigateWithPathfinding(bot, new net.minecraft.core.BlockPos(
-                            (int)targetPos.x, (int)targetPos.y, (int)targetPos.z));
-                    lastPlayerPos = playerBlockPos;
-                    pathUpdateTimer = PATH_UPDATE_INTERVAL;
-                }
-                pathUpdateTimer--;
-            }
-        }
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }
 

@@ -97,6 +97,7 @@ public class ChainManager {
             activeChain.stop();
             activeChain = null;
         }
+        lastActiveChain = null;
     }
 
     public BehaviorChain getActiveChain() { return activeChain; }

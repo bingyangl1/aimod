@@ -219,7 +219,10 @@ public class MovementController {
     }
 
     public boolean isNavigating() { return navigating; }
-    public boolean hasArrived() { return !navigating && navTarget != null; }
+    public boolean hasArrived() {
+        return !navigating && navTarget != null
+                && bot.blockPosition().distManhattan(navTarget) <= 2;
+    }
     public boolean isStuck() { return unstuckDetector.isStuck(); }
     public UnstuckDetector getUnstuckDetector() { return unstuckDetector; }
     public BlockPos getNavTarget() { return navTarget; }

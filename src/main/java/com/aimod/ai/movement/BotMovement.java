@@ -126,7 +126,7 @@ public abstract class BotMovement {
         if (dy == 0 && adx + adz == 2) return new MovementDiagonal(src, dest);
         if (dy == 0 && adx + adz == 0) return null;
         if (dy == 0 && adx <= 1 && adz <= 1 && adx + adz == 1) return new MovementTraverse(src, dest);
-        return new MovementTraverse(src, dest);
+        return null; // 无法识别的移动类型，回退到 moveToward
     }
 
     @Override

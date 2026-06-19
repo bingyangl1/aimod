@@ -68,6 +68,7 @@ public class TaskReplanner {
             planner.getPlanCache().markFailed(planner.getLastCommand());
             incrReplanCount.set(0);
             consecutiveUnknown.set(0);
+            stateMachine.reset();
             return;
         }
         incrReplanCount.incrementAndGet();
@@ -172,6 +173,7 @@ public class TaskReplanner {
                         task.setStatus(Task.TaskStatus.FAILED);
                         metrics.recordTaskFailed();
                         feedback.reportTaskFailed(task.getDescription(), "Replan failed: " + e.getMessage());
+                        stateMachine.reset();
                     } finally {
                         replanning = false;
                         bot.getMovementController().getUnstuckDetector().setPaused(false);
@@ -255,6 +257,7 @@ public class TaskReplanner {
                     }
                 } else {
                     replanning = false;
+                    stateMachine.reset();
                     DevLog.warn("REPLAN_NO_ACTIONS", "LLM returned no actions for replanning");
                 }
             } catch (Exception e) {

@@ -514,6 +514,7 @@ public class FakePlayer extends ServerPlayer {
      * Assign a pre-built task directly, bypassing the LLM.
      */
     public void assignDirectTask(Task task, @Nullable Player owner) {
+        aiManager.cancelReplan();
         if (parsingTask) {
             DevLog.warn("BOT_ALREADY_PARSING", "bot={}, task={}", this.getStringUUID(), task.getDescription());
             return;
