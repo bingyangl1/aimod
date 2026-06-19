@@ -44,8 +44,19 @@ public class ChainManager {
     public boolean tick(FakePlayer bot) {
         ensureSorted();
 
-        // If current chain is still active, keep running it
+        // If current chain is still active, check for preemption by higher-priority chains
         if (activeChain != null && activeChain.isActive()) {
+            for (BehaviorChain chain : chains) {
+                if (chain == activeChain) break; // same or lower priority, stop checking
+                if (chain.priority() > activeChain.priority() && chain.shouldActivate(bot)) {
+                    DevLog.info("CHAIN_PREEMPT", "higher={}({}) interrupts lower={}({})",
+                            chain.name(), chain.priority(), activeChain.name(), activeChain.priority());
+                    activeChain.stop();
+                    lastActiveChain = activeChain;
+                    activeChain = chain;
+                    break;
+                }
+            }
             activeChain.tick(bot);
             return activeChain.priority() > PREEMPT_THRESHOLD;
         }

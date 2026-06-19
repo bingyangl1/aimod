@@ -1,6 +1,6 @@
 {
-  "version": "1.1.09",
-  "build": "2026-06-12-r109",
+  "version": "1.1.10",
+  "build": "2026-06-18-r110",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -101,6 +101,13 @@
     "r107: Phase 4 audit — deficit replan resets counters + passes ownerName, LLMService.parseResponse delegates to LLMResponseParser, MovementDigDown tool durability check",
     "r108: Phase 5 audit — MovementPillar stuckTicks reset on place/jump, PlaceBlockAction re-reads stack after inventory swap, PlayerDefenseChain retreat calls bot.move()",
     "r109: Phase 6 audit — tryDigDown max depth 20, MovementFall zero horizontal velocity on landing, FakePlayer death check in tick, NameTagFormatter % escape, pickupNearbyItems throttle 20 ticks",
+    "r110: P0 audit — ChainManager preemption: higher-priority chains can now interrupt lower ones (DangerChain can preempt FoodChain)",
+    "r110: P0 audit — LLMResponseParser nested JSON: replaced regex with state-machine brace/bracket counter for proper nesting",
+    "r110: P0 audit — SneakAction: unconditionally reset shiftKeyDown on completion (was leaving bot sneaking forever)",
+    "r110: P0 audit — UnstuckDetector PILLAR: place block below feet instead of at feet (was suffocating the bot)",
+    "r110: P0 audit — DefenseChain: removed double movement in melee/retreat/shield (setDeltaMovement + move = 2x speed)",
+    "r110: P0 audit — PlayerDefenseChain: removed double movement in retreat (same pattern as DefenseChain)",
+    "r110: P0 audit — FakePlayer.assignTask: state machine reset in catch block (was stuck in PLANNING on LLM exception)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

@@ -114,7 +114,6 @@ public class DefenseChain extends BehaviorChain {
 
         if (dist > 6.25) {
             Vec3 toward = target.position().subtract(bot.position()).normalize().scale(0.2);
-            bot.setDeltaMovement(toward.x, bot.getDeltaMovement().y, toward.z);
             bot.move(MoverType.SELF, new Vec3(toward.x, bot.getDeltaMovement().y, toward.z));
         }
 
@@ -133,7 +132,6 @@ public class DefenseChain extends BehaviorChain {
     private void retreat(FakePlayer bot, double dist) {
         retreating = true;
         Vec3 away = bot.position().subtract(target.position()).normalize().scale(0.25);
-        bot.setDeltaMovement(away.x, bot.getDeltaMovement().y, away.z);
         bot.move(MoverType.SELF, new Vec3(away.x, bot.getDeltaMovement().y, away.z));
         // Look back at target while retreating
         bot.lookAt(target.getX(), target.getY() + target.getBbHeight() / 2, target.getZ());
@@ -152,7 +150,6 @@ public class DefenseChain extends BehaviorChain {
         Vec3 strafe = bot.position().subtract(target.position()).normalize();
         double sx = -strafe.z * 0.15;
         double sz = strafe.x * 0.15;
-        bot.setDeltaMovement(sx, bot.getDeltaMovement().y, sz);
         bot.move(MoverType.SELF, new Vec3(sx, bot.getDeltaMovement().y, sz));
     }
 

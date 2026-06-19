@@ -13,9 +13,8 @@ import java.util.regex.Pattern;
 public final class LLMResponseParser {
     private LLMResponseParser() {}
 
-    // Pre-compiled patterns for performance (avoid recompilation on every call)
-    private static final Pattern ACTIONS_ARRAY_PATTERN = Pattern.compile("\"actions\"\\s*:\\s*(\\[[^\\]]*\\])");
-    private static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("\\{[^}]*\\}");
+    // Pre-compiled pattern for actions array key detection
+    private static final Pattern ACTIONS_KEY_PATTERN = Pattern.compile("\"actions\"\\s*:\\s*\\[");
 
     public static LLMResponse parseResponse(String response) {
         try {
@@ -74,21 +73,38 @@ public final class LLMResponseParser {
     }
 
     /**
-     * 宽松解析：直接查找"actions": [...]模式
+     * 宽松解析：直接查找"actions": [...]模式（支持嵌套）
      */
     private static List<String> findActionsArrayLoosely(String content) {
         List<String> actions = new ArrayList<>();
         try {
-            // 使用正则表达式查找"actions": [ ... ] 模式
-            Matcher matcher = ACTIONS_ARRAY_PATTERN.matcher(content);
+            Matcher matcher = ACTIONS_KEY_PATTERN.matcher(content);
             if (matcher.find()) {
-                String jsonArrayStr = matcher.group(1);
-                // 尝试解析这个数组
-                JsonElement element = JsonParser.parseString(jsonArrayStr);
-                if (element.isJsonArray()) {
-                    JsonArray actionsArray = element.getAsJsonArray();
-                    for (int i = 0; i < actionsArray.size(); i++) {
-                        actions.add(actionsArray.get(i).toString());
+                int arrayStart = matcher.end() - 1; // position of '['
+                int depth = 0;
+                int i = arrayStart;
+                boolean inString = false;
+                boolean escaped = false;
+                for (; i < content.length(); i++) {
+                    char c = content.charAt(i);
+                    if (escaped) { escaped = false; continue; }
+                    if (c == '\\') { escaped = true; continue; }
+                    if (c == '"') { inString = !inString; continue; }
+                    if (inString) continue;
+                    if (c == '[') depth++;
+                    else if (c == ']') {
+                        depth--;
+                        if (depth == 0) break;
+                    }
+                }
+                if (depth == 0) {
+                    String jsonArrayStr = content.substring(arrayStart, i + 1);
+                    JsonElement element = JsonParser.parseString(jsonArrayStr);
+                    if (element.isJsonArray()) {
+                        JsonArray actionsArray = element.getAsJsonArray();
+                        for (int j = 0; j < actionsArray.size(); j++) {
+                            actions.add(actionsArray.get(j).toString());
+                        }
                     }
                 }
             }
@@ -99,19 +115,38 @@ public final class LLMResponseParser {
     }
 
     /**
-     * 提取看起来像action对象的内容（最后的备选方案）
+     * 提取看起来像action对象的内容（最后的备选方案，支持嵌套）
      */
     private static List<String> extractActionObjects(String content) {
         List<String> actions = new ArrayList<>();
         try {
-            // 查找所有看起来像独立JSON对象的内容
-            Matcher matcher = JSON_OBJECT_PATTERN.matcher(content);
-            while (matcher.find()) {
-                String potentialAction = matcher.group();
-                // 验证这是否包含action类型字段
-                if (potentialAction.contains("\"type\"")) {
-                    actions.add(potentialAction);
+            int i = 0;
+            while (i < content.length()) {
+                if (content.charAt(i) == '{') {
+                    int depth = 0;
+                    int start = i;
+                    boolean inString = false;
+                    boolean escaped = false;
+                    for (; i < content.length(); i++) {
+                        char c = content.charAt(i);
+                        if (escaped) { escaped = false; continue; }
+                        if (c == '\\') { escaped = true; continue; }
+                        if (c == '"') { inString = !inString; continue; }
+                        if (inString) continue;
+                        if (c == '{') depth++;
+                        else if (c == '}') {
+                            depth--;
+                            if (depth == 0) {
+                                String obj = content.substring(start, i + 1);
+                                if (obj.contains("\"type\"")) {
+                                    actions.add(obj);
+                                }
+                                break;
+                            }
+                        }
+                    }
                 }
+                i++;
             }
         } catch (Exception e) {
             DevLog.warn("LLM_ACTION_EXTRACT_ERROR", "action extraction failed: {}", e.getMessage());

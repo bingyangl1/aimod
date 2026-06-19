@@ -779,3 +779,21 @@ botSkinUrl = "https://example.com/skin.png"
 | 3 | `MovementDigDown.java` | `getToolSpeed()` 跳过耐久度 <10 的工具 |
 
 *更新日期: 2026-06-12 | 版本: 1.1.07-r107*
+
+### r110: P0 审计修复 — Critical/High 级问题
+
+全面代码审计发现 98 个问题（2 Critical, 15 High, 43 Medium, 38 Low）。本版本修复 6 个 P0 级问题。
+
+| # | 文件 | 修复内容 | 严重度 |
+|---|------|----------|--------|
+| 1 | `ChainManager.java` | 添加链抢占机制：高优先级链可打断低优先级链（DangerChain 可抢占 FoodChain） | Critical |
+| 2 | `LLMResponseParser.java` | 嵌套 JSON 解析：正则替换为状态机括号计数器，支持嵌套花括号/方括号 | Critical |
+| 3 | `SneakAction.java` | 完成后无条件重置 shiftKeyDown（之前 sneak=true 完成后 bot 永久蹲走） | High |
+| 4 | `UnstuckDetector.java` | PILLAR 策略改为在脚下放置方块（之前在脚位置放置导致窒息） | High |
+| 5 | `DefenseChain.java` | 移除 3 处双重移动（setDeltaMovement + move = 双倍速度） | High |
+| 6 | `PlayerDefenseChain.java` | 移除撤退时双重移动（同 DefenseChain 模式） | High |
+| 7 | `FakePlayer.java` | assignTask catch 块添加 stateMachine.reset()（之前 LLM 异常后卡在 PLANNING） | High |
+
+完整审计报告: `docs/CODE_AUDIT_V2.md`
+
+*更新日期: 2026-06-18 | 版本: 1.1.10-r110*

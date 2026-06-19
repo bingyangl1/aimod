@@ -145,8 +145,7 @@ public class PlayerDefenseChain extends BehaviorChain {
             double speed = 0.25; // sprint speed
             double nx = dx / dist;
             double nz = dz / dist;
-            bot.setDeltaMovement(nx * speed, bot.getDeltaMovement().y, nz * speed);
-            bot.move(net.minecraft.world.entity.MoverType.SELF, bot.getDeltaMovement());
+            bot.move(net.minecraft.world.entity.MoverType.SELF, new net.minecraft.world.phys.Vec3(nx * speed, bot.getDeltaMovement().y, nz * speed));
         }
     }
 

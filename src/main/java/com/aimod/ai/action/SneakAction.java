@@ -37,9 +37,7 @@ public class SneakAction extends Action {
             duration++;
             if (!sneak || duration >= MAX_DURATION) {
                 status = ActionStatus.COMPLETED;
-                if (!sneak) {
-                    bot.setShiftKeyDown(false);
-                }
+                bot.setShiftKeyDown(false); // 无条件重置潜行状态
                 DevLog.info("SNEAK_DONE", "sneak={}, duration={}", sneak, duration);
             }
         }

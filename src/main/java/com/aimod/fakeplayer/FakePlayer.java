@@ -499,6 +499,7 @@ public class FakePlayer extends ServerPlayer {
                 }
             } catch (Exception e) {
                 DevLog.error("BOT_PARSE_THREAD_EXCEPTION", "failed to parse task", e);
+                aiManager.getStateMachine().reset();
             } finally {
                 parsingTask = false;
                 DevLog.info("BOT_PARSE_THREAD_DONE", "bot={}, thread={}",

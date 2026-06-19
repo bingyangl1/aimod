@@ -147,18 +147,18 @@ public class UnstuckDetector {
                 bot.setDeltaMovement(Math.cos(rad) * 0.1, bot.getDeltaMovement().y, Math.sin(rad) * 0.1);
             }
             case PILLAR -> {
-                // Place block at feet and jump up
-                BlockPos pos = bot.blockPosition();
+                // Place block BELOW feet, then jump up
+                BlockPos below = bot.blockPosition().below();
                 var level = bot.level();
-                if (level.getBlockState(pos).isAir() || level.getBlockState(pos).canBeReplaced()) {
+                if (level.getBlockState(below).isAir() || level.getBlockState(below).canBeReplaced()) {
                     var inv = bot.getInventory();
                     for (int i = 0; i < inv.getContainerSize(); i++) {
                         var stack = inv.getItem(i);
                         if (!stack.isEmpty() && stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
-                            BlockState state = bi.getBlock().defaultBlockState();
                             // Skip blocks in the #minecraft:falling tag (sand, gravel, concrete powder, etc.)
                             if (bi.getBlock() instanceof FallingBlock) continue;
-                            level.setBlock(pos, state, 3);
+                            BlockState state = bi.getBlock().defaultBlockState();
+                            level.setBlock(below, state, 3);
                             stack.shrink(1);
                             bot.setDeltaMovement(bot.getDeltaMovement().x, 0.42, bot.getDeltaMovement().z);
                             break;
