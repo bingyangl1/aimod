@@ -79,6 +79,11 @@ public class MineBlockAction extends Action {
 
             if (currentTarget == null || searching) {
                 WorldScanner scanner = new WorldScanner(bot);
+                // Wire up OreIndex for incremental scanning (XRay optimization)
+                if (bot.level() != null) {
+                    com.aimod.ai.OreIndex oreIndex = com.aimod.ai.OreIndexHolder.getForLevel(bot.level());
+                    if (oreIndex != null) scanner.setOreIndex(oreIndex);
+                }
                 currentTarget = scanner.findNearestBlock(blockId, searchRadius);
                 searching = false;
                 lastDistSqr = Double.MAX_VALUE;

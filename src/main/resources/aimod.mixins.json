@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "refmap": "aimod.refmap.json",
   "mixins": [
+    "BlockChangeMixin",
     "ConnectionMixin",
     "PacketDistributorMixin",
     "PlayerListMixin",

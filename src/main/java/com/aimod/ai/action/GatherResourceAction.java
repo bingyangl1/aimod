@@ -703,6 +703,11 @@ public class GatherResourceAction extends Action {
 
     private BlockPos findResource(FakePlayer bot) {
         WorldScanner scanner = new WorldScanner(bot);
+        // Wire up OreIndex for incremental scanning (XRay optimization)
+        if (bot.level() != null) {
+            com.aimod.ai.OreIndex oreIndex = com.aimod.ai.OreIndexHolder.getForLevel(bot.level());
+            if (oreIndex != null) scanner.setOreIndex(oreIndex);
+        }
         List<Block> blockTypes = getBlocksForType();
 
         // Single-pass batch scan — all block types in one pass

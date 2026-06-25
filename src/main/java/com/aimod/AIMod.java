@@ -60,7 +60,14 @@ public class AIMod {
     private void onServerStarted(final ServerStartedEvent event) {
         BotCommand.init(event.getServer());
         chunkCache = new ChunkCache(event.getServer().overworld());
-        LOGGER.info("AI Mod: Server started, ChunkCache initialized");
+
+        // Initialize block change tracker (XRay-inspired ore tracking)
+        com.aimod.ai.BlockChangeTracker.init();
+
+        // Create OreIndex for the overworld
+        com.aimod.ai.OreIndexHolder.getOrCreate(event.getServer().overworld());
+
+        LOGGER.info("AI Mod: Server started, ChunkCache + OreIndex initialized");
 
         // Auto-load bots from previous session
         FakePlayerManager manager = BotCommand.getManager();

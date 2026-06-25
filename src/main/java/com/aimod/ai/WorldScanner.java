@@ -20,6 +20,14 @@ import java.util.stream.Collectors;
 /**
  * 世界扫描器，用于查找附近的方块、实体和资源。
  * 为 AI 决策提供世界感知能力。
+ *
+ * <p>XRay-inspired optimizations:
+ * <ul>
+ *   <li>OreIndex: incremental ore caching per chunk (scan once, query many)</li>
+ *   <li>Blacklist: skip common blocks (air/stone/dirt) early in scan loop</li>
+ *   <li>Chunk-level scanning: scan by chunk for better cache locality</li>
+ *   <li>BlockChangeTracker: real-time ore tracking via Mixin</li>
+ * </ul>
  */
 public class WorldScanner {
 
@@ -27,6 +35,8 @@ public class WorldScanner {
     private final int defaultScanRadius;
     @Nullable
     private ChunkCache chunkCache;
+    @Nullable
+    private OreIndex oreIndex;
 
     public WorldScanner(net.minecraft.world.entity.Entity bot) {
         this(bot, 32);
@@ -40,13 +50,16 @@ public class WorldScanner {
     /** Set a chunk cache for O(1) block lookups instead of level.getBlockState(). */
     public void setChunkCache(@Nullable ChunkCache cache) { this.chunkCache = cache; }
 
+    /** Set the ore index for incremental scanning. */
+    public void setOreIndex(@Nullable OreIndex index) { this.oreIndex = index; }
+
     private BlockState getState(BlockPos pos) {
         if (chunkCache != null) return chunkCache.getBlockState(pos);
         return bot.level().getBlockState(pos);
     }
 
     /**
-     * 查找附近指定类型的方块
+     * 查找附近指定类型的方块（带 OreIndex 增量扫描）
      */
     public List<BlockPos> findNearbyBlocks(String blockId, int radius) {
         Block targetBlock = resolveBlock(blockId);
@@ -58,13 +71,104 @@ public class WorldScanner {
     }
 
     /**
-     * 查找附近指定类型的方块
+     * 查找附近指定类型的方块。
+     *
+     * <p>Strategy: query OreIndex first, then scan only unscanned chunks.
+     * This avoids re-scanning the same area on every call.</p>
      */
     public List<BlockPos> findNearbyBlocks(Block targetBlock, int radius) {
         BlockPos botPos = bot.blockPosition();
-        List<BlockPos> results = new ArrayList<>();
         final int MAX_RESULTS = 16;
+
+        // Step 1: Query OreIndex for cached results
+        List<BlockPos> results = new ArrayList<>();
+        if (oreIndex != null) {
+            results.addAll(oreIndex.query(botPos, radius));
+            // Filter to only the target block type
+            results.removeIf(pos -> !getState(pos).is(targetBlock));
+        }
+
+        // Step 2: Scan unscanned chunks
+        if (oreIndex != null) {
+            var unscanned = oreIndex.getUnscannedChunks(botPos, radius);
+            for (var chunkPos : unscanned) {
+                scanChunkForBlock(chunkPos, targetBlock, botPos, radius, results);
+            }
+        } else {
+            // No OreIndex — fall back to full scan
+            scanFullRadius(botPos, targetBlock, radius, results);
+        }
+
+        // Sort by distance and cap
+        results.sort(Comparator.comparingDouble(pos -> bot.distanceToSqr(
+                pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)));
+
+        if (results.size() > MAX_RESULTS) {
+            results = new ArrayList<>(results.subList(0, MAX_RESULTS));
+        }
+
+        DevLog.info("SCAN_BLOCKS", "block={}, radius={}, found={}, indexed={}",
+                BuiltInRegistries.BLOCK.getKey(targetBlock), radius, results.size(),
+                oreIndex != null ? oreIndex.getScannedChunkCount() : 0);
+        return results;
+    }
+
+    /**
+     * Scan a single chunk for a specific block type.
+     * Uses blacklist filtering for early skip.
+     */
+    private void scanChunkForBlock(net.minecraft.world.level.ChunkPos chunkPos, Block targetBlock,
+                                   BlockPos center, int radius, List<BlockPos> results) {
         int radiusSq = radius * radius;
+        int chunkBaseX = chunkPos.x << 4;
+        int chunkBaseZ = chunkPos.z << 4;
+        int minY = bot.level().getMinBuildHeight();
+        int maxY = bot.level().getMaxBuildHeight();
+        int botY = center.getY();
+
+        List<BlockPos> chunkOres = new ArrayList<>();
+
+        for (int x = chunkBaseX; x < chunkBaseX + 16; x++) {
+            for (int z = chunkBaseZ; z < chunkBaseZ + 16; z++) {
+                int dx = x - center.getX();
+                int dz = z - center.getZ();
+                if (dx * dx + dz * dz > radiusSq) continue;
+
+                // Y spread from bot position (XRay-style: nearest Y first)
+                for (int dy = 0; dy <= radius; dy++) {
+                    for (int sign : new int[]{-1, 1}) {
+                        int y = botY + dy * sign;
+                        if (y < minY || y > maxY) continue;
+                        if (dy == 0 && sign == 1) continue;
+
+                        BlockState state = getState(new BlockPos(x, y, z));
+
+                        // Blacklist: skip common non-ore blocks (XRay optimization)
+                        if (BlockChangeTracker.isCommonNonOre(state)) continue;
+
+                        if (state.is(targetBlock)) {
+                            BlockPos pos = new BlockPos(x, y, z).immutable();
+                            results.add(pos);
+                            chunkOres.add(pos);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update OreIndex with all ores found in this chunk
+        if (oreIndex != null) {
+            oreIndex.putChunkOres(chunkPos, chunkOres);
+        }
+    }
+
+    /**
+     * Full radius scan (fallback when no OreIndex is available).
+     */
+    private void scanFullRadius(BlockPos botPos, Block targetBlock, int radius, List<BlockPos> results) {
+        int radiusSq = radius * radius;
+        int minY = bot.level().getMinBuildHeight();
+        int maxY = bot.level().getMaxBuildHeight();
 
         for (BlockPos pos : BlockPos.betweenClosed(
                 botPos.offset(-radius, -radius, -radius),
@@ -73,22 +177,14 @@ public class WorldScanner {
             int dy = pos.getY() - botPos.getY();
             int dz = pos.getZ() - botPos.getZ();
             if (dx * dx + dy * dy + dz * dz > radiusSq) continue;
+            if (pos.getY() < minY || pos.getY() > maxY) continue;
+
             BlockState state = getState(pos);
+            if (BlockChangeTracker.isCommonNonOre(state)) continue;
             if (state.is(targetBlock)) {
                 results.add(pos.immutable());
             }
         }
-
-        results.sort(Comparator.comparingDouble(pos -> bot.distanceToSqr(
-                pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)));
-
-        if (results.size() > MAX_RESULTS) {
-            results = new ArrayList<>(results.subList(0, MAX_RESULTS));
-        }
-
-        DevLog.info("SCAN_BLOCKS", "block={}, radius={}, found={}",
-                BuiltInRegistries.BLOCK.getKey(targetBlock), radius, results.size());
-        return results;
     }
 
 

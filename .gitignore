@@ -85,4 +85,4 @@ verify-*.txt
 verify-*.ps1
 analyze-logs.ps1
 *.bak
-crash-reports/
+crash-reports/.xray-ref/

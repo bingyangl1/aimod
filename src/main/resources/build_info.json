@@ -1,6 +1,6 @@
 {
-  "version": "1.1.16",
-  "build": "2026-06-26-r116",
+  "version": "1.1.17",
+  "build": "2026-06-26-r117",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -161,6 +161,13 @@
     "r116: Agentic fix — AgentLoop multi-layer response parsing (actions list → raw content → direct JSON fallback)",
     "r116: Agentic fix — AgentContext goal analysis: item requirements, inventory gap analysis, mining depth guide",
     "r116: Agentic fix — step-by-step thinking prompt for better LLM decision quality",
+    "r117: XRay-inspired OreIndex — incremental per-chunk ore caching (scan once, query many)",
+    "r117: XRay-inspired BlockChangeTracker — Mixin on Level.setBlock() for real-time ore tracking",
+    "r117: XRay-inspired blacklist — skip air/stone/dirt/deepslate/gravel/sand/netherrack in scan loop",
+    "r117: XRay-inspired chunk-level scanning — scan by chunk with Y-spread from bot position",
+    "r117: OreIndexHolder — static accessor for per-level OreIndex instances",
+    "r117: WorldScanner integrates OreIndex — query cached ores first, only scan unscanned chunks",
+    "r117: MineBlockAction/GatherResourceAction wire up OreIndex for incremental scanning",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
