@@ -76,7 +76,9 @@ public class AgentLoop {
     /**
      * Run the agentic loop until the goal is achieved, failed, or max steps reached.
      *
-     * <p>This is the main entry point, equivalent to OpenCode's {@code run()} method.</p>
+     * <p>Uses look-ahead LLM calls: the next LLM call starts while the current action
+     * is executing, so the response is ready by the time the action completes.
+     * This eliminates the 10-15 second idle gap between actions.</p>
      *
      * @param bot the bot to execute actions on
      * @return the final goal status
@@ -85,22 +87,47 @@ public class AgentLoop {
         DevLog.info("AGENT_LOOP_START", "goal={}, maxSteps={}", goal.getOriginalCommand(), MAX_STEPS);
 
         int step = 0;
+        java.util.concurrent.CompletableFuture<LLMResponse> pendingLlm = null;
+
         while (goal.isInProgress() && step < MAX_STEPS) {
 
-            // 1. OBSERVE — capture current world state
-            // (OpenCode: load context + history)
-            JsonObject worldState = WorldObserver.observe(bot);
+            // 1. GET LLM RESPONSE — either from look-ahead or fresh call
+            LLMResponse response;
+            String prompt;
+            long llmStart;
+            long llmDuration;
 
-            // 2. ASSEMBLE CONTEXT — build prompt for LLM
-            // (OpenCode: entriesForRunner)
-            AgentContext ctx = new AgentContext(goal, worldState, history, MAX_HISTORY_IN_CONTEXT);
-            String prompt = ctx.toPrompt();
-
-            // 3. THINK — call LLM for next decision
-            // (OpenCode: runTurn → stream LLM)
-            long llmStart = System.currentTimeMillis();
-            LLMResponse response = llmService.sendPromptWithModel(prompt, modelName);
-            long llmDuration = System.currentTimeMillis() - llmStart;
+            if (pendingLlm != null && pendingLlm.isDone()) {
+                // Look-ahead response is ready — use it immediately (no wait!)
+                try {
+                    response = pendingLlm.get();
+                } catch (Exception e) {
+                    response = LLMResponse.failure("Look-ahead failed: " + e.getMessage());
+                }
+                pendingLlm = null;
+                prompt = "(look-ahead from previous step)";
+                llmDuration = 0;
+                DevLog.info("AGENT_LOOKAHEAD_HIT", "step={}", step);
+            } else {
+                // No look-ahead available — call LLM synchronously
+                if (pendingLlm != null) {
+                    DevLog.info("AGENT_LOOKAHEAD_WAIT", "step={}", step);
+                    try { response = pendingLlm.get(); } catch (Exception e) {
+                        response = LLMResponse.failure("Look-ahead failed: " + e.getMessage());
+                    }
+                    pendingLlm = null;
+                    prompt = "(look-ahead from previous step)";
+                    llmDuration = 0;
+                } else {
+                    // Fresh LLM call
+                    JsonObject worldState = WorldObserver.observe(bot);
+                    AgentContext ctx = new AgentContext(goal, worldState, history, MAX_HISTORY_IN_CONTEXT);
+                    prompt = ctx.toPrompt();
+                    llmStart = System.currentTimeMillis();
+                    response = llmService.sendPromptWithModel(prompt, modelName);
+                    llmDuration = System.currentTimeMillis() - llmStart;
+                }
+            }
 
             if (!response.isSuccess()) {
                 DevLog.warn("AGENT_LLM_FAILED", "step={}, error={}", step, response.getError());
@@ -114,7 +141,7 @@ public class AgentLoop {
                 continue;
             }
 
-            // Parse LLM response into decision
+            // 2. PARSE — extract action from LLM response
             StepRecord.LLMDecision decision = parseDecision(response);
             DevLog.info("AGENT_PARSE_RESULT", "step={}, type={}, json={}, actionsInResponse={}",
                     step, decision.actionType(),
@@ -122,15 +149,24 @@ public class AgentLoop {
                     response.getActions().size());
 
             // Log LLM request/response
-            if (sessionLog != null) {
+            if (sessionLog != null && !prompt.equals("(look-ahead from previous step)")) {
                 sessionLog.recordLLM(prompt, response.getRawResponse(), modelName, llmDuration);
             }
 
             DevLog.info("AGENT_DECISION", "step={}, type={}, reasoning={}",
                     step, decision.actionType(), compact(decision.reasoning()));
 
-            // 4. ACT — execute the action
-            // (OpenCode: toolMaterialization.settle)
+            // 3. START LOOK-AHEAD — begin LLM call for NEXT step while current action executes
+            // This eliminates the idle gap between actions
+            final int nextStep = step;
+            pendingLlm = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                JsonObject ws = WorldObserver.observe(bot);
+                AgentContext ac = new AgentContext(goal, ws, history, MAX_HISTORY_IN_CONTEXT);
+                String p = ac.toPrompt();
+                return llmService.sendPromptWithModel(p, modelName);
+            });
+
+            // 4. ACT — execute the action (while LLM call runs in background)
             long actionStart = System.currentTimeMillis();
             Action action = actionExecutor.parseAction(decision.actionJson());
             if (action == null) {
@@ -144,16 +180,16 @@ public class AgentLoop {
             long actionDuration = System.currentTimeMillis() - actionStart;
 
             // 5. RECORD — save step to history and log
-            // (OpenCode: publish event)
+            JsonObject worldStateAfter = WorldObserver.observe(bot);
             StepRecord record = new StepRecord(
                     step + 1,
-                    worldState,
+                    WorldObserver.observe(bot),
                     decision,
                     action.getDescription(),
                     result.status(),
                     result.failReason(),
                     actionDuration,
-                    WorldObserver.observe(bot) // capture state after execution
+                    worldStateAfter
             );
             history.add(record);
 

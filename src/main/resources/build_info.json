@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
-  "build": "2026-06-26-r120",
+  "version": "1.2.1",
+  "build": "2026-06-26-r121",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -178,6 +178,9 @@
     "r120: Hierarchical planning — MineBlockAction auto-digs to ore spawn level when no ore found nearby",
     "r120: MineBlockAction auto-dig: re-scans every 10 blocks, stops at target Y, handles obstacles",
     "r120: MineBlockAction eliminates wasteful LLM calls for low-level digging decisions",
+    "r121: Look-ahead LLM calls — next decision pre-fetched via CompletableFuture while current action executes",
+    "r121: Bot no longer idles 10-15 seconds between actions (LLM call overlaps with action execution)",
+    "r121: AgentLoop.run() restructured: pendingLlm future, look-ahead hit/wait logging",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
