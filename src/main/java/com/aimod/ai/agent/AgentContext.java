@@ -71,9 +71,21 @@ public class AgentContext {
         sb.append("1. What do I need to achieve the goal?\n");
         sb.append("2. What do I currently have?\n");
         sb.append("3. What is the most important next action?\n\n");
-        sb.append("Respond with ONE JSON action. Do NOT repeat previously failed actions.\n");
+        sb.append("## Response Format\n");
+        sb.append("You MUST respond with EXACTLY ONE JSON object. Use \"type\" as the key for action type.\n");
+        sb.append("Do NOT use \"action\" as the key. Do NOT nest parameters in a sub-object.\n\n");
+        sb.append("Correct format:\n");
+        sb.append("{\"type\": \"break_block\", \"x\": -390, \"y\": 100, \"z\": -261}\n");
+        sb.append("{\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 1, \"radius\": 128}\n");
+        sb.append("{\"type\": \"craft\", \"item_id\": \"minecraft:stick\", \"count\": 4}\n");
+        sb.append("{\"type\": \"move_to\", \"x\": -390, \"y\": 60, \"z\": -261}\n");
+        sb.append("{\"type\": \"equip\", \"item_id\": \"minecraft:netherite_pickaxe\", \"slot\": \"MAINHAND\"}\n");
+        sb.append("{\"type\": \"interact\", \"interact_type\": \"CRAFTING_TABLE\"}\n\n");
+        sb.append("WRONG formats (do NOT use):\n");
+        sb.append("{\"action\": \"break_block\", ...}  ← use \"type\", not \"action\"\n");
+        sb.append("{\"break_block\": {\"x\": ...}}  ← do NOT nest, use flat keys\n\n");
         sb.append("Available types: move_to, break_block, place_block, mine, gather, craft, give_item, interact, equip, attack, follow, say, wait\n");
-        sb.append("For break_block/move_to/place_block: x, y, z are REQUIRED.\n");
+        sb.append("For break_block/move_to/place_block: x, y, z are REQUIRED flat keys.\n");
         sb.append("For mine/gather: radius max 128.\n");
         sb.append("Use 'mine' to find ores, 'craft' to craft items, 'interact' with crafting_table before crafting.\n");
 

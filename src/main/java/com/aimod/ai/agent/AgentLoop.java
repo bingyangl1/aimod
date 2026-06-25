@@ -36,9 +36,16 @@ import java.util.List;
  */
 public class AgentLoop {
 
-    private static final int MAX_STEPS = 30;
+    private static final int MAX_STEPS = 50;
     private static final int MAX_HISTORY_IN_CONTEXT = 10;
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
+
+    /** Known action type strings — for detecting shorthand LLM output */
+    private static final java.util.Set<String> KNOWN_TYPES = java.util.Set.of(
+            "move_to", "break_block", "place_block", "attack", "craft", "follow",
+            "give_item", "require_items", "say", "wait", "mine", "gather", "interact", "equip",
+            "vein_mine", "use_item", "drop", "sneak", "look_at"
+    );
 
     private final Goal goal;
     private final LLMService llmService;
@@ -213,14 +220,22 @@ public class AgentLoop {
         String reasoning = extractReasoning(rawContent);
 
         // Extract action type from JSON
+        // Handles 3 formats: {"type":"..."}, {"action":"..."}, {"break_block":{...}}
         String actionType = "unknown";
         try {
             JsonObject json = JsonParser.parseString(actionJson).getAsJsonObject();
-            // LLM may use "type" or "action" as the key
             if (json.has("type")) {
                 actionType = json.get("type").getAsString();
             } else if (json.has("action")) {
                 actionType = json.get("action").getAsString();
+            } else {
+                // Format 3: action type as key, e.g. {"break_block": {"x": ...}}
+                for (String knownType : KNOWN_TYPES) {
+                    if (json.has(knownType)) {
+                        actionType = knownType;
+                        break;
+                    }
+                }
             }
         } catch (Exception ignored) {}
 
