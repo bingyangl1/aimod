@@ -2,13 +2,16 @@ package com.aimod.ai.agent;
 
 import com.aimod.ai.action.Action;
 import com.aimod.ai.llm.LLMResponse;
+import com.aimod.ai.llm.LLMResponseParser;
 import com.aimod.ai.llm.LLMService;
 import com.aimod.ai.session.SessionLog;
 import com.aimod.ai.session.StepRecord;
 import com.aimod.ai.session.WorldObserver;
 import com.aimod.fakeplayer.FakePlayer;
 import com.aimod.util.DevLog;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -185,38 +188,91 @@ public class AgentLoop {
         return goal.getStatus();
     }
 
-    /** Parse LLM response into a decision. */
+    /**
+     * Parse LLM response into a decision.
+     * Multi-layer fallback: actions list → raw content extraction → direct JSON parse.
+     */
     private StepRecord.LLMDecision parseDecision(LLMResponse response) {
-        // The raw response contains the full LLM output
-        // The actions list contains parsed action JSON strings
-        String actionJson = response.getActions().isEmpty() ? "{}" : response.getActions().get(0);
         String rawContent = response.getRawResponse() != null ? response.getRawResponse() : "";
+        String actionJson = "{}";
 
-        // Extract reasoning from raw response (if available)
-        String reasoning = "";
-        try {
-            com.google.gson.JsonObject raw = com.google.gson.JsonParser.parseString(rawContent).getAsJsonObject();
-            if (raw.has("choices")) {
-                var choices = raw.getAsJsonArray("choices");
-                if (choices.size() > 0) {
-                    var message = choices.get(0).getAsJsonObject().getAsJsonObject("message");
-                    if (message != null && message.has("reasoning_content")) {
-                        reasoning = message.get("reasoning_content").getAsString();
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
+        // Layer 1: Use pre-parsed actions from LLMResponseParser
+        if (!response.getActions().isEmpty()) {
+            actionJson = response.getActions().get(0);
+        }
+        // Layer 2: Extract from raw OpenAI response content
+        else if (!rawContent.isEmpty()) {
+            actionJson = extractActionFromRawResponse(rawContent);
+        }
+
+        // Extract reasoning from raw response
+        String reasoning = extractReasoning(rawContent);
 
         // Extract action type from JSON
         String actionType = "unknown";
         try {
-            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(actionJson).getAsJsonObject();
+            JsonObject json = JsonParser.parseString(actionJson).getAsJsonObject();
             if (json.has("type")) {
                 actionType = json.get("type").getAsString();
             }
         } catch (Exception ignored) {}
 
         return new StepRecord.LLMDecision(reasoning, actionJson, actionType);
+    }
+
+    /**
+     * Extract action JSON from raw OpenAI-format response.
+     * Handles cases where LLMResponseParser fails to extract actions.
+     */
+    private String extractActionFromRawResponse(String rawResponse) {
+        try {
+            JsonObject json = JsonParser.parseString(rawResponse).getAsJsonObject();
+
+            // Try OpenAI format: choices[0].message.content
+            if (json.has("choices")) {
+                JsonArray choices = json.getAsJsonArray("choices");
+                if (choices.size() > 0) {
+                    JsonObject choice = choices.get(0).getAsJsonObject();
+                    JsonObject message = choice.has("message") && choice.get("message").isJsonObject()
+                            ? choice.getAsJsonObject("message") : null;
+                    if (message != null && message.has("content") && !message.get("content").isJsonNull()) {
+                        String content = message.get("content").getAsString();
+                        // Try parseActionsFromContent first
+                        List<String> actions = LLMResponseParser.parseActionsFromContent(content);
+                        if (!actions.isEmpty()) return actions.get(0);
+                        // Fallback: if content looks like a JSON object, use it directly
+                        if (content.trim().startsWith("{")) {
+                            return content.trim();
+                        }
+                    }
+                }
+            }
+
+            // Try direct action JSON (some LLMs return action directly)
+            if (json.has("type")) {
+                return rawResponse.trim();
+            }
+        } catch (Exception e) {
+            DevLog.warn("AGENT_RAW_PARSE_FAILED", "err={}", e.getMessage());
+        }
+        return "{}";
+    }
+
+    /** Extract reasoning_content from OpenAI-format response. */
+    private String extractReasoning(String rawResponse) {
+        try {
+            JsonObject raw = JsonParser.parseString(rawResponse).getAsJsonObject();
+            if (raw.has("choices")) {
+                var choices = raw.getAsJsonArray("choices");
+                if (choices.size() > 0) {
+                    var message = choices.get(0).getAsJsonObject().getAsJsonObject("message");
+                    if (message != null && message.has("reasoning_content")) {
+                        return message.get("reasoning_content").getAsString();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return "";
     }
 
     /** Compact string for logging. */

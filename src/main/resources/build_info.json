@@ -1,6 +1,6 @@
 {
-  "version": "1.1.15",
-  "build": "2026-06-19-r115",
+  "version": "1.1.16",
+  "build": "2026-06-26-r116",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -158,6 +158,9 @@
     "r115: Phase 3 integration — AgenticTaskRunner bridges AgentLoop with FakePlayer",
     "r115: Config toggle useAgenticMode (default false) — switch between one-shot and agentic modes",
     "r115: Replay command /ai_bot replay <session-id> — offline session replay for debugging",
+    "r116: Agentic fix — AgentLoop multi-layer response parsing (actions list → raw content → direct JSON fallback)",
+    "r116: Agentic fix — AgentContext goal analysis: item requirements, inventory gap analysis, mining depth guide",
+    "r116: Agentic fix — step-by-step thinking prompt for better LLM decision quality",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

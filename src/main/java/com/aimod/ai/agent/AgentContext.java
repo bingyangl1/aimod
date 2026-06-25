@@ -40,9 +40,15 @@ public class AgentContext {
         sb.append("## Goal\n");
         sb.append(goal.getOriginalCommand()).append("\n\n");
 
+        // Goal requirements analysis
+        appendGoalAnalysis(sb);
+
         // Current state section
         sb.append("## Current State\n");
         sb.append(formatWorldState(worldState)).append("\n");
+
+        // Mining depth guide
+        appendMiningGuide(sb);
 
         // History section (recent steps)
         if (!history.isEmpty()) {
@@ -61,13 +67,101 @@ public class AgentContext {
 
         // Instruction
         sb.append("## Instruction\n");
-        sb.append("Based on the current state and history, decide the NEXT single action to progress toward the goal.\n");
+        sb.append("Think step by step:\n");
+        sb.append("1. What do I need to achieve the goal?\n");
+        sb.append("2. What do I currently have?\n");
+        sb.append("3. What is the most important next action?\n\n");
         sb.append("Respond with ONE JSON action. Do NOT repeat previously failed actions.\n");
         sb.append("Available types: move_to, break_block, place_block, mine, gather, craft, give_item, interact, equip, attack, follow, say, wait\n");
         sb.append("For break_block/move_to/place_block: x, y, z are REQUIRED.\n");
         sb.append("For mine/gather: radius max 128.\n");
+        sb.append("Use 'mine' to find ores, 'craft' to craft items, 'interact' with crafting_table before crafting.\n");
 
         return sb.toString();
+    }
+
+    /**
+     * Analyze what items are needed for the goal and what's missing.
+     */
+    private void appendGoalAnalysis(StringBuilder sb) {
+        String goalText = goal.getOriginalCommand().toLowerCase();
+
+        // Diamond armor set
+        if (goalText.contains("钻石") || goalText.contains("diamond")) {
+            sb.append("## What You Need\n");
+            if (goalText.contains("装备") || goalText.contains("armor") || goalText.contains("套")) {
+                sb.append("Diamond armor set requires:\n");
+                sb.append("- diamond_helmet: 5 diamonds\n");
+                sb.append("- diamond_chestplate: 8 diamonds\n");
+                sb.append("- diamond_leggings: 7 diamonds\n");
+                sb.append("- diamond_boots: 4 diamonds\n");
+                sb.append("- Total: 24 diamonds\n");
+                sb.append("- Crafting table required (interact with crafting_table before craft)\n\n");
+            } else if (goalText.contains("剑") || goalText.contains("sword")) {
+                sb.append("Diamond sword requires: 2 diamonds + 1 stick\n\n");
+            } else if (goalText.contains("镐") || goalText.contains("pickaxe")) {
+                sb.append("Diamond pickaxe requires: 3 diamonds + 2 sticks\n\n");
+            } else {
+                sb.append("Diamond items require diamonds mined from diamond_ore.\n\n");
+            }
+
+            // Check inventory for diamonds
+            if (worldState.has("inventory")) {
+                JsonObject inv = worldState.getAsJsonObject("inventory");
+                int diamonds = 0;
+                for (var entry : inv.entrySet()) {
+                    if (entry.getKey().contains("diamond") && !entry.getKey().contains("pickaxe")
+                            && !entry.getKey().contains("sword") && !entry.getKey().contains("armor")) {
+                        diamonds += entry.getValue().getAsInt();
+                    }
+                }
+                sb.append("Current diamonds in inventory: ").append(diamonds).append("\n\n");
+            }
+        }
+
+        // Iron items
+        if (goalText.contains("铁") || goalText.contains("iron")) {
+            sb.append("## What You Need\n");
+            sb.append("Iron items require iron_ingot (smelt raw_iron in furnace).\n");
+            sb.append("Iron ore is found below Y=64.\n\n");
+        }
+    }
+
+    /**
+     * Add mining depth guide when the goal involves gathering resources.
+     */
+    private void appendMiningGuide(StringBuilder sb) {
+        String goalText = goal.getOriginalCommand().toLowerCase();
+        boolean needsMining = goalText.contains("钻石") || goalText.contains("diamond")
+                || goalText.contains("铁") || goalText.contains("iron")
+                || goalText.contains("金") || goalText.contains("gold")
+                || goalText.contains("红石") || goalText.contains("redstone")
+                || goalText.contains("青金石") || goalText.contains("lapis")
+                || goalText.contains("绿宝石") || goalText.contains("emerald")
+                || goalText.contains("挖") || goalText.contains("mine")
+                || goalText.contains("采") || goalText.contains("gather");
+
+        if (!needsMining) return;
+
+        // Check if bot is at surface level
+        if (worldState.has("position")) {
+            int y = worldState.getAsJsonObject("position").get("y").getAsInt();
+            if (y > 16) {
+                sb.append("## Mining Guide\n");
+                sb.append("You are at Y=").append(y).append(" (surface level).\n");
+                sb.append("Ore spawn depths:\n");
+                sb.append("- Diamond ore: Y < 16 (best at Y = -59)\n");
+                sb.append("- Iron ore: Y < 64 (best at Y = 16)\n");
+                sb.append("- Gold ore: Y < 32 (best at Y = -16)\n");
+                sb.append("- Redstone: Y < 16\n");
+                sb.append("- Lapis: Y < 32\n");
+                sb.append("- Emerald: Y < 32 (mountains only)\n");
+                sb.append("- Coal: Y < 96\n\n");
+                sb.append("To mine diamonds, you need to dig down first.\n");
+                sb.append("Use 'mine' action with block_id 'minecraft:diamond_ore' and radius 128.\n");
+                sb.append("If no diamond ore found, use 'break_block' to dig down to Y < 16.\n\n");
+            }
+        }
     }
 
     private String formatWorldState(JsonObject state) {
