@@ -180,7 +180,16 @@ public class LLMService {
         try {
             if (!isModelAvailable()) return LLMResponse.failure("Model health check failed");
             String response = callLLMApi(prompt);
-            return parseResponse(response);
+            LLMResponse parsed = parseResponse(response);
+            // If parseResponse failed, preserve raw content for fallback parsing
+            if (!parsed.isSuccess() || parsed.getActions().isEmpty()) {
+                LLMResponse fallback = LLMResponse.success(response);
+                if (parsed.isSuccess() && !parsed.getActions().isEmpty()) {
+                    fallback.setActions(parsed.getActions());
+                }
+                return fallback;
+            }
+            return parsed;
         } catch (Exception e) {
             return LLMResponse.failure("Prompt failed: " + e.getMessage());
         }
@@ -196,7 +205,17 @@ public class LLMService {
         try {
             if (!isModelAvailable(modelOverride)) return LLMResponse.failure("Model health check failed");
             String response = callLLMApiWithModel(prompt, modelOverride);
-            return parseResponse(response);
+            LLMResponse parsed = parseResponse(response);
+            // If parseResponse failed (no actions extracted), preserve raw content
+            // so AgentLoop can try fallback parsing (e.g., direct JSON action)
+            if (!parsed.isSuccess() || parsed.getActions().isEmpty()) {
+                LLMResponse fallback = LLMResponse.success(response);
+                if (parsed.isSuccess() && !parsed.getActions().isEmpty()) {
+                    fallback.setActions(parsed.getActions());
+                }
+                return fallback;
+            }
+            return parsed;
         } catch (Exception e) {
             return LLMResponse.failure("Prompt failed: " + e.getMessage());
         }

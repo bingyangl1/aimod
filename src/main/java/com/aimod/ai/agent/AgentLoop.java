@@ -109,6 +109,10 @@ public class AgentLoop {
 
             // Parse LLM response into decision
             StepRecord.LLMDecision decision = parseDecision(response);
+            DevLog.info("AGENT_PARSE_RESULT", "step={}, type={}, json={}, actionsInResponse={}",
+                    step, decision.actionType(),
+                    DevLog.compact(decision.actionJson()),
+                    response.getActions().size());
 
             // Log LLM request/response
             if (sessionLog != null) {
