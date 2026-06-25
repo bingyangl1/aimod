@@ -16,6 +16,7 @@ import java.util.List;
 
 public class MineBlockAction extends Action {
     private static final int STUCK_TIMEOUT = 200;
+    private static final int AUTO_DIG_RESCAN_INTERVAL = 10; // Re-scan every 10 blocks dug
 
     private final String blockId;
     private final int count;
@@ -32,6 +33,12 @@ public class MineBlockAction extends Action {
 
     // Dig down state
     private int digDownCooldown;
+
+    // Auto-dig-to-ore-level state (hierarchical planning)
+    private boolean autoDigging;       // true when auto-digging to ore spawn level
+    private int autoDigTargetY;        // target Y level to dig to
+    private int autoDigBlocksDug;      // blocks dug during auto-dig
+    private int autoDigRescanCounter;  // re-scan counter during auto-dig
 
     // Pathfinding state
     private List<BlockPos> currentPath;
@@ -92,13 +99,62 @@ public class MineBlockAction extends Action {
                 pathIndex = 0;
 
                 if (currentTarget == null) {
-                    DevLog.warn("MINE_NO_BLOCK_FOUND", "block={}, radius={}", blockId, searchRadius);
+                    // Hierarchical planning: auto-dig to ore spawn level
+                    if (!autoDigging && com.aimod.ai.OreDepthHelper.isKnownOre(blockId)) {
+                        int botY = bot.blockPosition().getY();
+                        int targetY = com.aimod.ai.OreDepthHelper.getTargetY(blockId);
+                        if (botY > targetY + 10) {
+                            // Bot is above ore spawn range — auto-dig down
+                            autoDigging = true;
+                            autoDigTargetY = targetY;
+                            autoDigBlocksDug = 0;
+                            autoDigRescanCounter = 0;
+                            DevLog.info("MINE_AUTO_DIG_START", "block={}, currentY={}, targetY={}",
+                                    blockId, botY, targetY);
+                            return; // Will dig down on next tick
+                        }
+                    }
+                    // Already at ore level or unknown ore — fail
+                    DevLog.warn("MINE_NO_BLOCK_FOUND", "block={}, radius={}, autoDigging={}",
+                            blockId, searchRadius, autoDigging);
                     status = ActionStatus.FAILED;
                     return;
                 }
 
                 DevLog.info("MINE_FOUND", "block={}, pos={}", blockId, currentTarget.toShortString());
                 computePath(bot);
+            }
+
+            // Auto-dig to ore spawn level (hierarchical planning)
+            if (autoDigging && currentTarget == null) {
+                int botY = bot.blockPosition().getY();
+                if (botY <= autoDigTargetY + 2) {
+                    // Reached target Y — re-scan one more time
+                    autoDigging = false;
+                    searching = true;
+                    DevLog.info("MINE_AUTO_DIG_REACHED", "block={}, y={}, blocksDug={}",
+                            blockId, botY, autoDigBlocksDug);
+                    return;
+                }
+                // Dig down
+                boolean dug = tryDigDown(bot);
+                if (dug) {
+                    autoDigBlocksDug++;
+                    autoDigRescanCounter++;
+                    // Re-scan periodically to check if ore appeared
+                    if (autoDigRescanCounter >= AUTO_DIG_RESCAN_INTERVAL) {
+                        autoDigRescanCounter = 0;
+                        searching = true;
+                        DevLog.info("MINE_AUTO_DIG_RESCAN", "block={}, y={}, blocksDug={}",
+                                blockId, botY, autoDigBlocksDug);
+                    }
+                } else {
+                    // Can't dig further (liquid, bedrock, void)
+                    autoDigging = false;
+                    searching = true;
+                    DevLog.warn("MINE_AUTO_DIG_STOPPED", "block={}, y={}, reason=obstacle", blockId, botY);
+                }
+                return;
             }
 
             BlockState blockState = bot.level().getBlockState(currentTarget);
