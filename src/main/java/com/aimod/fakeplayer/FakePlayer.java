@@ -237,7 +237,7 @@ public class FakePlayer extends ServerPlayer {
 
     @Override
     public Component getTabListDisplayName() {
-        return com.aimod.entity.NameTagFormatter.buildDisplayName(
+        return com.aimod.entity.NameTagFormatter.buildTabListName(
                 this.getName().getString(), this.aiManager.getStateMachine());
     }
 
