@@ -71,6 +71,9 @@ public class FakePlayer extends ServerPlayer {
     private volatile boolean parsingTask = false;
     private volatile boolean paused = false;
 
+    // ── Agentic Mode ───────────────────────────────────────────────────
+    private com.aimod.ai.agent.AgenticTaskRunner agenticRunner;
+
     // ── Movement ────────────────────────────────────────────────────────
     private final MovementController movementController;
 
@@ -321,6 +324,21 @@ public class FakePlayer extends ServerPlayer {
             if (this.currentTask.isCompleted()) {
                 taskPersistence.delete(this);
             }
+        } else if (!preempted && !paused && agenticRunner != null && agenticRunner.isRunning()) {
+            // Agentic mode: AgentLoop is running in background thread
+            idleTicks = 0;
+        } else if (!preempted && !paused && agenticRunner != null && agenticRunner.isCompleted()) {
+            // Agentic mode: AgentLoop finished
+            var agenticGoal = agenticRunner.getGoal();
+            if (agenticGoal.isAchieved()) {
+                aiManager.getStateMachine().complete();
+                DevLog.info("AGENTIC_TASK_ACHIEVED", "bot={}", this.getStringUUID());
+            } else {
+                aiManager.getStateMachine().fail();
+                DevLog.info("AGENTIC_TASK_FAILED", "bot={}, reason={}",
+                        this.getStringUUID(), agenticGoal.getFailReason());
+            }
+            agenticRunner = null;
         } else if (!preempted && !paused && (this.currentTask == null || this.currentTask.isCompleted())) {
             idleTicks++;
             // Safety: if task completed but state machine still stuck in EXECUTING, reset to IDLE
@@ -461,6 +479,13 @@ public class FakePlayer extends ServerPlayer {
                     this.getStringUUID(), DevLog.compact(naturalLanguageCommand));
             return;
         }
+
+        // Agentic mode: use AgentLoop instead of TaskPlanner→Task→TaskExecutor
+        if (com.aimod.config.ModConfig.getUseAgenticMode()) {
+            assignTaskAgentic(naturalLanguageCommand, owner);
+            return;
+        }
+
         parsingTask = true;
 
         aiManager.getFeedback().setOwner(owner);
@@ -511,6 +536,29 @@ public class FakePlayer extends ServerPlayer {
     }
 
     /**
+     * Assign a task using the Agentic Loop architecture.
+     * LLM is called at each step with the latest world state.
+     */
+    private void assignTaskAgentic(String command, @Nullable Player owner) {
+        String ownerName = owner != null ? owner.getName().getString() : null;
+        DevLog.info("BOT_ASSIGN_AGENTIC", "bot={}, owner={}, command={}",
+                this.getStringUUID(), ownerName, DevLog.compact(command));
+
+        aiManager.getFeedback().setOwner(owner);
+        aiManager.getFeedback().reportTaskStart(command);
+        aiManager.getStateMachine().setTaskInfo(command, 0);
+        aiManager.getStateMachine().startExecuting();
+
+        agenticRunner = new com.aimod.ai.agent.AgenticTaskRunner(
+                this,
+                aiManager.getPlanner(),
+                aiManager.getPlanner().getLlmService(),
+                com.aimod.config.ModConfig.getModelName()
+        );
+        agenticRunner.start(command, ownerName);
+    }
+
+    /**
      * Assign a pre-built task directly, bypassing the LLM.
      */
     public void assignDirectTask(Task task, @Nullable Player owner) {
@@ -541,6 +589,12 @@ public class FakePlayer extends ServerPlayer {
      * Cancel the current task, stopping all bot activity.
      */
     public void cancelTask() {
+        // Cancel agentic runner if active
+        if (agenticRunner != null && agenticRunner.isRunning()) {
+            agenticRunner.cancel();
+            agenticRunner = null;
+        }
+
         // Cancel any running replan before modifying task state
         aiManager.cancelReplan();
 

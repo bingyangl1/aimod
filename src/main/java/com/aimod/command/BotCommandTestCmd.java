@@ -15,6 +15,10 @@ public class BotCommandTestCmd implements SubCommand {
     public void register(LiteralArgumentBuilder<CommandSourceStack> root) {
         root.then(Commands.literal("test")
                 .executes(BotCommandTestCmd::runTests));
+        // Replay command: /ai_bot replay <session-id>
+        root.then(Commands.literal("replay")
+                .then(Commands.argument("session_id", com.mojang.brigadier.arguments.StringArgumentType.string())
+                        .executes(BotCommandTestCmd::replaySession)));
     }
 
     private static int runTests(CommandContext<CommandSourceStack> ctx) {
@@ -239,6 +243,39 @@ public class BotCommandTestCmd implements SubCommand {
 
         sb.append("===== ").append(passed).append(" passed, ").append(failed).append(" failed =====");
         source.sendSuccess(() -> Component.literal(sb.toString()), false);
+        return 1;
+    }
+
+    /**
+     * Replay a session log: /ai_bot replay <session-id>
+     * Reads saved session data and prints the execution trace.
+     */
+    private static int replaySession(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        String sessionId = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "session_id");
+
+        java.nio.file.Path sessionDir = java.nio.file.Path.of("config", "aimod", "sessions", sessionId);
+        if (!java.nio.file.Files.isDirectory(sessionDir)) {
+            source.sendFailure(Component.literal("Session not found: " + sessionId));
+            return 0;
+        }
+
+        // Capture replay output to a string
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(baos));
+        try {
+            com.aimod.ai.session.SessionReplayer.replay(sessionDir);
+        } finally {
+            System.setOut(oldOut);
+        }
+
+        // Send each line as a chat message
+        String output = baos.toString();
+        for (String line : output.split("\n")) {
+            source.sendSuccess(() -> Component.literal(line), false);
+        }
+
         return 1;
     }
 }

@@ -41,6 +41,7 @@ public class BotAIManager {
     public TaskFeedback getFeedback() { return feedback; }
     public WorldScanner getWorldScanner() { return worldScanner; }
     public BotMetrics getMetrics() { return metrics; }
+    public TaskPlanner getPlanner() { return planner; }
     public String getMemoryStats() { return bot.getMemoryStore().getStats(); }
 
     /**

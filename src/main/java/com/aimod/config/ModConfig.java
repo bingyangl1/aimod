@@ -226,6 +226,12 @@ public class ModConfig {
             )
             .define("botMode", "fp");
 
+    public static final ModConfigSpec.ConfigValue<Boolean> USE_AGENTIC_MODE = BUILDER
+            .comment("Use Agentic Loop mode (observe→think→act→repeat) instead of one-shot planning.",
+                     "Agentic mode calls LLM at each step with latest world state, providing better adaptability.",
+                     "One-shot mode plans all actions upfront (current behavior, lower cost).")
+            .define("useAgenticMode", false);
+
     public static final ModConfigSpec.ConfigValue<Double> MOVEMENT_SPEED = BUILDER
             .comment("Bot movement speed multiplier (0.3 = default player walk speed)")
             .defineInRange("movementSpeed", 0.3, 0.1, 1.0);
@@ -345,6 +351,7 @@ public class ModConfig {
     public static int getMaxWorkingMemory() { return MAX_WORKING_MEMORY.get(); }
 
     public static BotMode getBotMode() { return BotMode.fromKey(BOT_MODE.get()); }
+    public static boolean getUseAgenticMode() { return USE_AGENTIC_MODE.get(); }
 
     // -- Runtime setters (for /ai_bot config command) --
     public static void setDefaultScanRadius(int v) { DEFAULT_SCAN_RADIUS.set(Math.max(8, Math.min(128, v))); }

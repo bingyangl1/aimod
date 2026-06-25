@@ -865,3 +865,44 @@ botSkinUrl = "https://example.com/skin.png"
 | 18 | `BotPersistence.java` | 目录创建失败添加日志 | 错误处理 |
 
 *更新日期: 2026-06-18 | 版本: 1.1.13-r113*
+
+### r115-r116: Agentic 架构重构 — Phase 1-3
+
+参考 OpenCode 的 Agent Loop 模式，将任务执行从"一次性规划"重构为"观察→思考→行动→循环"架构。
+
+**Phase 1: Session Log 基础设施**
+
+| 文件 | 功能 |
+|------|------|
+| `ai/session/SessionLog.java` | 抓包系统：记录所有 LLM I/O + 执行结果到 config/aimod/sessions/ |
+| `ai/session/StepRecord.java` | 单步记录：世界状态 + LLM 决策 + Action 结果 |
+| `ai/session/WorldObserver.java` | 世界快照：位置/背包/方块/血量/时间/生态群系 |
+| `ai/session/SessionReplayer.java` | 重放引擎：离线回放调试，不需要运行游戏 |
+
+**Phase 2: AgentLoop 核心**
+
+| 文件 | 功能 |
+|------|------|
+| `ai/agent/Goal.java` | 显式目标管理 + 完成条件检查 |
+| `ai/agent/AgentLoop.java` | 核心循环：观察→LLM 决策→执行→记录→检查目标 |
+| `ai/agent/AgentContext.java` | 每步组装最新世界上下文给 LLM |
+| `ai/agent/DefaultActionExecutor.java` | 桥接到现有 Action 系统 |
+
+**Phase 3: 集成**
+
+| 文件 | 功能 |
+|------|------|
+| `ai/agent/AgenticTaskRunner.java` | 桥接 AgentLoop 与 FakePlayer |
+| `fakeplayer/FakePlayer.java` | 集成 AgenticTaskRunner，支持双模式 |
+| `config/ModConfig.java` | useAgenticMode 配置开关（默认 false） |
+| `command/BotCommandTestCmd.java` | /ai_bot replay 命令 |
+| `entity/NameTagFormatter.java` | Tab 列表增强：状态图标 + 进度 |
+
+**架构对比**
+
+```
+旧: 玩家命令 → LLM 返回 14 个 action → 按序执行 → 失败时 replan 1 个
+新: 玩家命令 → 设定 Goal → 循环 { 观察 → LLM 决策 1 步 → 执行 → 记录 } → 完成
+```
+
+*更新日期: 2026-06-19 | 版本: 1.1.15-r115*
