@@ -216,8 +216,11 @@ public class AgentLoop {
         String actionType = "unknown";
         try {
             JsonObject json = JsonParser.parseString(actionJson).getAsJsonObject();
+            // LLM may use "type" or "action" as the key
             if (json.has("type")) {
                 actionType = json.get("type").getAsString();
+            } else if (json.has("action")) {
+                actionType = json.get("action").getAsString();
             }
         } catch (Exception ignored) {}
 
