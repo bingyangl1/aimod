@@ -191,6 +191,20 @@ public class TaskPlanner {
     }
 
     /**
+     * Parse a single action from a JSON string.
+     * Used by AgentLoop to parse LLM responses that return one action at a time.
+     */
+    public Action parseSingleAction(String actionJson) {
+        try {
+            JsonObject obj = com.google.gson.JsonParser.parseString(actionJson).getAsJsonObject();
+            return parseActionFromJson(obj, null);
+        } catch (Exception e) {
+            DevLog.warn("PARSE_SINGLE_ACTION_FAILED", "json={}, err={}", actionJson, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Parse a single action JSON object into an Action instance.
      */
     public Action parseActionFromJson(JsonObject obj, String ownerName) {

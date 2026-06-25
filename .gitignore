@@ -75,7 +75,7 @@ emi-1.21/
 meteor-client-master/
 AI-Player-1.21.1/
 minecolonies-release-1.21/
-
+opencode/
 # Build and test logs
 *.log
 logs/
