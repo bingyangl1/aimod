@@ -32,6 +32,7 @@ public class AgentContext {
 
     /**
      * Build the full prompt for the LLM.
+     * Includes tool descriptions (MCP-style), world state, history, and instructions.
      */
     public String toPrompt() {
         StringBuilder sb = new StringBuilder();
@@ -65,33 +66,113 @@ public class AgentContext {
             sb.append("\n");
         }
 
-        // Instruction
-        sb.append("## Instruction\n");
-        sb.append("Think step by step:\n");
-        sb.append("1. What do I need to achieve the goal?\n");
-        sb.append("2. What do I currently have?\n");
-        sb.append("3. What is the most important next action?\n\n");
+        // Tool descriptions (MCP-style)
+        appendToolDescriptions(sb);
+
+        // Decision instructions
+        sb.append("## Decision Process\n");
+        sb.append("1. Read 'Goal' and 'Goal Requirements' to understand what you need\n");
+        sb.append("2. Read 'Current State' (especially 'Equipped' and 'Inventory') to see what you already have\n");
+        sb.append("3. Read 'Recent Steps' to see what was already done — DO NOT repeat completed actions\n");
+        sb.append("4. Choose the BEST tool from the list below to make progress\n");
+        sb.append("5. If an action FAILED because the target was already broken/mined, move to the next step\n\n");
+
         sb.append("## Response Format\n");
-        sb.append("You MUST respond with EXACTLY ONE JSON object. Use \"type\" as the key for action type.\n");
-        sb.append("Do NOT use \"action\" as the key. Do NOT nest parameters in a sub-object.\n\n");
-        sb.append("Correct format:\n");
-        sb.append("{\"type\": \"break_block\", \"x\": -390, \"y\": 100, \"z\": -261}\n");
-        sb.append("{\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 1, \"radius\": 128}\n");
-        sb.append("{\"type\": \"craft\", \"item_id\": \"minecraft:stick\", \"count\": 4}\n");
-        sb.append("{\"type\": \"move_to\", \"x\": -390, \"y\": 60, \"z\": -261}\n");
-        sb.append("{\"type\": \"equip\", \"item_id\": \"minecraft:netherite_pickaxe\", \"slot\": \"MAINHAND\"}\n");
-        sb.append("{\"type\": \"interact\", \"interact_type\": \"CRAFTING_TABLE\"}\n\n");
-        sb.append("WRONG formats (do NOT use):\n");
-        sb.append("{\"action\": \"break_block\", ...}  ← use \"type\", not \"action\"\n");
-        sb.append("{\"break_block\": {\"x\": ...}}  ← do NOT nest, use flat keys\n\n");
-        sb.append("Available types: move_to, break_block, place_block, mine, gather, craft, give_item, interact, equip, attack, follow, say, wait\n");
-        sb.append("For break_block/move_to/place_block: x, y, z are REQUIRED flat keys.\n");
-        sb.append("For mine/gather: radius max 128.\n");
-        sb.append("Use 'mine' to find ores, 'craft' to craft items, 'interact' with crafting_table before crafting.\n");
-        sb.append("Do NOT repeat actions that already succeeded (check 'Equipped' and 'Recent Steps').\n");
-        sb.append("If an action FAILED because the target was already broken/mined, move to the next step.\n");
+        sb.append("Respond with EXACTLY ONE JSON object. Use \"type\" as the key.\n");
+        sb.append("{\"type\": \"<tool_name>\", \"param1\": value, ...}\n");
 
         return sb.toString();
+    }
+
+    /**
+     * MCP-style tool descriptions — tells the LLM what each action does,
+     * when to use it, and what special features it has.
+     */
+    private void appendToolDescriptions(StringBuilder sb) {
+        sb.append("## Available Tools\n\n");
+
+        // --- Mining & Gathering ---
+        sb.append("### mine\n");
+        sb.append("Find and mine a specific block type. Automatically navigates to the nearest matching block.\n");
+        sb.append("**Special feature**: If the ore is not found nearby and it's a known ore type (diamond, iron, gold, etc.), ");
+        sb.append("the bot will AUTO-DIG down to the correct Y level where that ore spawns. You do NOT need to use break_block to dig down manually.\n");
+        sb.append("Parameters: block_id (required), count (default 1), radius (default 32, max 128)\n");
+        sb.append("Example: {\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 1, \"radius\": 128}\n\n");
+
+        sb.append("### gather\n");
+        sb.append("Gather a resource type (WOOD, STONE, DIRT, SAND, COBBLESTONE). Finds and breaks matching blocks.\n");
+        sb.append("Parameters: resource_type (required), count (required), radius (default 32, max 128)\n");
+        sb.append("Example: {\"type\": \"gather\", \"resource_type\": \"WOOD\", \"count\": 16, \"radius\": 32}\n\n");
+
+        // --- Crafting ---
+        sb.append("### craft\n");
+        sb.append("Craft an item using a crafting table. The bot must be near a crafting table (use 'interact' first).\n");
+        sb.append("Parameters: item_id (required), count (default 1)\n");
+        sb.append("Example: {\"type\": \"craft\", \"item_id\": \"minecraft:diamond_pickaxe\", \"count\": 1}\n\n");
+
+        sb.append("### interact\n");
+        sb.append("Right-click a block (crafting table, furnace, chest, etc.). Use this BEFORE 'craft' to open the crafting menu.\n");
+        sb.append("Parameters: interact_type (required: CRAFTING_TABLE, FURNACE, CHEST, ANVIL, etc.)\n");
+        sb.append("Example: {\"type\": \"interact\", \"interact_type\": \"CRAFTING_TABLE\"}\n\n");
+
+        // --- Movement ---
+        sb.append("### move_to\n");
+        sb.append("Walk/fly to a specific position. Use for long-distance travel.\n");
+        sb.append("Parameters: x, y, z (all required)\n");
+        sb.append("Example: {\"type\": \"move_to\", \"x\": -390, \"y\": 60, \"z\": -261}\n\n");
+
+        sb.append("### break_block\n");
+        sb.append("Break a SINGLE block at a specific position. Use for precise block removal.\n");
+        sb.append("**Do NOT use for digging long tunnels** — use 'mine' instead (it handles navigation and auto-dig).\n");
+        sb.append("Parameters: x, y, z (all required)\n");
+        sb.append("Example: {\"type\": \"break_block\", \"x\": -390, \"y\": 100, \"z\": -261}\n\n");
+
+        sb.append("### place_block\n");
+        sb.append("Place a block from inventory at a position.\n");
+        sb.append("Parameters: x, y, z (all required), block_id (default: first block in inventory)\n");
+        sb.append("Example: {\"type\": \"place_block\", \"x\": -390, \"y\": 100, \"z\": -261, \"block_id\": \"minecraft:cobblestone\"}\n\n");
+
+        // --- Inventory ---
+        sb.append("### equip\n");
+        sb.append("Hold/wear an item from inventory. Check 'Equipped' in Current State first — do NOT equip what's already held.\n");
+        sb.append("Parameters: item_id (required), slot (MAINHAND/OFFHAND/HEAD/CHEST/LEGS/FEET)\n");
+        sb.append("Example: {\"type\": \"equip\", \"item_id\": \"minecraft:diamond_pickaxe\", \"slot\": \"MAINHAND\"}\n\n");
+
+        sb.append("### give_item\n");
+        sb.append("Give items to a player.\n");
+        sb.append("Parameters: item_id (required), count (required), player (required)\n");
+        sb.append("Example: {\"type\": \"give_item\", \"item_id\": \"minecraft:diamond_helmet\", \"count\": 1, \"player\": \"nightfall\"}\n\n");
+
+        // --- Combat ---
+        sb.append("### attack\n");
+        sb.append("Attack a nearby entity by name.\n");
+        sb.append("Parameters: target (required)\n");
+        sb.append("Example: {\"type\": \"attack\", \"target\": \"zombie\"}\n\n");
+
+        sb.append("### follow\n");
+        sb.append("Follow a player.\n");
+        sb.append("Parameters: player (required)\n");
+        sb.append("Example: {\"type\": \"follow\", \"player\": \"nightfall\"}\n\n");
+
+        // --- Utility ---
+        sb.append("### say\n");
+        sb.append("Send a chat message.\n");
+        sb.append("Parameters: message (required)\n");
+        sb.append("Example: {\"type\": \"say\", \"message\": \"I found diamonds!\"}\n\n");
+
+        sb.append("### wait\n");
+        sb.append("Wait for a number of seconds.\n");
+        sb.append("Parameters: seconds (required)\n");
+        sb.append("Example: {\"type\": \"wait\", \"seconds\": 5}\n\n");
+
+        // --- Key Rules ---
+        sb.append("## Key Rules\n");
+        sb.append("- Use 'mine' for ores — it auto-digs to the correct Y level. Do NOT use break_block to dig down manually.\n");
+        sb.append("- Use 'gather' for wood/stone/dirt — it handles finding and breaking multiple blocks.\n");
+        sb.append("- Use 'interact' BEFORE 'craft' — you need to open the crafting table first.\n");
+        sb.append("- Check 'Equipped' before using 'equip' — do NOT equip what's already held.\n");
+        sb.append("- Check 'Recent Steps' — do NOT repeat actions that already succeeded.\n");
+        sb.append("- If an action FAILED because the target was already broken, move to the next step.\n");
     }
 
     /**

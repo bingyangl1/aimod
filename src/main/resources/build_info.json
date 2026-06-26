@@ -1,6 +1,6 @@
 {
-  "version": "1.2.2",
-  "build": "2026-06-26-r122",
+  "version": "1.2.3",
+  "build": "2026-06-26-r123",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -185,6 +185,10 @@
     "r122: WorldObserver: add equipped items (mainhand + armor + offhand) to world state snapshot",
     "r122: AgentContext: add 'Equipped' section to prompt — prevents LLM from repeating equip actions",
     "r122: AgentContext: add instruction to not repeat succeeded/failed actions",
+    "r123: MCP-style tool descriptions — each action described with purpose, parameters, examples, and special features",
+    "r123: mine tool docs: auto-dig feature explained (auto-digs to ore spawn level, no manual break_block needed)",
+    "r123: Decision process template: 5-step thinking guide for LLM",
+    "r123: Key rules section: mine for ores, gather for wood, interact before craft, check equipped",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
