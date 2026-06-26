@@ -55,6 +55,9 @@ public class WorldObserver {
         // Inventory summary
         state.add("inventory", summarizeInventory(bot));
 
+        // Equipped items (main hand + armor)
+        state.add("equipped", summarizeEquipment(bot));
+
         // Nearby blocks (top 10 by count)
         state.add("nearbyBlocks", summarizeNearbyBlocks(bot));
 
@@ -81,6 +84,37 @@ public class WorldObserver {
                 .forEach(e -> inv.addProperty(e.getKey(), e.getValue()));
 
         return inv;
+    }
+
+    private static JsonObject summarizeEquipment(FakePlayer bot) {
+        JsonObject equipped = new JsonObject();
+        var inv = bot.getInventory();
+
+        // Main hand
+        var mainHand = inv.getItem(inv.selected);
+        if (!mainHand.isEmpty()) {
+            equipped.addProperty("mainhand", net.minecraft.core.registries.BuiltInRegistries.ITEM
+                    .getKey(mainHand.getItem()).toString());
+        }
+
+        // Armor slots (36-39)
+        String[] armorSlots = {"feet", "legs", "chest", "head"};
+        for (int i = 0; i < 4; i++) {
+            var stack = inv.getItem(36 + i);
+            if (!stack.isEmpty()) {
+                equipped.addProperty(armorSlots[i], net.minecraft.core.registries.BuiltInRegistries.ITEM
+                        .getKey(stack.getItem()).toString());
+            }
+        }
+
+        // Offhand (slot 40)
+        var offhand = inv.getItem(40);
+        if (!offhand.isEmpty()) {
+            equipped.addProperty("offhand", net.minecraft.core.registries.BuiltInRegistries.ITEM
+                    .getKey(offhand.getItem()).toString());
+        }
+
+        return equipped;
     }
 
     private static JsonObject summarizeNearbyBlocks(FakePlayer bot) {

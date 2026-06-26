@@ -1,6 +1,6 @@
 {
-  "version": "1.2.1",
-  "build": "2026-06-26-r121",
+  "version": "1.2.2",
+  "build": "2026-06-26-r122",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -181,6 +181,10 @@
     "r121: Look-ahead LLM calls — next decision pre-fetched via CompletableFuture while current action executes",
     "r121: Bot no longer idles 10-15 seconds between actions (LLM call overlaps with action execution)",
     "r121: AgentLoop.run() restructured: pendingLlm future, look-ahead hit/wait logging",
+    "r122: Remove broken look-ahead — caused stale world state, duplicate break_block on already-mined positions",
+    "r122: WorldObserver: add equipped items (mainhand + armor + offhand) to world state snapshot",
+    "r122: AgentContext: add 'Equipped' section to prompt — prevents LLM from repeating equip actions",
+    "r122: AgentContext: add instruction to not repeat succeeded/failed actions",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

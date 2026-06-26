@@ -88,6 +88,8 @@ public class AgentContext {
         sb.append("For break_block/move_to/place_block: x, y, z are REQUIRED flat keys.\n");
         sb.append("For mine/gather: radius max 128.\n");
         sb.append("Use 'mine' to find ores, 'craft' to craft items, 'interact' with crafting_table before crafting.\n");
+        sb.append("Do NOT repeat actions that already succeeded (check 'Equipped' and 'Recent Steps').\n");
+        sb.append("If an action FAILED because the target was already broken/mined, move to the next step.\n");
 
         return sb.toString();
     }
@@ -210,6 +212,19 @@ public class AgentContext {
             for (var entry : inv.entrySet()) {
                 if (!first) sb.append(", ");
                 sb.append(entry.getValue()).append("x ").append(entry.getKey());
+                first = false;
+            }
+            sb.append("\n");
+        }
+
+        // Equipped items
+        if (state.has("equipped")) {
+            sb.append("Equipped: ");
+            JsonObject equipped = state.getAsJsonObject("equipped");
+            boolean first = true;
+            for (var entry : equipped.entrySet()) {
+                if (!first) sb.append(", ");
+                sb.append(entry.getKey()).append("=").append(entry.getValue().getAsString());
                 first = false;
             }
             sb.append("\n");
