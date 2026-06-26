@@ -50,7 +50,7 @@ public class DefaultActionExecutor implements AgentLoop.ActionExecutor {
             }
 
             // Action is IN_PROGRESS — needs multiple ticks
-            // For simplicity, we execute ticks until complete (with a timeout)
+            // Simulate game tick timing (50ms per tick = 20 TPS)
             int maxTicks = 400; // 20 seconds at 20 TPS
             for (int tick = 0; tick < maxTicks; tick++) {
                 action.execute(bot);
@@ -61,6 +61,10 @@ public class DefaultActionExecutor implements AgentLoop.ActionExecutor {
                         String reason = action.getFailReason() != null ? action.getFailReason() : "Action failed";
                         return AgentLoop.ActionResult.failure(reason);
                     }
+                }
+                // Sleep to match game tick rate (50ms per tick)
+                try { Thread.sleep(50); } catch (InterruptedException e) {
+                    return AgentLoop.ActionResult.failure("Interrupted");
                 }
             }
 
