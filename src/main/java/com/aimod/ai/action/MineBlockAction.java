@@ -122,6 +122,8 @@ public class MineBlockAction extends Action {
                 }
 
                 DevLog.info("MINE_FOUND", "block={}, pos={}", blockId, currentTarget.toShortString());
+                // Stop auto-digging if we were — we found the ore
+                autoDigging = false;
                 computePath(bot);
             }
 
@@ -331,6 +333,45 @@ public class MineBlockAction extends Action {
         return true;
     }
 
+    /**
+     * Try to pillar up to reach a target above the bot.
+     * Places a block below and jumps.
+     * Returns true if pilaring was performed.
+     */
+    private boolean tryPillarUp(FakePlayer bot) {
+        if (digDownCooldown > 0) {
+            digDownCooldown--;
+            return true;
+        }
+
+        if (!(bot.level() instanceof ServerLevel level)) return false;
+
+        BlockPos belowFeet = bot.blockPosition().below();
+        BlockState belowState = level.getBlockState(belowFeet);
+
+        // Place block below if air
+        if (belowState.isAir()) {
+            var inv = bot.getInventory();
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                var stack = inv.getItem(i);
+                if (!stack.isEmpty() && stack.getItem() instanceof net.minecraft.world.item.BlockItem bi) {
+                    if (bi.getBlock() instanceof net.minecraft.world.level.block.FallingBlock) continue;
+                    level.setBlock(belowFeet, bi.getBlock().defaultBlockState(), 3);
+                    stack.shrink(1);
+                    break;
+                }
+            }
+        }
+
+        // Jump
+        if (bot.onGround()) {
+            bot.setDeltaMovement(bot.getDeltaMovement().x, 0.42, bot.getDeltaMovement().z);
+        }
+        digDownCooldown = 5;
+        DevLog.info("MINE_PILLAR_UP", "pos={}, target={}", bot.blockPosition().toShortString(), currentTarget.toShortString());
+        return true;
+    }
+
     private double followPath(FakePlayer bot) {
         double dx = currentTarget.getX() + 0.5 - bot.getX();
         double dy = currentTarget.getY() - bot.getY();
@@ -357,14 +398,21 @@ public class MineBlockAction extends Action {
 
         // If async pathfinding is active, let MovementController handle it
         if (bot.getMovementController().isNavigating()) {
-            // MovementController is handling navigation — just wait
             return distSqr;
         }
 
-        // No path and not navigating — try digging down if target is below
-        if (currentPath == null && dy < -2) {
-            if (tryDigDown(bot)) {
-                return distSqr;
+        // No path and not navigating — try vertical movement toward target
+        if (currentPath == null) {
+            if (dy < -2) {
+                // Target is below — dig down
+                if (tryDigDown(bot)) {
+                    return distSqr;
+                }
+            } else if (dy > 2) {
+                // Target is above — pillar up
+                if (tryPillarUp(bot)) {
+                    return distSqr;
+                }
             }
         }
 
