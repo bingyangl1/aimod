@@ -365,7 +365,7 @@ public class MineBlockAction extends Action {
 
     /**
      * Try to pillar up to reach a target above the bot.
-     * Places a block below and jumps.
+     * Digs head block if needed, places a block below and jumps.
      * Returns true if pilaring was performed.
      */
     private boolean tryPillarUp(FakePlayer bot) {
@@ -376,10 +376,20 @@ public class MineBlockAction extends Action {
 
         if (!(bot.level() instanceof ServerLevel level)) return false;
 
+        BlockPos headPos = bot.blockPosition().above(); // block above head
         BlockPos belowFeet = bot.blockPosition().below();
-        BlockState belowState = level.getBlockState(belowFeet);
+
+        // Dig block above head if it's blocking
+        BlockState headState = level.getBlockState(headPos);
+        if (!headState.isAir() && headState.getDestroySpeed(level, headPos) >= 0) {
+            level.destroyBlock(headPos, true, bot);
+            digDownCooldown = 3;
+            DevLog.info("MINE_PILLAR_DIG_HEAD", "pos={}", headPos.toShortString());
+            return true;
+        }
 
         // Place block below if air
+        BlockState belowState = level.getBlockState(belowFeet);
         if (belowState.isAir()) {
             var inv = bot.getInventory();
             for (int i = 0; i < inv.getContainerSize(); i++) {

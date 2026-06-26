@@ -1,6 +1,6 @@
 {
-  "version": "1.3.2",
-  "build": "2026-06-27-r132",
+  "version": "1.3.3",
+  "build": "2026-06-27-r133",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -222,6 +222,8 @@
     "r132: MineBlockAction: when ore found at different Y, activate auto-dig mode to reach it",
     "r132: MineBlockAction: auto-dig handles both digging down (target below) and pillaring up (target above)",
     "r132: MineBlockAction: after reaching target Y, re-scan for ore at new position",
+    "r133: MineBlockAction tryPillarUp: dig block above head before jumping (was stuck in 1-high space)",
+    "r133: MoveToAction executePillarUp: same fix — dig head block before pillaring",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

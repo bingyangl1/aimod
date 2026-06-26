@@ -218,12 +218,21 @@ public class MoveToAction extends Action {
 
         if (!(bot.level() instanceof ServerLevel level)) return;
 
+        BlockPos headPos = bot.blockPosition().above(); // block above head
         BlockPos belowFeet = bot.blockPosition().below();
-        BlockState belowState = level.getBlockState(belowFeet);
+
+        // Dig block above head if it's blocking
+        BlockState headState = level.getBlockState(headPos);
+        if (!headState.isAir() && headState.getDestroySpeed(level, headPos) >= 0) {
+            level.destroyBlock(headPos, true, bot);
+            digCooldown = 3;
+            DevLog.info("PILLAR_DIG_HEAD", "pos={}", headPos.toShortString());
+            return;
+        }
 
         // Place block below if air
+        BlockState belowState = level.getBlockState(belowFeet);
         if (belowState.isAir()) {
-            // Find a block item in inventory
             var inv = bot.getInventory();
             for (int i = 0; i < inv.getContainerSize(); i++) {
                 var stack = inv.getItem(i);
