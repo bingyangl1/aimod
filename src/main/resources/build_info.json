@@ -1,6 +1,6 @@
 {
-  "version": "1.2.7",
-  "build": "2026-06-27-r127",
+  "version": "1.2.8",
+  "build": "2026-06-27-r128",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -207,6 +207,7 @@
     "r127: MoveToAction: PILLAR_UP mode — places blocks below and jumps to reach elevated targets",
     "r127: MoveToAction: stuck detection now switches to DIG_THROUGH instead of failing",
     "r127: MoveToAction: max 20 wall digs to prevent infinite digging",
+    "r128: Tool tier guidance in prompt — netherite > diamond > iron > stone > wood, do NOT downgrade",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

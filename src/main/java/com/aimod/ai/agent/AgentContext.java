@@ -172,6 +172,9 @@ public class AgentContext {
         sb.append("- Use 'interact' BEFORE 'craft' — you need to open the crafting table first.\n");
         sb.append("- Check 'Equipped' before using 'equip' — do NOT equip what's already held.\n");
         sb.append("- Check 'Recent Steps' — do NOT repeat actions that already succeeded.\n");
+        sb.append("- ALWAYS use the BEST available tool. Tool tier (best to worst): netherite > diamond > iron > stone > wood.\n");
+        sb.append("  If you already have netherite_pickaxe equipped, do NOT switch to iron_pickaxe.\n");
+        sb.append("  If you need to mine diamond_ore, use the best pickaxe available (netherite > diamond > iron).\n");
         sb.append("- If an action FAILED because the target was already broken, move to the next step.\n");
     }
 
