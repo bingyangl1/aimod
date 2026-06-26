@@ -124,37 +124,67 @@ public class MineBlockAction extends Action {
                 DevLog.info("MINE_FOUND", "block={}, pos={}", blockId, currentTarget.toShortString());
                 // Stop auto-digging if we were — we found the ore
                 autoDigging = false;
+
+                // Check if ore is at significantly different Y level
+                double dy = currentTarget.getY() - bot.blockPosition().getY();
+                if (Math.abs(dy) > 3) {
+                    // Ore is far above/below — need to dig/pillar to reach it
+                    autoDigging = true;
+                    autoDigTargetY = currentTarget.getY();
+                    autoDigBlocksDug = 0;
+                    autoDigRescanCounter = 0;
+                    DevLog.info("MINE_AUTO_DIG_TO_ORE", "block={}, botY={}, oreY={}",
+                            blockId, bot.blockPosition().getY(), currentTarget.getY());
+                    return;
+                }
+
                 computePath(bot);
             }
 
-            // Auto-dig to ore spawn level (hierarchical planning)
-            if (autoDigging && currentTarget == null) {
+            // Auto-dig/pillar to reach ore at different Y level
+            if (autoDigging) {
                 int botY = bot.blockPosition().getY();
-                if (botY <= autoDigTargetY + 2) {
-                    // Reached target Y — re-scan one more time
+                int dy = autoDigTargetY - botY;
+
+                // Check if we've reached the target Y level
+                if (Math.abs(dy) <= 2) {
                     autoDigging = false;
                     searching = true;
+                    currentTarget = null; // Re-scan to find the ore at new position
                     DevLog.info("MINE_AUTO_DIG_REACHED", "block={}, y={}, blocksDug={}",
                             blockId, botY, autoDigBlocksDug);
                     return;
                 }
-                // Dig down
-                boolean dug = tryDigDown(bot);
-                if (dug) {
-                    autoDigBlocksDug++;
-                    autoDigRescanCounter++;
-                    // Re-scan periodically to check if ore appeared
-                    if (autoDigRescanCounter >= AUTO_DIG_RESCAN_INTERVAL) {
-                        autoDigRescanCounter = 0;
+
+                if (dy < 0) {
+                    // Target is below — dig down
+                    boolean dug = tryDigDown(bot);
+                    if (dug) {
+                        autoDigBlocksDug++;
+                        autoDigRescanCounter++;
+                        // Re-scan periodically to check if ore is now reachable
+                        if (autoDigRescanCounter >= AUTO_DIG_RESCAN_INTERVAL) {
+                            autoDigRescanCounter = 0;
+                            searching = true;
+                            DevLog.info("MINE_AUTO_DIG_RESCAN", "block={}, y={}, blocksDug={}",
+                                    blockId, botY, autoDigBlocksDug);
+                        }
+                    } else {
+                        // Can't dig further (liquid, bedrock, void)
+                        autoDigging = false;
                         searching = true;
-                        DevLog.info("MINE_AUTO_DIG_RESCAN", "block={}, y={}, blocksDug={}",
-                                blockId, botY, autoDigBlocksDug);
+                        DevLog.warn("MINE_AUTO_DIG_STOPPED", "block={}, y={}, reason=obstacle", blockId, botY);
                     }
                 } else {
-                    // Can't dig further (liquid, bedrock, void)
-                    autoDigging = false;
-                    searching = true;
-                    DevLog.warn("MINE_AUTO_DIG_STOPPED", "block={}, y={}, reason=obstacle", blockId, botY);
+                    // Target is above — pillar up
+                    boolean pillared = tryPillarUp(bot);
+                    if (pillared) {
+                        autoDigBlocksDug++;
+                    } else {
+                        autoDigging = false;
+                        searching = true;
+                        DevLog.warn("MINE_AUTO_PILLAR_STOPPED", "block={}, y={}, reason=obstacle", blockId, botY);
+                    }
                 }
                 return;
             }
