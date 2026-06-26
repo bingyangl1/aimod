@@ -259,19 +259,13 @@ public class MoveToAction extends Action {
     @Override
     public boolean isComplete(FakePlayer bot) {
         if (status == ActionStatus.IN_PROGRESS) {
-            // Check if arrived
-            if (bot.getMovementController().hasArrived()) {
-                stopNavigation(bot);
-                status = ActionStatus.COMPLETED;
-                DevLog.info("MOVE_TO_ARRIVED", "target={}", targetPos.toShortString());
-                return true;
-            }
-
-            // Check distance
+            // Check distance to target
             double dx = targetPos.getX() + 0.5 - bot.getX();
             double dy = targetPos.getY() - bot.getY();
             double dz = targetPos.getZ() + 0.5 - bot.getZ();
             double distSqr = dx * dx + dy * dy + dz * dz;
+
+            // Close enough — done
             if (distSqr < 4.0) {
                 stopNavigation(bot);
                 status = ActionStatus.COMPLETED;
@@ -280,12 +274,20 @@ public class MoveToAction extends Action {
                 return true;
             }
 
-            // Stuck detection — switch to dig-through mode
+            // PATHFIND mode checks
             if (mode == Mode.PATHFIND && pathfindingStarted) {
+                // Check if pathfinder says we arrived
+                if (bot.getMovementController().hasArrived()) {
+                    stopNavigation(bot);
+                    status = ActionStatus.COMPLETED;
+                    DevLog.info("MOVE_TO_ARRIVED", "target={}", targetPos.toShortString());
+                    return true;
+                }
+
+                // Stuck detection — switch to dig-through mode
                 if (bot.getMovementController().isStuck()) {
                     stuckTicks++;
                     if (stuckTicks > STUCK_TIMEOUT) {
-                        // Switch to dig-through mode instead of failing
                         stopNavigation(bot);
                         mode = Mode.DIG_THROUGH;
                         wallDigsDone = 0;
@@ -295,14 +297,16 @@ public class MoveToAction extends Action {
                 } else {
                     stuckTicks = 0;
                 }
+
+                // Re-trigger pathfinding if needed
+                if (!bot.getMovementController().isNavigating() && distSqr > 4.0) {
+                    navigateWithPathfinding(bot, targetPos);
+                    DevLog.info("MOVE_TO_REPATH", "target={}", targetPos.toShortString());
+                }
             }
 
-            // Re-trigger pathfinding if needed
-            if (mode == Mode.PATHFIND && pathfindingStarted
-                    && !bot.getMovementController().isNavigating() && distSqr > 4.0) {
-                navigateWithPathfinding(bot, targetPos);
-                DevLog.info("MOVE_TO_REPATH", "target={}", targetPos.toShortString());
-            }
+            // DIG_DOWN / DIG_THROUGH / PILLAR_UP modes — keep going until close enough
+            // These modes are handled in execute(), isComplete just checks distance
         }
         return status == ActionStatus.COMPLETED || status == ActionStatus.FAILED;
     }

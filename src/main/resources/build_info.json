@@ -1,6 +1,6 @@
 {
-  "version": "1.2.8",
-  "build": "2026-06-27-r128",
+  "version": "1.2.9",
+  "build": "2026-06-27-r129",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -208,6 +208,11 @@
     "r127: MoveToAction: stuck detection now switches to DIG_THROUGH instead of failing",
     "r127: MoveToAction: max 20 wall digs to prevent infinite digging",
     "r128: Tool tier guidance in prompt — netherite > diamond > iron > stone > wood, do NOT downgrade",
+    "r129: MineBlockAction: use async pathfinding when sync Pathfinder fails (reaches distant ores)",
+    "r129: MineBlockAction: let MovementController handle navigation when async pathfinding is active",
+    "r129: MoveToAction: fix DIG_DOWN/PILLAR_UP/DIG_THROUGH not checking hasArrived() incorrectly",
+    "r129: LLM prompt: enhanced mine tool description with auto-navigate and auto-dig features",
+    "r129: LLM prompt: added rule to use move_to for long distances instead of break_block",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

@@ -261,6 +261,7 @@ public class MineBlockAction extends Action {
 
         DevLog.info("MINE_PATH_COMPUTE", "from={}, to={}", botPos.toShortString(), approachPos.toShortString());
 
+        // Try synchronous Pathfinder first (fast, limited search)
         Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, approachPos, 500, 20);
         PathResult result = pathfinder.findPath();
 
@@ -269,8 +270,11 @@ public class MineBlockAction extends Action {
             pathIndex = 1;
             DevLog.info("MINE_PATH_FOUND", "length={}, nodes={}", result.getLength(), result.getNodesExplored());
         } else {
+            // Synchronous pathfinder failed — use async pathfinding via MovementController
+            // This handles underground targets, long distances, and complex terrain
             currentPath = null;
-            DevLog.info("MINE_PATH_FALLBACK", "reason=no_path, using_direct_navigate");
+            bot.getMovementController().navigateTo(approachPos);
+            DevLog.info("MINE_PATH_ASYNC", "target={}, reason=sync_failed", approachPos.toShortString());
         }
     }
 
@@ -333,6 +337,7 @@ public class MineBlockAction extends Action {
         double dz = currentTarget.getZ() + 0.5 - bot.getZ();
         double distSqr = dx * dx + dy * dy + dz * dz;
 
+        // If we have a computed path, follow it
         if (currentPath != null && pathIndex < currentPath.size()) {
             BlockPos waypoint = currentPath.get(pathIndex);
             double wpDist = bot.distanceToSqr(waypoint.getX() + 0.5, waypoint.getY(), waypoint.getZ() + 0.5);
@@ -350,13 +355,20 @@ public class MineBlockAction extends Action {
             return distSqr;
         }
 
-        // No path found — try digging down if target is below
+        // If async pathfinding is active, let MovementController handle it
+        if (bot.getMovementController().isNavigating()) {
+            // MovementController is handling navigation — just wait
+            return distSqr;
+        }
+
+        // No path and not navigating — try digging down if target is below
         if (currentPath == null && dy < -2) {
             if (tryDigDown(bot)) {
                 return distSqr;
             }
         }
 
+        // Fallback: direct movement
         navigateTo(bot, currentTarget, 1.0);
         return distSqr;
     }

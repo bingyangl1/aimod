@@ -94,10 +94,13 @@ public class AgentContext {
         // --- Mining & Gathering ---
         sb.append("### mine\n");
         sb.append("Find and mine a specific block type. Automatically navigates to the nearest matching block.\n");
-        sb.append("**Special feature**: If the ore is not found nearby and it's a known ore type (diamond, iron, gold, etc.), ");
-        sb.append("the bot will AUTO-DIG down to the correct Y level where that ore spawns. You do NOT need to use break_block to dig down manually.\n");
+        sb.append("**Special features**:\n");
+        sb.append("- If the ore is not found nearby, auto-digs down to the correct Y level\n");
+        sb.append("- If the ore is found but far away, auto-navigates (including digging through walls)\n");
+        sb.append("- Use this for ALL mining tasks. Do NOT use break_block to dig down manually.\n");
+        sb.append("- Use a large radius (64-128) to find distant ores\n");
         sb.append("Parameters: block_id (required), count (default 1), radius (default 32, max 128)\n");
-        sb.append("Example: {\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 1, \"radius\": 128}\n\n");
+        sb.append("Example: {\"type\": \"mine\", \"block_id\": \"minecraft:diamond_ore\", \"count\": 24, \"radius\": 128}\n\n");
 
         sb.append("### gather\n");
         sb.append("Gather a resource type (WOOD, STONE, DIRT, SAND, COBBLESTONE). Finds and breaks matching blocks.\n");
@@ -175,6 +178,8 @@ public class AgentContext {
         sb.append("- ALWAYS use the BEST available tool. Tool tier (best to worst): netherite > diamond > iron > stone > wood.\n");
         sb.append("  If you already have netherite_pickaxe equipped, do NOT switch to iron_pickaxe.\n");
         sb.append("  If you need to mine diamond_ore, use the best pickaxe available (netherite > diamond > iron).\n");
+        sb.append("- Use 'move_to' to travel long distances — it auto-digs tunnels and climbs over obstacles.\n");
+        sb.append("  Do NOT use break_block repeatedly to dig a tunnel — use move_to instead.\n");
         sb.append("- If an action FAILED because the target was already broken, move to the next step.\n");
     }
 
