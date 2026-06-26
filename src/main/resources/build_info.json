@@ -1,6 +1,6 @@
 {
-  "version": "1.2.3",
-  "build": "2026-06-26-r123",
+  "version": "1.2.4",
+  "build": "2026-06-26-r124",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -189,6 +189,10 @@
     "r123: mine tool docs: auto-dig feature explained (auto-digs to ore spawn level, no manual break_block needed)",
     "r123: Decision process template: 5-step thinking guide for LLM",
     "r123: Key rules section: mine for ores, gather for wood, interact before craft, check equipped",
+    "r124: MoveToAction: rewrite to use A* async pathfinding instead of direct movement (moveToward)",
+    "r124: MoveToAction: supports auto-dig to underground, auto-pillar to sky, obstacle avoidance",
+    "r124: MoveToAction: stuck detection with 10s timeout, re-pathfinding if path lost",
+    "r124: Audit: identified 13 unused-function issues (Goal system, VeinMiningHelper, ToolSet, ObstacleBreaker)",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
