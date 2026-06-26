@@ -126,22 +126,7 @@ public class InteractBlockAction extends Action {
     }
 
     private void moveToward(FakePlayer bot, BlockPos target) {
-        double dx = target.getX() + 0.5 - bot.getX();
-        double dy = target.getY() - bot.getY();
-        double dz = target.getZ() + 0.5 - bot.getZ();
-        double distance = Math.sqrt(dx * dx + dz * dz);
-
-        if (distance > 0.1) {
-            double speed = 0.3;
-            double moveX = (dx / distance) * speed;
-            double moveZ = (dz / distance) * speed;
-
-            if (dy > 0.5 && bot.onGround()) {
-                bot.jumpFromGround();
-            }
-
-            bot.setDeltaMovement(moveX, bot.getDeltaMovement().y, moveZ);
-        }
+        navigateTo(bot, target, 1.0);
     }
 
     public InteractType getInteractType() {

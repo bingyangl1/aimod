@@ -347,49 +347,11 @@ public class GatherResourceAction extends Action {
     // ========== Navigation ==========
 
     private boolean navigateWithAStar(FakePlayer bot, BlockPos goal) {
-        if (!(bot.level() instanceof ServerLevel serverLevel)) return false;
-
-        // Use cached path if goal hasn't changed
-        if (cachedPathExecutor != null && cachedPathGoal != null && cachedPathGoal.equals(goal)) {
-            if (!cachedPathExecutor.isCompleted() && !cachedPathExecutor.isFailed()) {
-                BlockPos next = cachedPathExecutor.tick(bot);
-                if (next != null) {
-                    navigateTo(bot, next, 1.0);
-                    return true;
-                }
-            }
-            cachedPathExecutor = null;
-            cachedPathGoal = null;
-        }
-
-        BlockPos botPos = bot.blockPosition();
-        Pathfinder pathfinder = new Pathfinder(serverLevel, botPos, goal, 500, 20);
-        PathResult result = pathfinder.findPath();
-
-        if (result.isFound() && result.getLength() >= 2) {
-            cachedPathExecutor = new com.aimod.ai.pathing.PathExecutor(result.getPath());
-            cachedPathGoal = goal;
-            BlockPos next = cachedPathExecutor.tick(bot);
-            if (next != null) {
-                navigateTo(bot, next, 1.0);
-            }
-            consecutivePathFails = 0; // reset on success
-            DevLog.info("GATHER_ASTAR_OK", "length={}, next={}", result.getLength(), String.valueOf(next));
-            return true;
-        }
-
-        consecutivePathFails++;
-        pathFailCooldown = PATH_FAIL_COOLDOWN_TICKS;
-        DevLog.info("GATHER_ASTAR_FAIL", "reason=no_path, consecutiveFails={}", consecutivePathFails);
-
-        // After too many consecutive A* failures on same target, give up early
-        if (consecutivePathFails >= MAX_CONSECUTIVE_PATH_FAILS) {
-            DevLog.warn("GATHER_PATH_GIVE_UP", "type={}, target={}, fails={}",
-                    resourceType, goal.toShortString(), consecutivePathFails);
-            consecutivePathFails = 0;
-            return false; // will trigger unreachable logic in caller
-        }
-        return false;
+        // Use async pathfinding via MovementController (non-blocking)
+        bot.getMovementController().navigateTo(goal);
+        consecutivePathFails = 0;
+        DevLog.info("GATHER_ASTAR_OK", "target={}", goal.toShortString());
+        return true;
     }
 
 

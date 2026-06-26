@@ -123,19 +123,10 @@ public class AttackAction extends Action {
     }
 
     /**
-     * 移动到目标附近
+     * 移动到目标附近 — 使用 MovementController 而非直接设置速度
      */
     private void moveToward(FakePlayer bot, LivingEntity target) {
-        double dx = target.getX() - bot.getX();
-        double dz = target.getZ() - bot.getZ();
-        double distance = Math.sqrt(dx * dx + dz * dz);
-
-        if (distance > 0.1) {
-            double speed = 0.3;
-            double moveX = (dx / distance) * speed;
-            double moveZ = (dz / distance) * speed;
-            bot.setDeltaMovement(moveX, bot.getDeltaMovement().y, moveZ);
-        }
+        navigateTo(bot, target.blockPosition(), 1.0);
     }
 
     public String getTargetType() {

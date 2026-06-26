@@ -220,6 +220,26 @@ public class MineBlockAction extends Action {
                 bot.level().destroyBlock(currentTarget, true, destroyer);
                 minedCount++;
                 DevLog.info("MINE_MINED", "block={}, total={}", blockId, minedCount);
+
+                // Vein mining: break connected blocks of the same type
+                if (bot.level() instanceof ServerLevel level) {
+                    if (VeinMiningHelper.isOreBlock(blockState.getBlock())) {
+                        int veinSize = VeinMiningHelper.veinMineOre(level, currentTarget,
+                                blockState.getBlock(), 64, true, bot);
+                        if (veinSize > 1) {
+                            minedCount += veinSize - 1;
+                            DevLog.info("MINE_VEIN_ORE", "block={}, veinSize={}", blockId, veinSize);
+                        }
+                    } else if (VeinMiningHelper.isLogBlock(blockState.getBlock())) {
+                        int treeSize = VeinMiningHelper.veinMineTree(level, currentTarget,
+                                blockState.getBlock(), 64, true, bot);
+                        if (treeSize > 1) {
+                            minedCount += treeSize - 1;
+                            DevLog.info("MINE_VEIN_TREE", "block={}, treeSize={}", blockId, treeSize);
+                        }
+                    }
+                }
+
                 currentTarget = null;
                 searching = true;
                 breakProgress = 0;
