@@ -1,6 +1,6 @@
 {
-  "version": "1.2.5",
-  "build": "2026-06-27-r125",
+  "version": "1.2.6",
+  "build": "2026-06-27-r126",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -198,6 +198,10 @@
     "r125: MineBlockAction: add VeinMiningHelper for ore vein and tree trunk mining after block break",
     "r125: AttackAction: replace custom moveToward() with MovementController-based navigateTo()",
     "r125: InteractBlockAction: replace custom moveToward() with MovementController-based navigateTo()",
+    "r126: MoveToAction: auto-dig to underground targets when A* pathfinding fails",
+    "r126: MoveToAction: safety checks for void (-64), bedrock, and liquids during auto-dig",
+    "r126: MoveToAction: auto-dig cooldown (5 ticks) for gravity settling",
+    "r126: MoveToAction: switches back to horizontal navigation after reaching target Y level",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
