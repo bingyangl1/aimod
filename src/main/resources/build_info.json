@@ -1,6 +1,6 @@
 {
-  "version": "1.2.6",
-  "build": "2026-06-27-r126",
+  "version": "1.2.7",
+  "build": "2026-06-27-r127",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -202,6 +202,11 @@
     "r126: MoveToAction: safety checks for void (-64), bedrock, and liquids during auto-dig",
     "r126: MoveToAction: auto-dig cooldown (5 ticks) for gravity settling",
     "r126: MoveToAction: switches back to horizontal navigation after reaching target Y level",
+    "r127: MoveToAction: mode-based navigation (PATHFIND/DIG_DOWN/DIG_THROUGH/PILLAR_UP)",
+    "r127: MoveToAction: DIG_THROUGH mode — automatically breaks walls when A* pathfinding fails",
+    "r127: MoveToAction: PILLAR_UP mode — places blocks below and jumps to reach elevated targets",
+    "r127: MoveToAction: stuck detection now switches to DIG_THROUGH instead of failing",
+    "r127: MoveToAction: max 20 wall digs to prevent infinite digging",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
