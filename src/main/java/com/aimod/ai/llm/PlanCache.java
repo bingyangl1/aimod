@@ -245,6 +245,12 @@ public class PlanCache {
 
     public int size() { return plans.size(); }
 
+    /** Clear all cached plans. */
+    public synchronized void clear() {
+        plans.clear();
+        save();
+    }
+
     private List<CachedPlan> load() {
         try {
             Files.createDirectories(cacheFile.getParent());

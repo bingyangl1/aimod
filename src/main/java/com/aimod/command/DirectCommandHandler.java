@@ -112,4 +112,50 @@ public class DirectCommandHandler {
         task.setStatus(Task.TaskStatus.IN_PROGRESS);
         return task;
     }
+
+    public static Task createFarmTask(int count) {
+        Task task = new Task("Farm " + count + " crops");
+        List<Action> actions = new ArrayList<>();
+        actions.add(new FarmAction(count));
+        task.setActions(actions);
+        task.setStatus(Task.TaskStatus.IN_PROGRESS);
+        return task;
+    }
+
+    public static Task createSneakTask(boolean sneak) {
+        Task task = new Task(sneak ? "Start sneaking" : "Stop sneaking");
+        List<Action> actions = new ArrayList<>();
+        actions.add(new SneakAction(sneak));
+        task.setActions(actions);
+        task.setStatus(Task.TaskStatus.IN_PROGRESS);
+        return task;
+    }
+
+    public static Task createUseItemTask() {
+        Task task = new Task("Use held item");
+        List<Action> actions = new ArrayList<>();
+        actions.add(new UseItemAction("held"));
+        task.setActions(actions);
+        task.setStatus(Task.TaskStatus.IN_PROGRESS);
+        return task;
+    }
+
+    public static Task createDropTask(String itemId, int count) {
+        String fullId = itemId.contains(":") ? itemId : "minecraft:" + itemId;
+        Task task = new Task("Drop " + count + " " + fullId);
+        List<Action> actions = new ArrayList<>();
+        actions.add(new DropAction(fullId, count));
+        task.setActions(actions);
+        task.setStatus(Task.TaskStatus.IN_PROGRESS);
+        return task;
+    }
+
+    public static Task createLookAtTask(net.minecraft.world.phys.Vec3 pos) {
+        Task task = new Task("Look at " + String.format("%.1f, %.1f, %.1f", pos.x, pos.y, pos.z));
+        List<Action> actions = new ArrayList<>();
+        actions.add(new LookAtAction(pos.x, pos.y, pos.z));
+        task.setActions(actions);
+        task.setStatus(Task.TaskStatus.IN_PROGRESS);
+        return task;
+    }
 }

@@ -62,7 +62,33 @@ public class BotCommandAction implements SubCommand {
                                 .executes(ctx -> giveItem(ctx, IntegerArgumentType.getInteger(ctx, "count"))))))
             .then(Commands.literal("equip")
                 .then(Commands.argument("item", StringArgumentType.word())
-                        .executes(BotCommandAction::equipItem)));
+                        .executes(BotCommandAction::equipItem)))
+            .then(Commands.literal("attack")
+                .then(Commands.argument("target", StringArgumentType.word())
+                        .executes(BotCommandAction::attackTarget)))
+            .then(Commands.literal("build")
+                .then(Commands.argument("file", StringArgumentType.word())
+                        .executes(BotCommandAction::buildStructure)))
+            .then(Commands.literal("explore")
+                .executes(ctx -> exploreWorld(ctx, 20))
+                .then(Commands.argument("waypoints", IntegerArgumentType.integer(1, 100))
+                        .executes(ctx -> exploreWorld(ctx, IntegerArgumentType.getInteger(ctx, "waypoints")))))
+            .then(Commands.literal("farm")
+                .executes(ctx -> farmCrops(ctx, 16))
+                .then(Commands.argument("count", IntegerArgumentType.integer(1))
+                        .executes(ctx -> farmCrops(ctx, IntegerArgumentType.getInteger(ctx, "count")))))
+            .then(Commands.literal("sneak")
+                .executes(BotCommandAction::toggleSneak))
+            .then(Commands.literal("use")
+                .executes(BotCommandAction::useItem))
+            .then(Commands.literal("drop")
+                .then(Commands.argument("item", StringArgumentType.word())
+                        .executes(ctx -> dropItem(ctx, 1))
+                        .then(Commands.argument("count", IntegerArgumentType.integer(1))
+                                .executes(ctx -> dropItem(ctx, IntegerArgumentType.getInteger(ctx, "count"))))))
+            .then(Commands.literal("look")
+                .then(Commands.argument("pos", Vec3Argument.vec3())
+                        .executes(BotCommandAction::lookAt)));
     }
 
     private static int gotoVec3(CommandContext<CommandSourceStack> ctx) {
@@ -206,6 +232,116 @@ public class BotCommandAction implements SubCommand {
                 bot.assignDirectTask(task, player);
                 String fullItem = item.contains(":") ? item : "minecraft:" + item;
                 source.sendSuccess(() -> Component.translatable("commands.ai_bot.equip.success", fullItem), true);
+            }
+        }
+        return 1;
+    }
+
+    // ========== New Action Commands ==========
+
+    private static int attackTarget(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        String target = StringArgumentType.getString(ctx, "target");
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                String command = "attack " + target;
+                bot.assignTask(command, player);
+                source.sendSuccess(() -> Component.literal("§aAttacking: " + target), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int buildStructure(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        String file = StringArgumentType.getString(ctx, "file");
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                String command = "build " + file;
+                bot.assignTask(command, player);
+                source.sendSuccess(() -> Component.literal("§aBuilding: " + file), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int exploreWorld(CommandContext<CommandSourceStack> ctx, int waypoints) {
+        CommandSourceStack source = ctx.getSource();
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                String command = "explore " + waypoints + " waypoints";
+                bot.assignTask(command, player);
+                source.sendSuccess(() -> Component.literal("§aExploring (" + waypoints + " waypoints)"), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int farmCrops(CommandContext<CommandSourceStack> ctx, int count) {
+        CommandSourceStack source = ctx.getSource();
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                Task task = DirectCommandHandler.createFarmTask(count);
+                bot.assignDirectTask(task, player);
+                source.sendSuccess(() -> Component.literal("§aFarming " + count + " crops"), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int toggleSneak(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                Task task = DirectCommandHandler.createSneakTask(true);
+                bot.assignDirectTask(task, player);
+                source.sendSuccess(() -> Component.literal("§aSneaking"), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int useItem(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                Task task = DirectCommandHandler.createUseItemTask();
+                bot.assignDirectTask(task, player);
+                source.sendSuccess(() -> Component.literal("§aUsing held item"), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int dropItem(CommandContext<CommandSourceStack> ctx, int count) {
+        CommandSourceStack source = ctx.getSource();
+        String item = StringArgumentType.getString(ctx, "item");
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                Task task = DirectCommandHandler.createDropTask(item, count);
+                bot.assignDirectTask(task, player);
+                source.sendSuccess(() -> Component.literal("§aDropping " + count + "x " + item), true);
+            }
+        }
+        return 1;
+    }
+
+    private static int lookAt(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        Vec3 pos = Vec3Argument.getVec3(ctx, "pos");
+        if (source.getEntity() instanceof Player player) {
+            FakePlayer bot = BotCommand.findOrSpawnBot(source, player);
+            if (bot != null) {
+                Task task = DirectCommandHandler.createLookAtTask(pos);
+                bot.assignDirectTask(task, player);
+                source.sendSuccess(() -> Component.literal(String.format("§aLooking at %.1f, %.1f, %.1f", pos.x, pos.y, pos.z)), true);
             }
         }
         return 1;

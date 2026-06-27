@@ -73,15 +73,21 @@ public class BotCommandConfig implements SubCommand {
             case "autoReplenish" -> !com.aimod.config.ModConfig.getAutoReplenish();
             case "autoReplace" -> !com.aimod.config.ModConfig.getAutoReplaceTool();
             case "veinMine" -> !com.aimod.config.ModConfig.getVeinMine();
-            default -> { ctx.getSource().sendFailure(Component.literal("Unknown: " + feature)); yield false; }
+            case "pvpDefense" -> !com.aimod.config.ModConfig.getEnablePvpDefense();
+            case "showTaskAboveHead" -> !com.aimod.config.ModConfig.getShowTaskAboveHead();
+            case "agenticMode" -> !com.aimod.config.ModConfig.getUseAgenticMode();
+            default -> { ctx.getSource().sendFailure(Component.literal("Unknown: " + feature + ". Available: autoFish, autoReplenish, autoReplace, veinMine, pvpDefense, showTaskAboveHead, agenticMode")); yield false; }
         };
         switch (feature) {
             case "autoFish" -> com.aimod.config.ModConfig.setAutoFish(newVal);
             case "autoReplenish" -> com.aimod.config.ModConfig.setAutoReplenish(newVal);
             case "autoReplace" -> com.aimod.config.ModConfig.setAutoReplaceTool(newVal);
             case "veinMine" -> com.aimod.config.ModConfig.setVeinMine(newVal);
+            case "pvpDefense" -> com.aimod.config.ModConfig.setEnablePvpDefense(newVal);
+            case "showTaskAboveHead" -> com.aimod.config.ModConfig.setShowTaskAboveHead(newVal);
+            case "agenticMode" -> { /* read-only, logged */ }
         }
-        ctx.getSource().sendSuccess(() -> Component.literal(feature + " = " + newVal), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("§a" + feature + " = " + newVal), true);
         return 1;
     }
 

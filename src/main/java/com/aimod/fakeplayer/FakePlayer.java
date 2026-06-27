@@ -628,6 +628,11 @@ public class FakePlayer extends ServerPlayer {
         }
     }
 
+    // ── Getters ─────────────────────────────────────────────────────────
+
+    @Nullable
+    public com.aimod.ai.agent.AgenticTaskRunner getAgenticRunner() { return agenticRunner; }
+
     // ── Convenience Methods ─────────────────────────────────────────────
 
     public void lookAt(double x, double y, double z) {

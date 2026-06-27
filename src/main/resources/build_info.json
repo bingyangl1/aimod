@@ -1,6 +1,6 @@
 {
-  "version": "1.4.3",
-  "build": "2026-06-28-r143",
+  "version": "1.5.0",
+  "build": "2026-06-28-r150",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -240,6 +240,12 @@
     "r143: MLG water bucket — search full inventory (not just hotbar) for water bucket",
     "r143: MLG water bucket — pickup water source block after safe landing",
     "r143: MLG water bucket — hotbar swap when bucket is in non-hotbar slot",
+    "r150: BotCommandDebug — ore stats/clear, cache stats/clear, agent status/cancel, chain status/list, session list/delete/info, scan, memory stats/clear",
+    "r150: BotCommandAction — 8 new commands: attack, build, explore, farm, sneak, use, drop, look",
+    "r150: BotCommandConfig — 3 new toggles: pvpDefense, showTaskAboveHead, agenticMode",
+    "r150: BotCommandHelp — bilingual (Chinese + English) comprehensive help text with all 40+ commands",
+    "r150: DirectCommandHandler — 6 new task creators: farm, sneak, use, drop, lookAt",
+    "r150: PlanCache.clear() + BotMemoryStore.clear() methods for debug commands",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
