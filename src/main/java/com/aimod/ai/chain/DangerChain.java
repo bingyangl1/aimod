@@ -135,6 +135,10 @@ public class DangerChain extends BehaviorChain {
         boolean timedOut = escapeTicks > MAX_ESCAPE;
 
         if (isSafe || timedOut) {
+            // Pick up water if MLG was deployed
+            if (mlgDeployed && bot.onGround()) {
+                pickupWater(bot);
+            }
             active = false;
             escapeFailCount = 0;
             cooldownTicks = COOLDOWN;
@@ -257,18 +261,68 @@ public class DangerChain extends BehaviorChain {
 
     private void tryWaterBucketMLG(FakePlayer bot) {
         var inv = bot.getInventory();
-        // Find water bucket
+        // Find water bucket in full inventory
         int bucketSlot = -1;
-        for (int i = 0; i < 9; i++) {
-            if (inv.getItem(i).getItem() == Items.WATER_BUCKET) { bucketSlot = i; break; }
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).getItem() == Items.WATER_BUCKET) {
+                bucketSlot = i;
+                break;
+            }
         }
-        if (bucketSlot < 0) return; // no water bucket, can't MLG
+        if (bucketSlot < 0) {
+            DevLog.warn("MLG_NO_BUCKET", "no water bucket in inventory");
+            return;
+        }
 
-        inv.selected = bucketSlot;
+        // Select water bucket
+        if (bucketSlot < 9) {
+            inv.selected = bucketSlot;
+        } else {
+            // Swap with hotbar slot
+            int hotbarSlot = inv.selected;
+            var tmp = inv.getItem(hotbarSlot);
+            inv.setItem(hotbarSlot, inv.getItem(bucketSlot));
+            inv.setItem(bucketSlot, tmp);
+        }
+
         // Look straight down for placement
         bot.setXRot(90f);
         bot.startUsingItem(InteractionHand.MAIN_HAND);
         bot.stopUsingItem(); // place water
+
+        DevLog.info("MLG_WATER_PLACED", "pos={}", bot.blockPosition().below().toShortString());
+    }
+
+    /**
+     * Pick up water source block after MLG landing.
+     * Finds empty bucket in inventory and uses it on the water block.
+     */
+    private void pickupWater(FakePlayer bot) {
+        var inv = bot.getInventory();
+        // Find empty bucket
+        int bucketSlot = -1;
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).getItem() == Items.BUCKET) {
+                bucketSlot = i;
+                break;
+            }
+        }
+        if (bucketSlot < 0) return;
+
+        // Select bucket
+        if (bucketSlot < 9) {
+            inv.selected = bucketSlot;
+        }
+
+        // Look at the water block below
+        BlockPos waterPos = bot.blockPosition().below();
+        bot.lookAt(waterPos.getX() + 0.5, waterPos.getY() + 0.5, waterPos.getZ() + 0.5);
+
+        // Use bucket on water
+        bot.startUsingItem(InteractionHand.MAIN_HAND);
+        bot.stopUsingItem();
+
+        DevLog.info("MLG_WATER_PICKUP", "pos={}", waterPos.toShortString());
     }
 
     @Override public boolean isActive() { return active; }

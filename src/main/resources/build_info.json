@@ -1,6 +1,6 @@
 {
-  "version": "1.4.2",
-  "build": "2026-06-28-r142",
+  "version": "1.4.3",
+  "build": "2026-06-28-r143",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -237,6 +237,9 @@
     "r142: BuildAction — load blueprint from file, navigate to each position, place blocks",
     "r142: ExploreAction — automatic world exploration with spiral pattern",
     "r142: ExploreAction — configurable radius and waypoint count",
+    "r143: MLG water bucket — search full inventory (not just hotbar) for water bucket",
+    "r143: MLG water bucket — pickup water source block after safe landing",
+    "r143: MLG water bucket — hotbar swap when bucket is in non-hotbar slot",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }
