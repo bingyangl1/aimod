@@ -126,6 +126,10 @@ public abstract class BotMovement {
         if (dy == 0 && adx + adz == 2) return new MovementDiagonal(src, dest);
         if (dy == 0 && adx + adz == 0) return null;
         if (dy == 0 && adx <= 1 && adz <= 1 && adx + adz == 1) return new MovementTraverse(src, dest);
+
+        // Parkour: sprint-jump over 2-4 block gaps at same Y level
+        if (dy == 0 && adx + adz >= 2 && adx + adz <= 4) return new MovementParkour(src, dest);
+
         return null; // 无法识别的移动类型，回退到 moveToward
     }
 
