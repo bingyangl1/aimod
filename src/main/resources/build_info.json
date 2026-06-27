@@ -1,6 +1,6 @@
 {
-  "version": "1.4.0",
-  "build": "2026-06-27-r140",
+  "version": "1.4.1",
+  "build": "2026-06-28-r141",
   "fixes": [
     "r65: deferred PlanCache store — only cache plans after task COMPLETED (not at parse time)",
     "r65: PlaceBlock canBeReplaced — snow/grass no longer block placement",
@@ -229,6 +229,10 @@
     "r140: GoalNear — reach within radius of a position (new goal type)",
     "r140: GoalGetToBlock — get adjacent to a block for interaction (new goal type)",
     "r140: BotMovement factory — parkour movement for dy=0, dist=2-4 gaps",
+    "r141: FarmAction — automated crop harvesting and replanting (wheat, carrots, potatoes, beetroot, melon, pumpkin, sugar cane, cactus, nether wart)",
+    "r141: WaypointManager — save/load/navigate/delete named positions with category support",
+    "r141: BotCommandWaypoint — /ai_bot waypoint save/list/goto/delete commands",
+    "r141: Waypoints persist to config/aimod/waypoints.json",
     "Phase1 total: 22 bugfixes across r61-r67, bot now completes 'craft stone pickaxe' tasks via replan"
   ]
 }

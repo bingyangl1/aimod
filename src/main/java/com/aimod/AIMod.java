@@ -67,7 +67,11 @@ public class AIMod {
         // Create OreIndex for the overworld
         com.aimod.ai.OreIndexHolder.getOrCreate(event.getServer().overworld());
 
-        LOGGER.info("AI Mod: Server started, ChunkCache + OreIndex initialized");
+        // Initialize waypoint system
+        com.aimod.ai.WaypointManager waypointManager = new com.aimod.ai.WaypointManager();
+        com.aimod.command.BotCommandWaypoint.init(waypointManager);
+
+        LOGGER.info("AI Mod: Server started, ChunkCache + OreIndex + Waypoints initialized");
 
         // Auto-load bots from previous session
         FakePlayerManager manager = BotCommand.getManager();

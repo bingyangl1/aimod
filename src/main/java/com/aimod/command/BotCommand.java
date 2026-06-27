@@ -64,6 +64,7 @@ public class BotCommand {
         new BotCommandAdmin().register(root);
         new BotCommandConfig().register(root);
         new BotCommandTestCmd().register(root);
+        new BotCommandWaypoint().register(root);
         new BotCommandHelp().register(root);
 
         dispatcher.register(root);
